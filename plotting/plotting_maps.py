@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import numpy as np
+import geopandas as gpd
+import pandas as pd
 import cartopy
+from shapely.geometry import Point, Polygon
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm, LinearSegmentedColormap
 from matplotlib.patches import Patch
-import numpy as np
-from plotting.colors import add_colorbar, cmap_2d, cmap_random, cmap_discrete
-import geopandas as gpd
-import pandas as pd
-from shapely.geometry import Point, Polygon
-from ndarray_functions.nan_functions import nanunique, nandigitize
 from mpl_toolkits import axes_grid1
+from ndarray_functions import nandigitize, nanunique
+from plotting.colors import add_colorbar, cmap_2d, cmap_random, cmap_discrete
+from ndarray_functions.nan_functions import nanunique, nandigitize
 
 
 def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", clip_legend=False, ax=None,
@@ -23,7 +24,8 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
     m : array-like
         Input array. Needs to be either 2D or 3D if the third axis contains RGB(A) information
     bins : array-like, optional
-        List of bins that will be used to create a boundarynorm instance to discretise the plotting. This does not work
+        todo; currently fails for one bin
+        List of bins that will be used to create a BoundaryNorm instance to discretise the plotting. This does not work
         in conjunction with vmin and vmax. Bins in that case will take the upper hand.  Alternatively a 'norm' parameter
         can be passed on in the have outside control on the behaviour.
     cmap : matplotlib.cmap or str, optional
@@ -68,7 +70,7 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
     # in case of a boolean array no colorbar is shown
     if m.dtype != "bool_" and m.ndim == 2:
         if isinstance(bins, type(None)):
-            im = ax.imshow(m, vmin=vmin, vmax=vmax, **kwargs)
+            im = ax.imshow(m, vmin=vmin, vmax=vmax, origin='upper', **kwargs)
             if isinstance(legend_kwargs, type(None)):
                 legend_kwargs = {}
             if legend=="colorbar":
@@ -133,7 +135,7 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
                 cbar = add_colorbar(im=im, extend=extend, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
 
     elif m.ndim == 3:
-        ax.imshow(m, **kwargs)
+        ax.imshow(m, origin='upper', **kwargs)
     else:
         if len(np.unique(m)) == 2:
             plot_classified_map(m.astype(int), colors=['lightgrey', 'red'], labels=['False', 'True'], ax=ax,
@@ -675,16 +677,17 @@ def create_map_cmap_2d(map1, map2, bin1=None, bin2=None, vmin1=None, vmax1=None,
 
 if __name__ == "__main__":
     from thesis import *
-    wtd = Map("../tests/wtd.tif")[0]
-    # plot_map(wtd, [0, 1, 2, 3, 6, 100], cmap=plt.cm.get_cmap("Greens"), legend="colorbar")
-    # plt.show()
-    #
-    # plot_map(wtd, np.logspace(-4, 4), cmap=plt.cm.get_cmap("Greens"), legend="colorbar",
-    #          legend_kwargs={'format': "%.5f"}, clip_legend=True)
-    # plt.show()
-    #
-    # plot_classified_map_old(wtd, [1, 2, 3, 6, 100], cmap=plt.cm.get_cmap("Greens"), legend="colorbar")
-    # plt.show()
+    wtd = Map("../data/wtd.tif")[0]
+
+    plot_map(wtd, [0, 1, 2, 3, 6, 100], cmap=plt.cm.get_cmap("Greens"), legend="colorbar")
+    plt.show()
+
+    plot_map(wtd, np.logspace(-4, 4), cmap=plt.cm.get_cmap("Greens"), legend="colorbar",
+             legend_kwargs={'format': "%.5f"}, clip_legend=True)
+    plt.show()
+
+    plot_classified_map_old(wtd, [1, 2, 3, 6, 100], cmap=plt.cm.get_cmap("Greens"), legend="colorbar")
+    plt.show()
 
     a = np.random.randint(0,3,900).reshape(30,30)-1
     bins = [-1,0,1,2]
@@ -692,4 +695,7 @@ if __name__ == "__main__":
     mode = 'classes'
 
     plot_classified_map_old(a, bins=bins, colors=colors, mode=mode, legend='colorbar', clip_legend=True)
+    plt.show()
     plot_classified_map(a, bins=bins, colors=colors, mode=mode, legend='colorbar', clip_legend=True)
+    plt.show()
+

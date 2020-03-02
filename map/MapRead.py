@@ -4,18 +4,17 @@
 import os
 from plotting import add_colorbar
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm
 from map.MapBase import MapBase
 from map.MapWrite import MapWrite
 import numpy as np
 import rasterio as rio
 import pandas as pd
 import copy
-from plotting.plotting_maps import plot_world, plot_map, plot_classified_map_old, plot_classified_map
+from plotting.plotting_maps import plot_world, plot_map, plot_classified_map
 from plotting.basemap import basemap as basemap_function
 from shapely.geometry import Point, Polygon
 from raster_functions import resample_profile, focal_statistics, correlate_maps
-from progress_bar import progress_bar
+from progress_bar.progress_bar import progress_bar
 import gc
 import cartopy.crs as ccrs
 
@@ -516,9 +515,8 @@ class MapRead(MapBase):
 
         return MapRead(output_file)
 
-    def plot(self, ind=None, mode="ind", basemap=False, vmin=None, vmax=None, figsize=(10, 10), ax=None,
-             colorbar=False, pad_fraction=0.5, aspect=20, cbar_title="", cmap=None, log=False, epsg=4326,
-             cbar_kwargs=None, **kwargs):
+    def plot(self, ind=None, *, mode="ind", basemap=False, figsize=(10, 10), ax=None, log=False, epsg=4326,
+             basemap_kwargs=None, **kwargs):
         """
         plot data at given index (ind)
         
@@ -530,30 +528,19 @@ class MapRead(MapBase):
             if ind is passed, only the data at the given index is plotted. If all is given, it will plot the whole file.
         basemap : bool, optional
             plot a basemap behind the data
-        vmin : float, optional
-            clip values below vmin
-        vmax : float, optional
-            clip values above vmax
         figsize : tuple, optional
             matplotlib figsize parameter
         ax : Axes, optional
             matplotlib axes where plot is drawn on
-        colorbar : bool, optional
-            add a colorbar, default is False
-        pad_fraction : float, optional
-            padding between graph and colorbar
-        aspect: float, optional
-            see add_colorbar function
-        cbar_title: str, optional
-            title of colorbar, if applicable
-        cmap : matplotlib cmap
-            Matplotlib cmap
         log : bool, optional
             plot the colors on a log scale
         epsg : int, optional
+            todo; add a possibility to take the native one
             EPSG code that will be used to render the plot, the default is 4326
-        **kwargs
+        basemap_kwargs
             kwargs going to the basemap command
+        **kwargs
+            kwargs going to the plot_map() command
 
         Returns
         -------
@@ -562,66 +549,50 @@ class MapRead(MapBase):
         if isinstance(ind, type(None)):
             mode = "all"
 
-        if mode not in ("ind", "all"):
-            raise ValueError("Only 'ind' and 'all' mode exist")
-
         if mode == "ind":
             ind = self.get_pointer(ind)
             data = self.get_data(ind)
             bounds = self._file.window_bounds(self._tiles[ind])
-
-        if mode == "all":
+        elif mode == "all":
             data = self.get_file_data()
             bounds = self._file.bounds
+        else:
+            raise ValueError("Mode not recognised")
 
         if data.ndim not in (2, 3):
             print(f"Can't plot this data. Dimensions : {data.ndim}")
             return None
         elif data.ndim == 3 and data.shape[-1] not in (3, 4):
+            # todo; create the posibility to select a layer
             print(f"Can't plot this data; only RGB(A) accepted on the third axis.")
             return None
 
+        if log:
+            data = np.log(data)
+
         if basemap:
+            if isinstance(basemap_kwargs, type(None)):
+                basemap_kwargs = {}
+            ax = basemap_function(ax=ax, epsg=epsg, figsize=figsize, **basemap_kwargs)
+
             if isinstance(self.epsg, type(None)):
                 raise RuntimeError("This object does not contain a EPSG code. It can be set through set_epsg()")
-
-            ax = basemap_function(ax=ax, epsg=epsg, figsize=figsize, **kwargs)
-
-            if self.epsg == 4326:
+            elif self.epsg == 4326:
                 transform = ccrs.PlateCarree()
             else:
                 transform = ccrs.epsg(self.epsg)
 
             extent = (bounds[0], bounds[2], bounds[1], bounds[3])
 
-            if log:
-                im = ax.imshow(np.log(data), vmin=vmin, vmax=vmax, origin='upper', cmap=cmap, transform=transform,
-                               extent=extent)
-            else:
-                im = ax.imshow(data, vmin=vmin, vmax=vmax, origin='upper', cmap=cmap, transform=transform,
-                               extent=extent)
-
+            ax = plot_map(data, transform=transform, extent=extent, ax=ax, **kwargs)
             ax.set_extent(extent)
 
         else:
-            if isinstance(ax, type(None)):
-                f, ax = plt.subplots(figsize=figsize)
-
-            if log:
-                im = ax.imshow(np.log(data), vmin=vmin, vmax=vmax, cmap=cmap)
-            else:
-                im = ax.imshow(data, vmin=vmin, vmax=vmax, cmap=cmap)
-
-        # in case of a boolean array no colorbar is shown
-        if data.dtype != "bool_" and colorbar is True:
-            if isinstance(cbar_kwargs, type(None)):
-                cbar_kwargs={}
-            cbar = add_colorbar(im, pad_fraction=pad_fraction, aspect=aspect,**cbar_kwargs)
-            cbar.ax.set_title(cbar_title)
+            ax = plot_map(data, ax=ax, figsize=figsize, **kwargs)
 
         return ax
 
-    def plot_classified(self, ind=None, *, data_mode="ind", basemap=False, figsize=(10, 10), ax=None, epsg=4326,
+    def plot_classified(self, ind=None, *, mode="ind", basemap=False, figsize=(10, 10), ax=None, epsg=4326,
                         basemap_kwargs=None, **kwargs):
         """
         Plots data in a classified way. Look at plot_classified_map for the implementation.
@@ -630,7 +601,7 @@ class MapRead(MapBase):
         ----------
         ind : .
             check self.get_pointer(). The default is None which will set `mode` to "all"
-        data_mode : {"ind", "all"}
+        mode : {"ind", "all"}
             if ind is passed, only the data at the given index is plotted. If all is given, it will plot the whole file.
         basemap : bool, optional
             plot a basemap behind the data
@@ -643,29 +614,27 @@ class MapRead(MapBase):
         basemap_kwargs : dict, optional
             kwargs for basemap
         **kwargs
-            kwargs going to the plot_classified_map command itself
+            kwargs going to the plot_classified_map() command itself
 
         Returns
         -------
         :obj:`~matplotlib.axes.Axes` or GeoAxis if basemap=True
         """
         if isinstance(ind, type(None)):
-            data_mode = "all"
+            mode = "all"
 
-        if data_mode not in ("ind", "all"):
-            raise ValueError("Only 'ind' and 'all' mode exist")
-
-        if data_mode == "ind":
+        if mode == "ind":
             ind = self.get_pointer(ind)
             data = self.get_data(ind)
             bounds = self._file.window_bounds(self._tiles[ind])
-
-        if data_mode == "all":
+        elif mode == "all":
             data = self.get_file_data()
             bounds = self._file.bounds
+        else:
+            raise ValueError("Mode not recognised")
 
+        # todo, rebuild it to accept taking a layer
         data = np.squeeze(data)
-
         if data.ndim > 2:
             raise ValueError(f"This function is only applicable for 2D data. This file contains stacked layers. "
                              f"{data.shape}")
@@ -675,15 +644,14 @@ class MapRead(MapBase):
         legend_kwargs.update({'title': title})
 
         if basemap:
-            if isinstance(self.epsg, type(None)):
-                raise RuntimeError("This object does not contain a EPSG code. It can be set through set_epsg()")
-
             if isinstance(basemap_kwargs, type(None)):
                 basemap_kwargs = {}
 
             ax = basemap_function(ax=ax, epsg=epsg, figsize=figsize, **basemap_kwargs)
 
-            if self.epsg == 4326:
+            if isinstance(self.epsg, type(None)):
+                raise RuntimeError("This object does not contain a EPSG code. It can be set through set_epsg()")
+            elif self.epsg == 4326:
                 transform = ccrs.PlateCarree()
             else:
                 transform = ccrs.epsg(self.epsg)
@@ -694,13 +662,12 @@ class MapRead(MapBase):
                                      **kwargs)
             ax.set_extent(extent)
             return ax
-
         else:
-
-            return plot_classified_map(data, ax=ax, legend_kwargs=legend_kwargs, **kwargs)
+            return plot_classified_map(data, ax=ax, figsize=figsize, legend_kwargs=legend_kwargs, **kwargs)
 
     def __getitem__(self, ind):
         """
         pointer to internal function get_data().
         """
         return self.get_data(ind)
+

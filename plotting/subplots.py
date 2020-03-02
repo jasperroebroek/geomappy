@@ -24,37 +24,34 @@ def subplots(n=1, **kwargs):
     ax : list of :obj:`~matplotlib.axes.Axes`
         flat list of axes that can be looped over
     """
-    # todo; test this function for 1 col or row
-
     if "figsize" not in kwargs.keys():
-        kwargs["figsize"] = (10,10)
-    
-    if type(n) not in (int,tuple,list):
+        kwargs["figsize"] = (10, 10)
+
+    if isinstance(n, (list, tuple, int)):
         raise TypeError("n should be an integer or a tuple of 2 integers")
-    
+
     if type(n) == int:
         # columns
         i = int(np.sqrt(n))
         # rows
-        j = int(n/i)
-    
+        j = int(n / i)
+
         # check if enough rows are inserted
-        if i*j<n:
-            j+=1
-    
-    if type(n) in (tuple,list):
+        if i * j < n:
+            j += 1
+
+    if isinstance(n, (tuple, list)):
         if len(n) != 2:
             raise ValueError("List should be of length 2")
         if type(n[0]) != int or type(n[1]) != int:
             raise TypeError("List should contain integers")
         i = n[0]
         j = n[1]
-    
+
     # construct the holders for the subplots
-    f, ax = plt.subplots(j,i,**kwargs)
-    
+    f, ax = plt.subplots(j, i, **kwargs)
+
     # flatten the ax list
-    if i > 1 and j > 1:
-        ax = [item for sublist in ax for item in sublist]
-    
-    return f,ax
+    ax = ax.flatten()
+
+    return f, ax
