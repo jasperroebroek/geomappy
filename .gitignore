@@ -1,0 +1,7 @@
+.idea/
+__pycache__/
+code_base_expansion/
+scratch/
+data/
+
+.DS_Store
