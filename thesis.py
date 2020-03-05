@@ -31,7 +31,7 @@ import os
 
 os.environ['PROJ_LIB'] = "/Library/Frameworks/PROJ.framework/Versions/5/Resources/proj"
 
-from plotting import *
+from mappy.plotting import *
 from map import *
 import numpy as np
 import matplotlib.pyplot as plt

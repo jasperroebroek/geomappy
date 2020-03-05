@@ -2,20 +2,19 @@
 # -*- coding: utf-8 -*-
 
 import os
-from plotting import add_colorbar
+from ..plotting import add_colorbar
 import matplotlib.pyplot as plt
-from map.MapBase import MapBase
-from map.MapWrite import MapWrite
+from .MapBase import MapBase
+from .MapWrite import MapWrite
 import numpy as np
 import rasterio as rio
 import pandas as pd
 import copy
-from plotting.plotting_maps import plot_world, plot_map, plot_classified_map
-from plotting.basemap import basemap as basemap_function
+from mappy.plotting import plot_world, plot_map, plot_classified_map
+from mappy.plotting import basemap as basemap_function
 from shapely.geometry import Point, Polygon
-from raster_functions import resample_profile, focal_statistics, correlate_maps
-from progress_bar.progress_bar import progress_bar
-import gc
+from ..raster_functions import resample_profile, focal_statistics, correlate_maps
+from ..progress_bar.progress_bar import progress_bar
 import cartopy.crs as ccrs
 
 

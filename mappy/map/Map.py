@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from map.MapBase import MapBase
-from map.MapRead import MapRead
-from map.MapWrite import MapWrite
+from .MapBase import MapBase
+from .MapRead import MapRead
+from .MapWrite import MapWrite
 import numpy as np
 
 

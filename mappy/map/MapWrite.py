@@ -3,7 +3,7 @@
 import os
 import numpy as np
 import rasterio as rio
-from map.MapBase import MapBase
+from .MapBase import MapBase
 
 
 class MapWrite(MapBase):

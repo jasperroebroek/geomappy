@@ -9,8 +9,8 @@ actual tile to be able to calculate values on the border. By setting the same wi
 this border without values before writing it to the file as if everything happened in one calculation.
 """
 
-from map.MapBase import MapBase
-from map.MapWrite import MapWrite
-from map.MapRead import MapRead
-from map.Map import Map
+from .Map import Map
+from .MapBase import MapBase
+from .MapRead import MapRead
+from .MapWrite import MapWrite
 

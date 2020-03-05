@@ -2,12 +2,10 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from numpy.lib.index_tricks import s_
-import matplotlib.pyplot as plt
 import rasterio as rio
-import geopandas as gpd
 import copy
-from plotting.basemap import basemap as basemap_function
-from raster_functions.bounds_to_polygons import bounds_to_polygons
+from ..plotting import basemap as basemap_function
+from ..raster_functions.bounds_to_polygons import bounds_to_polygons
 
 
 class MapBase:

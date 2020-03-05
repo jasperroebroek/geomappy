@@ -1,6 +1,8 @@
-from thesis import *
+from mappy import *
+import matplotlib.pyplot as plt
+import numpy as np
 
-m = Map("data/wtd.tif")
+m = Map("/perm/mo/mojr/mappy/data/wtd.tif")
 
 m.plot(basemap=False, legend="colorbar", basemap_kwargs={'xticks':10, 'yticks':10})
 plt.show()

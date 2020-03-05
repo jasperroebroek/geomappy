@@ -1,8 +1,7 @@
 import unittest
 import numpy as np
 from numpy import s_
-from ndarray_functions import overlapping_arrays
-from setup import *
+from mappy import *
 from scipy.stats import pearsonr
 
 
@@ -95,8 +94,8 @@ class TestRollingSum(unittest.TestCase):
 class TestCorrelateMaps(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestCorrelateMaps, self).__init__(*args, **kwargs)
-        self.map1 = Map("../data/tree_height.asc")[0][::10, ::10]
-        self.map2 = Map("../data/wtd.tif")[0][::10, ::10]
+        self.map1 = Map("../../data/tree_height.asc")[0][::10, ::10]
+        self.map2 = Map("../../data/wtd.tif")[0][::10, ::10]
         # If the actual maps are not available, uncomment the following lines to do the testing on randomly generated
         # arrays, rather than maps.
         # self.map1 = np.random.rand(20, 20)

@@ -54,7 +54,7 @@ def grid_from_corners(v, shape, plotting=True, show=True):
                        np.linspace(v[3], v[2], shape[1]), shape[0])
     if plotting:
         im = plt.imshow(grid, aspect="auto")
-        from plotting import add_colorbar
+        from mappy.plotting import add_colorbar
         add_colorbar(im)
         if show:
             plt.show()

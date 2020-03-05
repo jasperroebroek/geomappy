@@ -9,9 +9,8 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm, LinearSegmentedColormap
 from matplotlib.patches import Patch
 from mpl_toolkits import axes_grid1
-from ndarray_functions import nandigitize, nanunique
-from plotting.colors import add_colorbar, cmap_2d, cmap_random, cmap_discrete
-from ndarray_functions.nan_functions import nanunique, nandigitize
+from ..plotting import add_colorbar, cmap_2d, cmap_random, cmap_discrete
+from ..ndarray_functions.nan_functions import nanunique, nandigitize
 
 
 def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", clip_legend=False, ax=None,

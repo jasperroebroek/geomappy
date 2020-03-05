@@ -3,7 +3,7 @@
 import numpy as np
 from numpy.lib.index_tricks import s_
 import time
-from ndarray_functions.rolling_functions import rolling_window
+from ..ndarray_functions.rolling_functions import rolling_window
 
 
 def focal_statistics(a, *, window_size=None, func=None, fraction_accepted=0.7, verbose=False, count_values=None,

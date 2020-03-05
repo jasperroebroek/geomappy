@@ -10,9 +10,9 @@ should run faster. This still requires some testing though.
 import numpy as np
 from numpy.lib.index_tricks import s_
 
-from ndarray_functions.rolling_functions import rolling_window, rolling_sum
-from ndarray_functions.misc import overlapping_arrays
-from raster_functions.focal_statistics import focal_statistics
+from ..ndarray_functions.rolling_functions import rolling_window, rolling_sum
+from ..ndarray_functions.misc import overlapping_arrays
+from .focal_statistics import focal_statistics
 import time
 
 

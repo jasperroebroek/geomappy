@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors, colorbar
 from matplotlib.colors import LinearSegmentedColormap, to_rgba_array
 import numpy as np
-from ndarray_functions.misc import grid_from_corners
+from ..ndarray_functions.misc import grid_from_corners
 import colorsys
 from matplotlib.colorbar import ColorbarBase
 
