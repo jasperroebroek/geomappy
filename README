@@ -80,5 +80,5 @@ the basemap can be interfaced in the following way, as a normal function
 # NOTES #
 #########
 
-- Focal statistics are accesible through the Map class and as a function in ndarray_functions
+- Focal statistics are accessible through the Map class and as a function in ndarray_functions
 - Some handy cmap functionality is stored in plotting.colors
