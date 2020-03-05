@@ -58,6 +58,7 @@ class MapRead(MapBase):
         self._file = rio.open(location)
         self._profile = self._file.profile
 
+        # todo; change fill value into a property
         if isinstance(fill_value, type(None)):
             if 'float' in self._profile['dtype']:
                 self._fill_value = np.nan
@@ -161,6 +162,9 @@ class MapRead(MapBase):
             2: longitude out of bounds
             3: latitude out of bounds
         """
+        # todo; evaluate this function
+        # todo; integrate with geopandas
+
         if type(plotting) != bool:
             raise TypeError("plotting is a boolean parameter")
 
@@ -208,7 +212,7 @@ class MapRead(MapBase):
 
         return sampled_values
 
-    def cross_profile(self, c1, c2, n=100, *, plotting=False, figsize=(20, 20)):
+    def cross_profile(self, c1, c2, n=100, *, plotting=False, figsize=(10, 10)):
         """
         Routine to create a cross profile, based on self.sample_raster
 
@@ -234,12 +238,10 @@ class MapRead(MapBase):
         for i in range(1, n - 1):
             points[i] = (c1[0] + i * dx, c1[1] + i * dy)
 
-        return np.array(self.sample_raster(points=points,
-                                           plotting=plotting, figsize=figsize))
+        return np.array(self.sample_raster(points=points, plotting=plotting, figsize=figsize))
 
-    def _focal_stat_iter(self, output_file=None, *, func=None, overwrite=False, plotting_world=False, compress=False,
-                         p_bar=True, verbose=False, reduce=False, window_size=-1, silent=True, dtype=None,
-                         majority_mode="nan", **kwargs):
+    def _focal_stat_iter(self, output_file=None, *, func=None, overwrite=False, compress=False, p_bar=True,
+                         verbose=False, reduce=False, window_size=None, dtype=None, majority_mode="nan", **kwargs):
         """
         Function that calculates focal statistics, in tiled fashion if c_tiles is bigger than 1. The result is outputted
         to 'output_file'
@@ -254,8 +256,6 @@ class MapRead(MapBase):
             todo; should have a default behaviour that is slightly more functional
         overwrite : bool, optional
             If allowed to overwrite the output_file. The default is False.
-        plotting_world : bool, optional
-            Plot world with the current tile. The default is False.
         compress : bool, optional
             Compress output data, the default is False
         p_bar : bool, optional
@@ -267,96 +267,77 @@ class MapRead(MapBase):
             same shape as the input, which is the default.
         window_size : int, optional
             If `reduce` is False window_size of the whole object is set temporarily. If `reduce` is True, the
-            window_size of the whole object is set to 1. The window_size parameter passed to `focal_statistics()` will
-            be the parameter given here. The default is -1, in which case it will be taken from the object:
-            self.window_size.
-        silent : bool, optional
-            If False, this function returns a :obj:`MapRead` object. If True, the return statement is suppressed, which
-            is the default.
+            window_size of the whole object is set to 1. The default is None, in which case it will be taken from the
+            object: self.window_size.
         majority_mode : {"nan", "ascending", "descending"}, optional
             nan: when more than one class has the same score NaN will be assigned ascending: the first occurrence of the
             maximum count will be assigned descending: the last occurence of the maximum count will be assigned.
             Parameter only used when the `func` is majority.
         **kwargs
             passed to focal_statistics()
-        
-        Returns
-        -------
-        MapRead object with the created file
-        
-        Raises
-        ------
-        ValueError
-            Window_size smaller than 3
         """
-        if type(func) == type(None):
+        # todo; make it accept ind
+        if isinstance(func, type(None)):
             raise TypeError("No function given")
-        if type(output_file) != str:
+        if not isinstance(output_file, str):
             raise TypeError("Filename not understood")
 
-        if not overwrite:
-            if os.path.isfile(output_file):
-                print(f"\n{output_file}:\nOutput file already exists. Can only "
-                      "overwrite this file if explicitly stated with the "
-                      "'overwrite' parameter. Continuing without performing "
-                      "operation ...\n")
-                return None
+        if not overwrite and os.path.isfile(output_file):
+            print(f"\n{output_file}:\nOutput file already exists. Can only overwrite this file if explicitly stated "
+                  f"with the overwrite' parameter. Continuing without performing operation ...\n")
+            return None
 
-        if type(reduce) != bool:
+        if not isinstance(reduce, bool):
             raise TypeError("reduce parameter needs to be a boolean")
 
+        window_size_old = self.window_size
         if not reduce:
-            window_size_old = copy.deepcopy(self.window_size)
-            if window_size != -1:
+            if isinstance(window_size, type(None)):
+                if self.window_size < 3:
+                    raise ValueError("Can't run focal statistics with a window size of 1, unless 'reduce' is True")
+                window_size = self.window_size
+            else:
+                if window_size < 3:
+                    raise ValueError("Can't run focal statistics with a window size of 1, unless 'reduce' is True")
                 self.window_size = window_size
-            if self.window_size < 3:
-                raise ValueError("Can't run focal statistics with a window size of 1")
-            window_size = self.window_size
             profile = self.profile
-        elif reduce:
-            window_size_old = copy.deepcopy(self.window_size)
+        else:
             self.window_size = 1
+            if isinstance(window_size, type(None)):
+                raise TypeError("Window_size needs to be provided in reduction mode")
             if window_size < 2:
-                raise ValueError(
-                    "Window_size needs to be given explicitly and needs to be bigger than 1 in reduction mode")
+                raise ValueError("Window_size needs to be bigger than 1 in reduction mode")
             profile = resample_profile(self.profile, 1 / window_size)
 
-        if type(dtype) != type(None):
+        if not isinstance(dtype, type(None)):
             profile['dtype'] = dtype
         if func == "majority" and majority_mode == "nan":
             profile['dtype'] = np.float64
 
         old_settings = np.seterr(all='ignore')  # silence all numpy warnings
 
-        with MapWrite(output_file, tiles=(self._v_tiles, self._h_tiles),
-                      window_size=self.window_size, overwrite=overwrite,
-                      compress=compress, profile=profile) as f:
+        with MapWrite(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
+                      overwrite=overwrite, compress=compress, profile=profile) as f:
             for i in self:
                 if verbose:
                     print(f"\nTILE: {i + 1}/{self._c_tiles}")
-                if p_bar and not verbose:
-                    progress_bar(i / self._c_tiles)
-                if plotting_world:
-                    self.plot_world(i)
+                elif p_bar:
+                    progress_bar((i+1) / self._c_tiles)
+
                 data = self[i]
                 # if data is empty, write directly
                 if ~np.isnan(self[i]).sum() == 0:
+                    # todo; check if this is already done in the focal statistics wrapper
                     f[i] = np.full(f.get_shape(), np.nan)
                 else:
-                    f[i] = focal_statistics(data, func=func, window_size=window_size,
-                                            verbose=verbose, reduce=reduce,
+                    f[i] = focal_statistics(data, func=func, window_size=window_size, verbose=verbose, reduce=reduce,
                                             majority_mode=majority_mode, **kwargs)
-            gc.collect()
-            if p_bar and not verbose:
-                progress_bar(1)
-                print("", end="\t")
 
-        gc.collect()
+            if p_bar:
+                print("\n")
+
         self.window_size = window_size_old
         np.seterr(**old_settings)  # reset to default
-
-        if not silent:
-            return MapRead(output_file)
 
     def focal_mean(self, **kwargs):
         """
@@ -393,8 +374,7 @@ class MapRead(MapBase):
         """
         return self._focal_stat_iter(func="majority", **kwargs)
 
-    def correlate(self, other=None, *, output_file=None, plotting=False, verbose=False, plotting_world=False,
-                  overwrite=False, compress=False, p_bar=True):
+    def correlate(self, other=None, *, output_file=None, verbose=False, overwrite=False, compress=False, p_bar=True):
         """
         Correlate self and other and output the result to output_file.
         
@@ -404,22 +384,15 @@ class MapRead(MapBase):
             map to correlate with
         output_file : str
             Location of output file
-        plotting : bool, optional
-            Plot input data and results. Default is False.
         verbose : bool, optional
             Verbosity, default is False
-        plotting_world : bool, optional
-            Plot world and current window, default is False.
         overwrite : bool, optional
             If allowed to overwrite the output_file, default is False
         compress : bool, optional
             Compress calculated data, default is False.
         p_bar : bool, optional
             Show the progress bar. If verbose is True p_bar will be False. Default value is True.
-        
-        Returns
-        -------
-        MapRead object with the created file
+        todo; create window_size parameter
         
         Raises
         ------
@@ -432,6 +405,7 @@ class MapRead(MapBase):
             4: bounds don't match
             5: window_size too small
         """
+        # todo; make it accept ind
         if type(other) != MapRead:
             raise TypeError("Other not correctly passed")
         if self._v_tiles != other._v_tiles:
@@ -449,11 +423,11 @@ class MapRead(MapBase):
 
         if not overwrite:
             if os.path.isfile(output_file):
-                print(f"Output file already exists. Can only overwrite this file "
-                      f"if explicitly stated with the 'overwrite' parameter. "
-                      f"\n{output_file}\nContinuing without performing operation ...\n")
+                print(f"Output file already exists. Can only overwrite this file if explicitly stated with the "
+                      f"'overwrite' parameter. \n{output_file}\nContinuing without performing operation ...\n")
                 return None
 
+        # todo; if updating to new version of correlate_maps this is not necessary anymore
         old_settings = np.seterr(all='ignore')  # silence all numpy warnings
 
         with MapWrite(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
@@ -461,19 +435,13 @@ class MapRead(MapBase):
             for i in self:
                 if verbose:
                     print(f"\nTILE: {i + 1}/{self._c_tiles}")
-                if p_bar and not verbose:
-                    progress_bar(i / self._c_tiles, frac=True)
-                if plotting:
-                    plot_map(self[i])
-                    plot_map(other[i])
-                if plotting_world:
-                    self.plot_world(i, tiles=True)
+                elif p_bar:
+                    progress_bar((i+1) / self._c_tiles)
 
                 # todo; convert this to the optimised version and add preserve_input=False
                 f[i] = correlate_maps(self[i], other[i], window_size=self.window_size, verbose=verbose)
-            gc.collect()
-            if p_bar and not verbose:
-                progress_bar(1, frac=True)
+
+            if p_bar:
                 print("\n")
 
         np.seterr(**old_settings)  # reset to default
@@ -491,11 +459,7 @@ class MapRead(MapBase):
             see self.get_pointer()
         output_file : str
             path to the location where the data will be written to
-            
-        Returns
-        -------
-        :obj:`MapRead`
-            file pointer to the newly created map
+
         """
         # todo; this function only works with one layer
         height, width = self.get_shape(ind)
@@ -512,8 +476,6 @@ class MapRead(MapBase):
         with rio.open(output_file, mode="w", driver="GTiff", dtype=data.dtype, height=height, width=width, count=1,
                       crs=self._file.crs, transform=transform) as dst:
             dst.write_band(1, data)
-
-        return MapRead(output_file)
 
     def plot(self, ind=None, *, mode="ind", basemap=False, figsize=(10, 10), ax=None, log=False, epsg=4326,
              basemap_kwargs=None, **kwargs):
@@ -541,6 +503,7 @@ class MapRead(MapBase):
             kwargs going to the basemap command
         **kwargs
             kwargs going to the plot_map() command
+        # todo; at least add resolution, xticks and yticks as parameters here
 
         Returns
         -------
@@ -573,6 +536,9 @@ class MapRead(MapBase):
         if basemap:
             if isinstance(basemap_kwargs, type(None)):
                 basemap_kwargs = {}
+
+            # todo; right now we depend on the set_extent for clipping to the right place
+            #  this works, but the drawback is that it is quite slow for the whole world if that is not yet in memory
             ax = basemap_function(ax=ax, epsg=epsg, figsize=figsize, **basemap_kwargs)
 
             if isinstance(self.epsg, type(None)):

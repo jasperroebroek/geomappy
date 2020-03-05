@@ -15,7 +15,7 @@ https://nbviewer.jupyter.org/gist/ajdawson/dd536f786741e987ae4e
 """
 
 
-def custom_xticks(ax, ticks, precision=0, side='bottom', add=True, fontsize=10):
+def basemap_xticks(ax, ticks, precision=0, side='bottom', add=True, fontsize=10):
     """
     Calculate and insert xticks on a GeoAxis
 
@@ -39,11 +39,11 @@ def custom_xticks(ax, ticks, precision=0, side='bottom', add=True, fontsize=10):
     te = lambda xy: xy[0]
     # line_constructor (create line with fixed x-coordinates and variabel y coordinates)
     lc = lambda t, n, b: np.vstack((np.zeros(n) + t, np.linspace(b[2]-1, b[3]+1, n))).T
-    xticks, xticklabels = _custom_ticks(ax, ticks, side, lc, te)
+    xticks, xticklabels = _basemap_ticks(ax, ticks, side, lc, te)
 
     # Insert and format the ticks
     if add:
-        ax = plt.gcf().add_subplot(projection=ax.projection, zorder=-1, label="xticknew")
+        ax = plt.gcf().add_subplot(projection=ax.projection, zorder=-1, label="xtick_new_"+str(np.random.rand()))
         ax.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
     if side == "top":
         ax.xaxis.tick_top()
@@ -69,7 +69,7 @@ def custom_xticks(ax, ticks, precision=0, side='bottom', add=True, fontsize=10):
     ax.set_xticklabels(xticklabels_formatted)
 
 
-def custom_yticks(ax, ticks, precision=0, side='left', add=True, fontsize=12):
+def basemap_yticks(ax, ticks, precision=0, side='left', add=True, fontsize=10):
     """
     Calculate and insert yticks on a GeoAxis
 
@@ -93,11 +93,11 @@ def custom_yticks(ax, ticks, precision=0, side='left', add=True, fontsize=12):
     te = lambda xy: xy[1]
     # line_constructor (create line with fixed y-coordinates and variabel x coordinates)
     lc = lambda t, n, b: np.vstack((np.linspace(b[0]-1, b[1]+1, n), np.zeros(n) + t)).T
-    yticks, yticklabels = _custom_ticks(ax, ticks, side, lc, te)
+    yticks, yticklabels = _basemap_ticks(ax, ticks, side, lc, te)
 
     # Insert and format the ticks
     if add:
-        ax = plt.gcf().add_subplot(projection=ax.projection, zorder=-1, label="yticknew")
+        ax = plt.gcf().add_subplot(projection=ax.projection, zorder=-1, label="ytick_new_"+str(np.random.rand()))
         ax.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
     if side == "right":
         ax.yaxis.tick_right()
@@ -123,7 +123,7 @@ def custom_yticks(ax, ticks, precision=0, side='left', add=True, fontsize=12):
     ax.set_yticklabels(yticklabels_formatted)
 
 
-def _custom_ticks(ax, ticks, tick_location, line_constructor, tick_extractor):
+def _basemap_ticks(ax, ticks, tick_location, line_constructor, tick_extractor):
     """Get the tick locations and labels for an axis of an unsupported projection.
     Parameters
     ----------
@@ -277,7 +277,7 @@ def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None,
     ytick_locations = np.linspace(-90, 90, int(180 / yticks + 1))
 
     if grid:
-        if ax.projection == ccrs.PlateCarree():
+        if isinstance(ax.projection, ccrs.PlateCarree):
             g = ax.gridlines(draw_labels=False, color="gray", linestyle="--", crs=ccrs.PlateCarree(),
                              linewidth=grid_linewidth, alpha=grid_alpha)
             g.xlocator = mticker.FixedLocator(xtick_locations)
@@ -289,7 +289,8 @@ def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None,
             ax.set_yticks(ytick_locations, crs=ccrs.PlateCarree())
             ax.yaxis.set_major_formatter(LatitudeFormatter())
 
-        elif ax.projection == ccrs.Mercator():
+        elif isinstance(ax.projection, ccrs.Mercator):
+            # todo; figure out how to display the 90 degree mercator marks
             g = ax.gridlines(draw_labels=True, color="gray", linestyle="--", crs=ccrs.PlateCarree(),
                              linewidth=grid_linewidth, alpha=grid_alpha)
             g.xlocator = mticker.FixedLocator(xtick_locations)
@@ -310,8 +311,8 @@ def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None,
             g.ylocator = mticker.FixedLocator(ytick_locations)
             g.n_steps = n_steps
 
-            custom_xticks(ax, list(xtick_locations))
-            custom_yticks(ax, list(ytick_locations))
+            basemap_xticks(ax, list(xtick_locations))
+            basemap_yticks(ax, list(ytick_locations))
 
     ax.outline_patch.set_linewidth(border_linewidth)
     ax.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
@@ -334,27 +335,28 @@ def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None,
 if __name__ == "__main__":
     basemap()
     basemap(x0=0)
+    basemap(epsg=3857)
     basemap(y0=0, epsg=3857)
 
     # Trying out different projections
-    basemap(epsg=3035, resolution="10m", grid=True)
-    basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5)
-    basemap(epsg=3857, resolution="10m", grid=True)
-    basemap(epsg=5643, resolution="10m", grid=True, xticks=5, yticks=5)
-
-    # Add labels on four axes
-    ax = basemap(epsg=5643, resolution="10m", grid=True, xticks=2, yticks=2)
-    custom_xticks(ax, list(np.linspace(-180, 180, (360//2+1))), side="top", add=True)
-    custom_yticks(ax, list(np.linspace(-90, 90, (180//2+1))), side="right", add=True)
-    plt.show()
-
-    # Add labels on three axes
-    ax = basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5)
-    custom_yticks(ax, list(np.linspace(-90, 90, (180//5+1))), side="right", add=True)
-    plt.show()
-
-    # Changing fontsize
-    ax = basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5, fontsize=6)
-    custom_yticks(ax, list(np.linspace(-90, 90, (180 // 5 + 1))), side="right", add=True, fontsize=6)
-    plt.show()
+    # basemap(epsg=3035, resolution="10m", grid=True)
+    # basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5)
+    # basemap(epsg=3857, resolution="10m", grid=True)
+    # basemap(epsg=5643, resolution="10m", grid=True, xticks=5, yticks=5)
+    #
+    # # Add labels on four axes
+    # ax = basemap(epsg=5643, resolution="10m", grid=True, xticks=2, yticks=2)
+    # basemap_xticks(ax, list(np.linspace(-180, 180, (360 // 2 + 1))), side="top")
+    # basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 2 + 1))), side="right")
+    # plt.show()
+    #
+    # # Add labels on three axes
+    # ax = basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5)
+    # basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 5 + 1))), side="right")
+    # plt.show()
+    #
+    # # Changing fontsize
+    # ax = basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5, fontsize=6)
+    # basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 5 + 1))), side="right", fontsize=6)
+    # plt.show()
 

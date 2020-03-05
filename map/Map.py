@@ -74,6 +74,7 @@ class Map:
         tiles : int or tuple
             Parameter for setting the MapBase.tiles property
         """
+        # todo; make sure that all files can be set to exactly the same tile settings first!
         for m in MapBase.collector:
             m.tiles = tiles
 

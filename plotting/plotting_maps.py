@@ -500,10 +500,19 @@ def plot_classified_map(m, bins=None, colors=None, labels=None, legend="legend",
     if isinstance(ax, cartopy.mpl.geoaxes.GeoAxes):
         if isinstance(transform, type(None)):
             transform = ax.projection
-        im = ax.imshow(m_binned, cmap=cmap, origin='upper', vmin=vmin, vmax=vmax, transform=transform,
-                       extent=ax.get_extent(), **kwargs)
-    else:
-        im = ax.imshow(m_binned, cmap=cmap, origin='upper', vmin=vmin, vmax=vmax, **kwargs)
+        if isinstance(kwargs, dict):
+            if 'extent' in kwargs:
+                extent = kwargs['extent']
+            else:
+                extent = ax.get_extent()
+        else:
+            extent = ax.get_extent()
+
+        kwargs.update({'transform': transform,
+                       'extent': extent})
+
+    im = ax.imshow(m_binned, cmap=cmap, origin='upper', vmin=vmin, vmax=vmax, **kwargs)
+
 
     # Legend
     if legend == "legend":

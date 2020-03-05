@@ -29,7 +29,7 @@ class MapWrite(MapBase):
     overwrite : bool, optional
         Allowed to overwrite a file if it already exists. Default is False
     compress : bool, optional
-        compress the output file, default is False
+        compress the output file, default is False. If profile is provided the compression parameter is taken from there
     dtype : numpy dtype, optional
         Type of data that is going to be written to the file. This parameter doesn't work in combination with passing a
         rasterio profile to the 'profile' parameter. The default is 'np.float64'
@@ -57,7 +57,7 @@ class MapWrite(MapBase):
 
         if isinstance(profile, type(None)):
             # load the rasterio profile either from a reference map or the location itself if it already exists
-            if type(ref_map) == type(None):
+            if isinstance(ref_map, type(None)):
                 if not os.path.isfile(location):
                     raise IOError("Location doesn't exist and no reference map or profile given")
                 with rio.open(location) as f:
@@ -71,14 +71,13 @@ class MapWrite(MapBase):
             # todo; create folder if non - existent!!
             # todo; adapt default nodata to data type
             self._profile['dtype'] = dtype
-            nodata = dtype(nodata)  # this yields an error if the nodata value can't exist with the current dtype
+            nodata = np.array((nodata, )).astype(dtype)[0]
             self._profile['nodata'] = nodata
             self._profile['driver'] = "GTiff"
             if compress:
-                # todo; create parameter for compression
                 self._profile['compress'] = 'lzw'
             if count != -1:
-                if type(count) != int:
+                if not isinstance(count, int):
                     raise TypeError("count should be an integer")
                 if count < 1:
                     raise ValueError("count should be a positive integer")
@@ -91,7 +90,6 @@ class MapWrite(MapBase):
             if not overwrite:
                 raise IOError(f"Can't overwrite if not explicitly stated with overwrite parameter\n{location}")
 
-        # todo; think about dtypes, nodata values etc
         # todo; work on APPROXIMATE_STATISTICS
         #   https://gdal.org/doxygen/classGDALRasterBand.html#a48883c1dae195b21b37b51b10e910f9b
         #   https://github.com/mapbox/rasterio/issues/244
@@ -138,7 +136,7 @@ class MapWrite(MapBase):
         ValueError
             Shape of writing_buffer is not of the dimensions and shape that is expected with the current tiles
         """
-        if type(writing_buffer) != np.ndarray:
+        if not isinstance(writing_buffer, np.ndarray):
             raise TypeError("Buffer needs to be a numpy array")
         if writing_buffer.ndim not in (2, 3):
             raise ValueError(f"ndarray not of right dimensions: {writing_buffer.ndim}")
@@ -149,7 +147,7 @@ class MapWrite(MapBase):
             writing_buffer = writing_buffer[self.ind_inner]
         if writing_buffer.shape != self.get_shape():
             raise ValueError(
-                f"Shapes don't match:\n- shape writing_buffer: {writing_buffer.shape}\n- tile shape: {self.get_shape()}")
+               f"Shapes don't match:\n- shape writing_buffer: {writing_buffer.shape}\n- tile shape: {self.get_shape()}")
 
         self._writing_buffer = writing_buffer
 
@@ -170,7 +168,7 @@ class MapWrite(MapBase):
             when writing buffer is not set
         """
         ind = self.get_pointer(ind)
-        if type(self.writing_buffer) == type(None):
+        if isinstance(self.writing_buffer, type(None)):
             raise NameError("No writing buffer found")
         if self.profile['count'] == 1:
             self._file.write(self.writing_buffer, 1, window=self._tiles[ind])

@@ -9,6 +9,7 @@ import copy
 from plotting.basemap import basemap as basemap_function
 from raster_functions.bounds_to_polygons import bounds_to_polygons
 
+
 class MapBase:
     """
     Main map object, bases on rasterio functionality.
@@ -355,8 +356,10 @@ class MapBase:
         2: use numpy -> s_[1:2]
         
         """
-        if type(ind) in (tuple, list) and len(ind) == 2:
-            if type(ind[0]) != int or type(ind[1]) != int:
+        # todo; update to accept custom Bounds object
+
+        if isinstance(ind, (tuple, list)) and len(ind) == 2:
+            if not isinstance(ind[0], int) or not isinstance(ind[1], int):
                 raise TypeError("Tuple of length two indexes on a grid, it needs two integers")
             if ind[0] not in list(range(self._v_tiles)):
                 raise IndexError("Vertical index out of range")
@@ -364,8 +367,8 @@ class MapBase:
                 raise IndexError("Horizontal index out of range")
             ind = self._iter.index((ind[0] + 1, ind[1] + 1))
 
-        elif type(ind) in (tuple, list, rio.coords.BoundingBox):
-            if type(ind) in (tuple, list):
+        elif isinstance(ind, (tuple, list, rio.coords.BoundingBox)):
+            if isinstance(ind, (tuple, list)):
                 if ind[0] < -180 or ind[0] > 180:
                     raise ValueError("BoundingBox left coordinate of the globe")
                 if ind[1] < -90 or ind[1] > 90:
@@ -398,13 +401,13 @@ class MapBase:
                                                                 height=height)
                 ind = self._c_tiles
 
-        elif type(ind) == slice:
-            if type(ind.start) != int:
+        elif isinstance(ind, slice):
+            if not isinstance(ind.start, int):
                 raise TypeError("Start of slice not given or not an integer")
             if ind.start < 0 or ind.start > (self._c_tiles - 1):
                 raise IndexError("Start of slice out of range")
 
-            if type(ind.stop) != int:
+            if not isinstance(ind.stop, int):
                 raise TypeError("Stop of slice not given or not an integer")
             if ind.stop < 0 or ind.stop > (self._c_tiles - 1):
                 raise IndexError("Stop of slice out of range")
@@ -432,7 +435,7 @@ class MapBase:
                 self._tiles[self._c_tiles] = rio.windows.Window(col_off, row_off, width, height)
                 ind = self._c_tiles
 
-        elif type(ind) == int:
+        elif isinstance(ind, int):
             if ind not in list(range(-1, self._c_tiles + 1)):
                 raise IndexError("Index out of range")
             if ind == -1:
@@ -453,7 +456,7 @@ class MapBase:
         -------
         rasterio profile object
         """
-        return self._profile
+        return copy.deepcopy(self._profile)
 
     def get_file_bounds(self):
         """
@@ -463,7 +466,7 @@ class MapBase:
         -------
         rasterio bounds object of file
         """
-        return self._file.bounds
+        return copy.deepcopy(self._file.bounds)
 
     def get_bounds(self, ind=-1):
         """
@@ -513,15 +516,15 @@ class MapBase:
         else:
             return tuple(np.around((s.height, s.width, self.profile['count'])).astype(int))
 
-    def __repr__(self):
-        return f"map at '{self._location}'"
-
     def __str__(self):
+        return f"Map at '{self._location}'"
+
+    def __repr__(self):
         return (
-            f"open in mode '{self._mode}'\n\n"
-            f"rasterio profile: \n{self._file.profile}\n\n"
+            f"Map is open in mode '{self._mode}'\n\n"
+            f"Rasterio profile: \n{self._file.profile}\n\n"
             f"File is closed: {self._file.closed}\n"
-            f"File split in {self._c_tiles} tiles"
+            f"File split in {self._c_tiles} tiles: {{{self._v_tiles, self._h_tiles}}}"
         )
 
     def __iter__(self):

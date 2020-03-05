@@ -339,8 +339,8 @@ def add_colorbar(im=None, ax=None, aspect=20, pad_fraction=0.5, position="right"
     im : ScalarMappable, optional
         The source ScalarMappable. If not provided it will use the last image on the Axes
     ax : Axes, optional
-        The Axes that the colorbar will be placed in. If not provided it will either be optained from the ScalarMappable
-        or if that is also not provided it will be assumed to be the last Axes that was used (plt.gca())
+        The Axes that the colorbar will be placed in. If not provided it will be assumed to be the last Axes that was
+        used (plt.gca())
     aspect : float, optional
         The aspect ratio of the colorbar
     pad_fraction : float, otional
@@ -364,7 +364,7 @@ def add_colorbar(im=None, ax=None, aspect=20, pad_fraction=0.5, position="right"
         im = ax.images[-1]
     else:
         if isinstance(ax, type(None)):
-            ax = im.axes
+            ax = plt.gca()
 
     orientation = "vertical" if position in ("right","left") else "horizontal"
 

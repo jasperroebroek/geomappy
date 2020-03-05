@@ -36,8 +36,8 @@ def rolling_window(a, window_size, *, flatten=False, reduce=False):
         be copied. This can be very slow and memory intensive for large arrays.
     reduce : bool, optional
         Reuse data if set to False (which is the default) in which case an array will be returned with dimensions that
-        are close to the original; see *flatten*. If set to true, every entry is used exactly once. Creating a
-        much smaller dimensions.
+        are close to the original; see *flatten*. If set to true, every entry is used exactly once. Creating  much
+        smaller dimensions.
     
     Returns
     -------
@@ -54,6 +54,7 @@ def rolling_window(a, window_size, *, flatten=False, reduce=False):
     #   different shapes of windows
     # todo; create possibility of passing a ndarray to window_size with booleans to select a specific region
     # todo; even numbers
+    # todo; replace reduce with a step parameter
 
     if type(a) not in (np.ndarray, np.ma.array):
         a = np.array(a)
@@ -170,6 +171,7 @@ def rolling_sum(a, window_size):
         return r
 
     elif a.ndim == 3:
+        # todo; check if this is actually faster than the backup solution
         if a.dtype == np.bool_:
             dtype = np.int
         else:

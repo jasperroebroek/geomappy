@@ -27,7 +27,7 @@ def subplots(n=1, **kwargs):
     if "figsize" not in kwargs.keys():
         kwargs["figsize"] = (10, 10)
 
-    if isinstance(n, (list, tuple, int)):
+    if not isinstance(n, (list, tuple, int)):
         raise TypeError("n should be an integer or a tuple of 2 integers")
 
     if type(n) == int:

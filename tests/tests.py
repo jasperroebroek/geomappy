@@ -1,7 +1,61 @@
 import unittest
 import numpy as np
-from thesis import *
+from numpy import s_
+from ndarray_functions import overlapping_arrays
+from setup import *
 from scipy.stats import pearsonr
+
+
+def correlate_maps_simple(map1, map2, window_size=5, fraction_accepted=0.7):
+    """
+    Takes two maps and returning the local correlation between them with the same dimensions as the input maps.
+    Correlation calculated in a rolling window with the size `window_size`. If either of the input maps contains
+    a NaN value on a location, the output map will also have a NaN on that location. This is a simplified version of
+    correlate_maps() in raster_functions with the purpose of testing. It is super slow, so don't throw large maps
+    at it.
+
+    Parameters
+    ----------
+    map1, map2 : array-like
+        Input arrays that will be correlated. If not present in dtype `np.float64` it will be converted internally.
+    window_size : int, optional
+        Size of the window used for the correlation calculations. It should be bigger than 1, the default is 5.
+    fraction_accepted : float, optional
+        Fraction of the window that has to contain not-nans for the function to calculate the correlation. The default
+        is 0.7.
+
+    Returns
+    -------
+    corr : :obj:`~numpy.ndarray`
+        numpy array of the same shape as map1 and map2 with the local correlation
+
+    """
+    map1, map2 = overlapping_arrays(map1.astype(np.float64), map2.astype(np.float64))
+    fringe = window_size // 2
+    corr = np.full(map1.shape, np.nan)
+    for i in range(fringe, map1.shape[0] - fringe):
+        for j in range(fringe, map1.shape[1] - fringe):
+            ind = s_[i - fringe:i + fringe + 1, j - fringe:j + fringe + 1]
+
+            if np.isnan(map1[i, j]):
+                continue
+
+            d1 = map1[ind].flatten()
+            d2 = map2[ind].flatten()
+
+            d1 = d1[~np.isnan(d1)]
+            d2 = d2[~np.isnan(d2)]
+
+            if d1.size < fraction_accepted * window_size ** 2:
+                continue
+
+            if np.all(d1 == d1[0]) or np.all(d2 == d2[0]):
+                corr[i, j] = 0
+                continue
+
+            corr[i, j] = pearsonr(d1, d2)[0]
+
+    return corr
 
 
 class TestRollingSum(unittest.TestCase):
@@ -41,11 +95,12 @@ class TestRollingSum(unittest.TestCase):
 class TestCorrelateMaps(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestCorrelateMaps, self).__init__(*args, **kwargs)
-        # If available you can test it with actual maps, if not randomly generated grids work fine
-        # self.map1 = Map("tree_height.asc")[0][::10, ::10]
-        # self.map2 = Map("wtd.tif")[0][::10, ::10]
-        self.map1 = np.random.rand(20, 20)
-        self.map2 = np.random.rand(20, 20)
+        self.map1 = Map("../data/tree_height.asc")[0][::10, ::10]
+        self.map2 = Map("../data/wtd.tif")[0][::10, ::10]
+        # If the actual maps are not available, uncomment the following lines to do the testing on randomly generated
+        # arrays, rather than maps.
+        # self.map1 = np.random.rand(20, 20)
+        # self.map2 = np.random.rand(20, 20)
 
     def test_assumptions(self):
         with self.assertRaises(ValueError):

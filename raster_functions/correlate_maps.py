@@ -9,7 +9,6 @@ should run faster. This still requires some testing though.
 
 import numpy as np
 from numpy.lib.index_tricks import s_
-from scipy.stats import pearsonr
 
 from ndarray_functions.rolling_functions import rolling_window, rolling_sum
 from ndarray_functions.misc import overlapping_arrays
@@ -176,63 +175,6 @@ def correlate_maps(map1, map2, *, window_size=5, fraction_accepted=0.7, verbose=
     # End main calculation
     if verbose:
         print(f"- correlation: {time.time() - start}")
-
-    return corr
-
-
-def correlate_maps_simple(map1, map2, window_size=5, fraction_accepted=0.7):
-    """
-    Takes two maps and returning the local correlation between them with the same dimensions as the input maps.
-    Correlation calculated in a rolling window with the size `window_size`. If either of the input maps contains
-    a NaN value on a location, the output map will also have a NaN on that location.
-
-    Parameters
-    ----------
-    map1, map2 : array-like
-        Input arrays that will be correlated. If not present in dtype `np.float64` it will be converted internally.
-    window_size : int, optional
-        Size of the window used for the correlation calculations. It should be bigger than 1, the default is 5.
-    fraction_accepted : float, optional
-        Fraction of the window that has to contain not-nans for the function to calculate the correlation. The default
-        is 0.7.
-
-    Returns
-    -------
-    corr : :obj:`~numpy.ndarray`
-        numpy array of the same shape as map1 and map2 with the local correlation
-
-    Raises
-    ------
-    ValueError
-        - When data is not 2D
-        - When `window_size` is bigger than one of the dimensions of the input
-          data
-    """
-
-    map1, map2 = overlapping_arrays(map1.astype(np.float64), map2.astype(np.float64))
-    fringe = window_size // 2
-    corr = np.full(map1.shape, np.nan)
-    for i in range(fringe, map1.shape[0] - fringe):
-        for j in range(fringe, map1.shape[1] - fringe):
-            ind = s_[i - fringe:i + fringe + 1, j - fringe:j + fringe + 1]
-
-            if np.isnan(map1[i, j]):
-                continue
-
-            d1 = map1[ind].flatten()
-            d2 = map2[ind].flatten()
-
-            d1 = d1[~np.isnan(d1)]
-            d2 = d2[~np.isnan(d2)]
-
-            if d1.size < fraction_accepted * window_size ** 2:
-                continue
-
-            if np.all(d1 == d1[0]) or np.all(d2 == d2[0]):
-                corr[i, j] = 0
-                continue
-
-            corr[i, j] = pearsonr(d1, d2)[0]
 
     return corr
 
