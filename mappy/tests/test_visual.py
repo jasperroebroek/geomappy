@@ -17,3 +17,4 @@ plt.show()
 plot_classified_map_old(a, legend='colorbar', bins=[0,1,2,3,4], mode='classes', colors=cmap_discrete(5, return_type='list'))
 plt.show()
 
+np.random.rand((5,5,5))

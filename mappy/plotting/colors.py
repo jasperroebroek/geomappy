@@ -366,7 +366,7 @@ def add_colorbar(im=None, ax=None, aspect=20, pad_fraction=0.5, position="right"
         if isinstance(ax, type(None)):
             ax = plt.gca()
 
-    orientation = "vertical" if position in ("right","left") else "horizontal"
+    orientation = "vertical" if position in ("right", "left") else "horizontal"
 
     divider = axes_grid1.make_axes_locatable(ax)
     width = axes_grid1.axes_size.AxesY(ax, aspect=1. / aspect)

@@ -188,7 +188,8 @@ def _basemap_ticks(ax, ticks, tick_location, line_constructor, tick_extractor):
 
 def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None, figsize=(10, 10), resolution="110m",
             coastlines=True, earth_image=False, land=False, ocean=False, yticks=30, xticks=30, grid=True, n_steps=300,
-            grid_linewidth=1, border_linewidth=1, coastline_linewidth=1, grid_alpha=0.5, fontsize=10):
+            linewidth=1, grid_linewidth=None, border_linewidth=None, coastline_linewidth=None, grid_alpha=0.5,
+            fontsize=10):
     """
     Parameters
     ----------
@@ -227,11 +228,14 @@ def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None,
     grid : bool, optional
         switch for gridlines and ticks
     grid_linewidth : float, optional
-        linewidth specifier for gridlines
+        linewidth specifier for gridlines. If not specified, the value will be taken from 'linewidth'.
     border_linewidth : float, optional
-        linewidth specifier for the borders around the plot
+        linewidth specifier for the borders around the plot. If not specified, the value will be taken from 'linewidth'.
     coastline_linewidth : float, optional
-        linewidth specifier for the coastlines
+        linewidth specifier for the coastlines, If not specified, the value will be taken from 'linewidth'.
+    linewidth : float, optional
+        Default linewidth parameter for the gridlines, coastlines and border around the plot. Its value is used in case
+        the others are not specifically specified.
     n_steps : int, optional
         the number of discrete steps when plotting the gridlines. For circular gridlines this can be too low.
     grid_alpha : float, optional
@@ -262,6 +266,15 @@ def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None,
     else:
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(projection=projection)
+
+    if not isinstance(linewidth, (float, int)):
+        raise TypeError("Linewidth should be numeric")
+    if isinstance(coastline_linewidth, type(None)):
+        coastline_linewidth = linewidth
+    if isinstance(border_linewidth, type(None)):
+        border_linewidth = linewidth
+    if isinstance(grid_linewidth, type(None)):
+        grid_linewidth = linewidth
 
     if coastlines:
         ax.coastlines(resolution=resolution, linewidth=coastline_linewidth)

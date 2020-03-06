@@ -49,6 +49,12 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
     kwargs : dict, optional
         Keyword arguments for plt.imshow()
 
+    Notes
+    -----
+    When providing a GeoAxes in the 'ax' parameter it needs to be noted that the 'extent' of the data should be provided
+    if there is not a perfect overlap. If provided to this function it will be handled by **kwargs. The same goes for
+    'transform' if the plotting projection is different from the data projection.
+
     Returns
     -------
     Axes
@@ -60,6 +66,11 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
 
     if isinstance(ax, type(None)):
         f, ax = plt.subplots(figsize=figsize)
+    elif isinstance(ax, cartopy.mpl.geoaxes.GeoAxes):
+        if "extent" not in kwargs:
+            kwargs["extent"] = ax.get_extent()
+        if "transform" not in kwargs:
+            kwargs["transform"] = ax.projection
 
     if isinstance(cmap, type(None)):
         cmap = plt.cm.get_cmap("viridis")
@@ -69,10 +80,10 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
     # in case of a boolean array no colorbar is shown
     if m.dtype != "bool_" and m.ndim == 2:
         if isinstance(bins, type(None)):
-            im = ax.imshow(m, vmin=vmin, vmax=vmax, origin='upper', **kwargs)
+            im = ax.imshow(m, vmin=vmin, vmax=vmax, origin='upper', cmap=cmap, **kwargs)
             if isinstance(legend_kwargs, type(None)):
                 legend_kwargs = {}
-            if legend=="colorbar":
+            if legend == "colorbar":
                 add_colorbar(im, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
         else:
             data = m[~np.isnan(m)]
@@ -395,8 +406,7 @@ def plot_classified_map_old(m, bins=None, colors=None, labels=None, legend="lege
 
 
 def plot_classified_map(m, bins=None, colors=None, labels=None, legend="legend", clip_legend=False, ax=None,
-                        suppress_warnings=False, mode="classes", transform=None, legend_kwargs=None,
-                        legend_title_pad=10, **kwargs):
+                        suppress_warnings=False, mode="classes", legend_kwargs=None, legend_title_pad=10, **kwargs):
     """
     Plot a map with discrete classes or index
 
@@ -426,8 +436,6 @@ def plot_classified_map(m, bins=None, colors=None, labels=None, legend="legend",
     cmap : Colormap
         parameter directly passed to matplotlib functions. Is used instead of colors when mode=='continues'. If specific
         colors are required a ListedColormap can be passed in.
-    transform : list, optional
-        When providing a cartopy GeoAxes in 'ax' parameter, the transform of the data can be provided here.
     legend_kwargs : dict, optional
         kwargs passed into either the legend or colorbar function
     legend_title_pad : float, optional
@@ -435,12 +443,23 @@ def plot_classified_map(m, bins=None, colors=None, labels=None, legend="legend",
     **kwargs : dict, optional
         kwargs for the plt.imshow command
 
+    Notes
+    -----
+    When providing a GeoAxes in the 'ax' parameter it needs to be noted that the 'extent' of the data should be provided
+    if there is not a perfect overlap. If provided to this function it will be handled by **kwargs. The same goes for
+    'transform' if the plotting projection is different from the data projection.
+
     Returns
     -------
     Axes
     """
     if isinstance(ax, type(None)):
         f, ax = plt.subplots(figsize=(10, 10))
+    elif isinstance(ax, cartopy.mpl.geoaxes.GeoAxes):
+        if "extent" not in kwargs:
+            kwargs["extent"] = ax.get_extent()
+        if "transform" not in kwargs:
+            kwargs["transform"] = ax.projection
 
     if mode not in ('classes', 'index'):
         raise ValueError("mode not recognized")
@@ -496,22 +515,7 @@ def plot_classified_map(m, bins=None, colors=None, labels=None, legend="legend",
         vmin=0
         vmax=bins.size-1
 
-    if isinstance(ax, cartopy.mpl.geoaxes.GeoAxes):
-        if isinstance(transform, type(None)):
-            transform = ax.projection
-        if isinstance(kwargs, dict):
-            if 'extent' in kwargs:
-                extent = kwargs['extent']
-            else:
-                extent = ax.get_extent()
-        else:
-            extent = ax.get_extent()
-
-        kwargs.update({'transform': transform,
-                       'extent': extent})
-
     im = ax.imshow(m_binned, cmap=cmap, origin='upper', vmin=vmin, vmax=vmax, **kwargs)
-
 
     # Legend
     if legend == "legend":
