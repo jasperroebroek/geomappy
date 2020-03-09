@@ -9,7 +9,7 @@ should run faster. This still requires some testing though.
 
 import numpy as np
 from numpy.lib.index_tricks import s_
-
+from numba import njit, prange
 from ..ndarray_functions.rolling_functions import rolling_window, rolling_sum
 from ..ndarray_functions.misc import overlapping_arrays
 from .focal_statistics import focal_statistics
@@ -233,7 +233,7 @@ def correlate_maps_opt(map1, map2, *, window_size=5, fraction_accepted=0.7, verb
     if window_size % 2 == 0:
         raise ValueError("Window_size should be an uneven nuber")
 
-    if ~np.all(np.array(map1.shape) > window_size):
+    if ~np.all(np.array(map1.shape) >= window_size):
         raise ValueError("Window bigger than input array")
 
     if map1.dtype != np.float64:
@@ -341,5 +341,114 @@ def correlate_maps_opt(map1, map2, *, window_size=5, fraction_accepted=0.7, verb
     # End main calculation
     if verbose:
         print(f"- correlation: {time.time() - start}")
+
+    return corr
+
+
+def correlate_maps_njit(map1, map2, window_size=5, fraction_accepted=0.7):
+    """
+    Takes two maps and returning the local correlation between them with the same dimensions as the input maps.
+    Correlation calculated in a rolling window with the size `window_size`. If either of the input maps contains
+    a NaN value on a location, the output map will also have a NaN on that location. This function is the wrapper around
+    the core functionality which happens in _correlate_maps() and does the typechecking.
+
+    Parameters
+    ----------
+    map1, map2 : array-like
+        Input arrays that will be correlated. If not present in dtype `np.float64` it will be converted internally.
+    window_size : int, optional
+        Size of the window used for the correlation calculations. It should be bigger than 1, the default is 5.
+    fraction_accepted : float, optional
+        Fraction of the window that has to contain not-nans for the function to calculate the correlation. The default
+        is 0.7.
+
+    Returns
+    -------
+    corr : :obj:`~numpy.ndarray`
+        numpy array of the same shape as map1 and map2 with the local correlation
+    """
+    if not isinstance(map1, np.ndarray):
+        map1 = np.array(map1, dtype=np.float64)
+    elif map1.ndim != 2:
+        raise IndexError("Only two dimensional arrays are supported")
+    elif map1.dtype != np.float64:
+        map1 = map1.astype(np.float64)
+
+    if not isinstance(map2, np.ndarray):
+        map2 = np.array(map2, dtype=np.float64)
+    elif map2.ndim != 2:
+        raise IndexError("Only two dimensional arrays are supported")
+    elif map2.dtype != np.float64:
+        map2 = map2.astype(np.float64)
+
+    if not isinstance(window_size, int):
+        raise TypeError("window_size should be an integer")
+    elif window_size < 3 or window_size % 2 == 0:
+        raise ValueError("window_size should be uneven and bigger than or equal to 3")
+
+    if not isinstance(fraction_accepted, (int, float)):
+        raise TypeError("fraction_accepted should be numeric")
+    elif fraction_accepted < 0 or fraction_accepted > 1:
+        raise ValueError("fraction_accepted should be between 0 and 1")
+
+    return _correlate_maps(map1=map1, map2=map2, window_size=window_size, fraction_accepted=fraction_accepted)
+
+
+@njit(cache=True)
+def _correlate_maps(map1, map2, window_size=5, fraction_accepted=0.7):
+    """
+    Takes two maps and returning the local correlation between them with the same dimensions as the input maps.
+    Correlation calculated in a rolling window with the size `window_size`. If either of the input maps contains
+    a NaN value on a location, the output map will also have a NaN on that location. This function is not supposed to
+    be called directly, as it does absolutely no input checks. Use correlate_maps_njit instead.
+
+    Parameters
+    ----------
+    map1, map2 : array-like
+        Input arrays that will be correlated. If not present in dtype `np.float64` it will be converted internally.
+    window_size : int, optional
+        Size of the window used for the correlation calculations. It should be bigger than 1, the default is 5.
+    fraction_accepted : float, optional
+        Fraction of the window that has to contain not-nans for the function to calculate the correlation. The default
+        is 0.7.
+
+    Returns
+    -------
+    corr : :obj:`~numpy.ndarray`
+        numpy array of the same shape as map1 and map2 with the local correlation
+    """
+    # todo; if needed, this can be made three dimensional, simply by adding a third inner loop
+
+    fringe = window_size // 2
+    corr = np.full(map1.shape, np.nan)
+
+    for i in range(fringe, map1.shape[0] - fringe):
+        for j in range(fringe, map1.shape[1] - fringe):
+            ind = (slice(i - fringe, i + fringe + 1), slice(j - fringe, j + fringe + 1))
+
+            if np.isnan(map1[i, j]) or np.isnan(map2[i, j]):
+                continue
+
+            d1 = map1[ind].ravel()
+            d2 = map2[ind].ravel()
+
+            mask = np.logical_and(~np.isnan(d1), ~np.isnan(d2))
+            d1 = d1[mask]
+            d2 = d2[mask]
+
+            if d1.size < fraction_accepted * window_size ** 2:
+                continue
+
+            if np.all(d1 == d1[0]) or np.all(d2 == d2[0]):
+                corr[i, j] = 0
+                continue
+
+            d1_mean = d1.mean()
+            d2_mean = d2.mean()
+
+            d1_dist = d1 - d1_mean
+            d2_dist = d2 - d2_mean
+
+            corr[i, j] = np.sum(d1_dist * d2_dist) / np.sqrt(np.sum(d1_dist ** 2) * np.sum(d2_dist ** 2))
 
     return corr

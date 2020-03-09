@@ -145,7 +145,7 @@ def rolling_sum(a, window_size):
     if window_size % 2 == 0:
         raise ValueError("window_size should be uneven")
 
-    if ~np.all(np.array(a.shape) > window_size):
+    if ~np.all(np.array(a.shape) >= window_size):
         raise ValueError("Window bigger than input array")
 
     if a.ndim == 1:

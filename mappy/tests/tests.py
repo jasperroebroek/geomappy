@@ -1,8 +1,9 @@
 import unittest
 import numpy as np
 from numpy import s_
-from mappy import *
+from mappy import overlapping_arrays, rolling_mean, rolling_sum, rolling_window, focal_statistics, Map
 from scipy.stats import pearsonr
+from mappy.raster_functions.correlate_maps import correlate_maps_njit as correlate_maps
 
 
 def correlate_maps_simple(map1, map2, window_size=5, fraction_accepted=0.7):
@@ -94,18 +95,14 @@ class TestRollingSum(unittest.TestCase):
 class TestCorrelateMaps(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestCorrelateMaps, self).__init__(*args, **kwargs)
-        self.map1 = Map("../../data/tree_height.asc")[0][::10, ::10]
-        self.map2 = Map("../../data/wtd.tif")[0][::10, ::10]
-        # If the actual maps are not available, uncomment the following lines to do the testing on randomly generated
-        # arrays, rather than maps.
         # self.map1 = np.random.rand(20, 20)
         # self.map2 = np.random.rand(20, 20)
 
     def test_assumptions(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises((ValueError, IndexError)):
             # Only 2D is supported
             correlate_maps(np.random.rand(10, 10, 10), np.random.rand(10, 10, 10))
-        with self.assertRaises(ValueError):
+        with self.assertRaises((ValueError, IndexError)):
             # Only 2D is supported
             correlate_maps(np.random.rand(10), np.random.rand(10))
 
