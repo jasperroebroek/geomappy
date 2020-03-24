@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from matplotlib.cm import ScalarMappable
 from mpl_toolkits import axes_grid1
 import matplotlib.pyplot as plt
 from matplotlib import colors, colorbar
@@ -363,8 +364,10 @@ def add_colorbar(im=None, ax=None, aspect=20, pad_fraction=0.5, position="right"
             ax = plt.gca()
         im = ax.images[-1]
     else:
-        if isinstance(ax, type(None)):
+        if isinstance(ax, ScalarMappable):
             ax = plt.gca()
+        elif isinstance(ax, type(None)):
+            ax = im.axes
 
     orientation = "vertical" if position in ("right", "left") else "horizontal"
 

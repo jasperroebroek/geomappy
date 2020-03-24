@@ -5,14 +5,23 @@ import cartopy.crs as ccrs
 import cartopy.feature as cf
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+import shapely
 import shapely.geometry as sgeom
 from copy import copy
-import shapely
 
 """
 inspiration source:
 https://nbviewer.jupyter.org/gist/ajdawson/dd536f786741e987ae4e
 """
+
+
+def _clone_geoaxes(ax):
+    extent = ax.get_extent()
+    ax = ax.figure.add_subplot(projection=ax.projection, zorder=-1, label="xtick_new_" + str(np.random.rand()))
+    ax.set_xlim(extent[0], extent[1])
+    ax.set_ylim(extent[2], extent[3])
+    ax.outline_patch.set_linewidth(0)
+    return ax
 
 
 def basemap_xticks(ax, ticks, precision=0, side='bottom', add=True, fontsize=10):
@@ -38,17 +47,18 @@ def basemap_xticks(ax, ticks, precision=0, side='bottom', add=True, fontsize=10)
     # tick_extractor (pick the first coordinate)
     te = lambda xy: xy[0]
     # line_constructor (create line with fixed x-coordinates and variabel y coordinates)
-    lc = lambda t, n, b: np.vstack((np.zeros(n) + t, np.linspace(b[2]-1, b[3]+1, n))).T
+    lc = lambda t, n, b: np.vstack((np.zeros(n) + t, np.linspace(b[2] - 1, b[3] + 1, n))).T
     xticks, xticklabels = _basemap_ticks(ax, ticks, side, lc, te)
 
     # Insert and format the ticks
     if add:
-        ax = plt.gcf().add_subplot(projection=ax.projection, zorder=-1, label="xtick_new_"+str(np.random.rand()))
+        ax = _clone_geoaxes(ax)
         ax.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
     if side == "top":
         ax.xaxis.tick_top()
     ax.set_xticks(xticks)
     xticklabels_formatted = []
+    # Format the labels
     for label in xticklabels:
         if int(label) == -180 or int(label) == 180:
             xticklabels_formatted.append(str(180) + u'\u00B0')
@@ -92,17 +102,19 @@ def basemap_yticks(ax, ticks, precision=0, side='left', add=True, fontsize=10):
     # tick_extractor (pick the second coordinate)
     te = lambda xy: xy[1]
     # line_constructor (create line with fixed y-coordinates and variabel x coordinates)
-    lc = lambda t, n, b: np.vstack((np.linspace(b[0]-1, b[1]+1, n), np.zeros(n) + t)).T
+    lc = lambda t, n, b: np.vstack((np.linspace(b[0] - 1, b[1] + 1, n), np.zeros(n) + t)).T
     yticks, yticklabels = _basemap_ticks(ax, ticks, side, lc, te)
 
     # Insert and format the ticks
+    # Insert and format the ticks
     if add:
-        ax = plt.gcf().add_subplot(projection=ax.projection, zorder=-1, label="ytick_new_"+str(np.random.rand()))
+        ax = _clone_geoaxes(ax)
         ax.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
     if side == "right":
         ax.yaxis.tick_right()
     ax.set_yticks(yticks)
     yticklabels_formatted = []
+    # Format the labels
     for label in yticklabels:
         if int(label) == -90 or int(label) == 90:
             yticklabels_formatted.append(str(90) + u'\u00B0')
@@ -144,8 +156,7 @@ def _basemap_ticks(ax, ticks, tick_location, line_constructor, tick_extractor):
     (ticks, ticklabels)
     """
     # the border of the axis
-    outline_patch = sgeom.LineString(ax.outline_patch.get_path().vertices.tolist())
-    minx, miny, maxx, maxy = outline_patch.bounds
+    minx, maxx, miny, maxy = ax.get_extent()
     points = {'left': [(minx, miny), (minx, maxy)],
               'right': [(maxx, miny), (maxx, maxy)],
               'bottom': [(minx, miny), (maxx, miny)],
@@ -219,12 +230,14 @@ def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None,
         switch to color the landmass lightgrey
     ocean : bool, optional
         switch to color the ocean lightblue
-    yticks : float, optional
+    yticks : float or list, optional
         parameter that describes the distance between two gridlines in PlateCarree coordinate terms. The default 30
-        means that every 30 degrees a gridline gets drawn.
-    xticks : float, optional
+        means that every 30 degrees a gridline gets drawn. If a list is passed, the procedure is skipped and the
+        coordinates in the list are used.
+    xticks : float or list, optional
         parameter that describes the distance between two gridlines in PlateCarree coordinate terms. The default 30
-        means that every 30 degrees a gridline gets drawn.
+        means that every 30 degrees a gridline gets drawn. If a list is passed, the procedure is skipped and the
+        coordinates in the list are used.
     grid : bool, optional
         switch for gridlines and ticks
     grid_linewidth : float, optional
@@ -267,6 +280,18 @@ def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None,
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(projection=projection)
 
+    extent = list(ax.get_extent(crs=ccrs.PlateCarree()))
+    if extent[0] < x0:
+        extent[0] = x0
+    if extent[1] > x1:
+        extent[1] = x1
+    if extent[2] < y0:
+        extent[2] = y0
+    if extent[3] > y1:
+        extent[3] = y1
+
+    ax.set_extent(extent, crs=ccrs.PlateCarree())
+
     if not isinstance(linewidth, (float, int)):
         raise TypeError("Linewidth should be numeric")
     if isinstance(coastline_linewidth, type(None)):
@@ -286,8 +311,15 @@ def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None,
     if ocean:
         ax.add_feature(cf.OCEAN, color="lightblue")
 
-    xtick_locations = np.linspace(-180, 180, int(360 / xticks + 1))
-    ytick_locations = np.linspace(-90, 90, int(180 / yticks + 1))
+    if isinstance(xticks, (float, int)):
+        xtick_locations = np.linspace(-180, 180, int(360 / xticks + 1))
+    else:
+        xtick_locations = xticks
+
+    if isinstance(yticks, (float, int)):
+        ytick_locations = np.linspace(-90, 90, int(180 / yticks + 1))
+    else:
+        ytick_locations = yticks
 
     if grid:
         if isinstance(ax.projection, ccrs.PlateCarree):
@@ -324,38 +356,43 @@ def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None,
             g.ylocator = mticker.FixedLocator(ytick_locations)
             g.n_steps = n_steps
 
-            basemap_xticks(ax, list(xtick_locations))
-            basemap_yticks(ax, list(ytick_locations))
+            basemap_xticks(ax, list(xtick_locations), add=False)
+            basemap_yticks(ax, list(ytick_locations), add=False)
 
     ax.outline_patch.set_linewidth(border_linewidth)
     ax.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
-
-    extent = list(ax.get_extent(crs=ccrs.PlateCarree()))
-    if extent[0] < x0:
-        extent[0] = x0
-    if extent[1] > x1:
-        extent[1] = x1
-    if extent[2] < y0:
-        extent[2] = y0
-    if extent[3] > y1:
-        extent[3] = y1
-
     ax.set_extent(extent, crs=ccrs.PlateCarree())
+
     return ax
 
 
 # TESTS
 if __name__ == "__main__":
-    basemap()
-    basemap(x0=0)
-    basemap(epsg=3857)
-    basemap(y0=0, epsg=3857)
-
-    # Trying out different projections
+    pass
+    # basemap()
+    # plt.show()
+    #
+    # basemap(x0=0)
+    # plt.show()
+    #
+    # basemap(epsg=3857)
+    # plt.show()
+    #
+    # ax = basemap(y0=0, epsg=3857)
+    # plt.show()
+    #
+    # # Trying out different projections
     # basemap(epsg=3035, resolution="10m", grid=True)
+    # plt.show()
+    #
     # basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5)
+    # plt.show()
+    #
     # basemap(epsg=3857, resolution="10m", grid=True)
+    # plt.show()
+    #
     # basemap(epsg=5643, resolution="10m", grid=True, xticks=5, yticks=5)
+    # plt.show()
     #
     # # Add labels on four axes
     # ax = basemap(epsg=5643, resolution="10m", grid=True, xticks=2, yticks=2)
@@ -363,7 +400,7 @@ if __name__ == "__main__":
     # basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 2 + 1))), side="right")
     # plt.show()
     #
-    # # Add labels on three axes
+    # Add labels on three axes
     # ax = basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5)
     # basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 5 + 1))), side="right")
     # plt.show()
@@ -373,3 +410,8 @@ if __name__ == "__main__":
     # basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 5 + 1))), side="right", fontsize=6)
     # plt.show()
 
+    # Smaller extent and labels on both sides
+    # ax = basemap(x0=0, epsg=3035, resolution="10m", grid=True, xticks=5, yticks=10)
+    # basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 5 + 1))), side="right")
+    # plt.tight_layout()
+    # plt.show()

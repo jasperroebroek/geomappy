@@ -321,7 +321,7 @@ class MapRead(MapBase):
                 if verbose:
                     print(f"\nTILE: {i + 1}/{self._c_tiles}")
                 elif p_bar:
-                    progress_bar((i+1) / self._c_tiles)
+                    progress_bar((i + 1) / self._c_tiles)
 
                 data = self[i]
                 # if data is empty, write directly
@@ -435,7 +435,7 @@ class MapRead(MapBase):
                 if verbose:
                     print(f"\nTILE: {i + 1}/{self._c_tiles}")
                 elif p_bar:
-                    progress_bar((i+1) / self._c_tiles)
+                    progress_bar((i + 1) / self._c_tiles)
 
                 # todo; convert this to the optimised version and add preserve_input=False
                 f[i] = correlate_maps(self[i], other[i], window_size=self.window_size, verbose=verbose)
@@ -471,9 +471,10 @@ class MapRead(MapBase):
                                               height=height)
 
         data = self[ind]
+        profile = self.profile
+        profile.update({'height': height, 'width': width, 'transform': transform, 'driver': "GTiff"})
 
-        with rio.open(output_file, mode="w", driver="GTiff", dtype=data.dtype, height=height, width=width, count=1,
-                      crs=self._file.crs, transform=transform) as dst:
+        with rio.open(output_file, mode="w", **profile) as dst:
             dst.write_band(1, data)
 
     def plot(self, ind=None, *, mode="ind", basemap=False, figsize=(10, 10), ax=None, log=False, epsg=4326,
@@ -536,9 +537,8 @@ class MapRead(MapBase):
             if isinstance(basemap_kwargs, type(None)):
                 basemap_kwargs = {}
 
-            # todo; right now we depend on the set_extent for clipping to the right place
-            #  this works, but the drawback is that it is quite slow for the whole world if that is not yet in memory
-            ax = basemap_function(ax=ax, epsg=epsg, figsize=figsize, **basemap_kwargs)
+            extent = (bounds[0], bounds[2], bounds[1], bounds[3])
+            ax = basemap_function(*extent, ax=ax, epsg=epsg, figsize=figsize, **basemap_kwargs)
 
             if isinstance(self.epsg, type(None)):
                 raise RuntimeError("This object does not contain a EPSG code. It can be set through set_epsg()")
@@ -547,10 +547,7 @@ class MapRead(MapBase):
             else:
                 transform = ccrs.epsg(self.epsg)
 
-            extent = (bounds[0], bounds[2], bounds[1], bounds[3])
-
             ax = plot_map(data, transform=transform, extent=extent, ax=ax, **kwargs)
-            ax.set_extent(extent)
 
         else:
             ax = plot_map(data, ax=ax, figsize=figsize, **kwargs)
@@ -612,7 +609,8 @@ class MapRead(MapBase):
             if isinstance(basemap_kwargs, type(None)):
                 basemap_kwargs = {}
 
-            ax = basemap_function(ax=ax, epsg=epsg, figsize=figsize, **basemap_kwargs)
+            extent = (bounds[0], bounds[2], bounds[1], bounds[3])
+            ax = basemap_function(*extent, ax=ax, epsg=epsg, figsize=figsize, **basemap_kwargs)
 
             if isinstance(self.epsg, type(None)):
                 raise RuntimeError("This object does not contain a EPSG code. It can be set through set_epsg()")
@@ -621,18 +619,15 @@ class MapRead(MapBase):
             else:
                 transform = ccrs.epsg(self.epsg)
 
-            extent = (bounds[0], bounds[2], bounds[1], bounds[3])
-
             ax = plot_classified_map(data, ax=ax, legend_kwargs=legend_kwargs, transform=transform, extent=extent,
                                      **kwargs)
-            ax.set_extent(extent)
-            return ax
         else:
-            return plot_classified_map(data, ax=ax, figsize=figsize, legend_kwargs=legend_kwargs, **kwargs)
+            ax = plot_classified_map(data, ax=ax, figsize=figsize, legend_kwargs=legend_kwargs, **kwargs)
+
+        return ax
 
     def __getitem__(self, ind):
         """
         pointer to internal function get_data().
         """
         return self.get_data(ind)
-

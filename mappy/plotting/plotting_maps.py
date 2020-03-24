@@ -6,9 +6,11 @@ import pandas as pd
 import cartopy
 from shapely.geometry import Point, Polygon
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap, BoundaryNorm, LinearSegmentedColormap
+from matplotlib.colors import ListedColormap, BoundaryNorm, LinearSegmentedColormap, Colormap
 from matplotlib.patches import Patch
 from mpl_toolkits import axes_grid1
+
+from mappy.plotting.misc import _determine_cmap_boundaries
 from ..plotting import add_colorbar, cmap_2d, cmap_random, cmap_discrete
 from ..ndarray_functions.nan_functions import nanunique, nandigitize
 
@@ -76,9 +78,15 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
         cmap = plt.cm.get_cmap("viridis")
     elif isinstance(cmap, str):
         cmap = plt.cm.get_cmap(cmap)
+    elif not isinstance(cmap, Colormap):
+        raise TypeError("cmap not recognized")
 
-    # in case of a boolean array no colorbar is shown
-    if m.dtype != "bool_" and m.ndim == 2:
+
+    if not isinstance(bins, type(None)) and len(bins)==1:
+        m = (m>bins[0])
+        plot_classified_map(m.astype(int), colors=['lightgrey', 'red'], labels=[f'< {bins[0]}', f'> {bins[1]}'], ax=ax,
+                            legend=legend, legend_kwargs=legend_kwargs, **kwargs)
+    elif m.dtype != "bool_" and m.ndim == 2:
         if isinstance(bins, type(None)):
             im = ax.imshow(m, vmin=vmin, vmax=vmax, origin='upper', cmap=cmap, **kwargs)
             if isinstance(legend_kwargs, type(None)):
@@ -86,46 +94,10 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
             if legend == "colorbar":
                 add_colorbar(im, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
         else:
-            data = m[~np.isnan(m)]
-            bins = np.array(bins)
-            bins.sort()
+            cmap, norm, legend_patches, extend = _determine_cmap_boundaries(m=m, bins=bins, cmap=cmap,
+                                                                            clip_legend=clip_legend)
 
-            vmin = data.min()
-            vmax = data.max()
-            boundaries = bins.copy()
-
-            if clip_legend:
-                bins = bins[np.logical_and(bins >= vmin, bins <= vmax)]
-
-            if vmin < bins[0]:
-                boundaries = np.hstack([vmin, boundaries])
-                extend_min = True
-                labels = [f"< {bins[0]}"]
-            else:
-                extend_min = False
-                labels = [f"{bins[0]} - {bins[1]}"]
-
-            labels = labels + [f"{bins[i - 1]} - {bins[i]}" for i in range(2, len(bins))]
-
-            if vmax > bins[-1]:
-                boundaries = np.hstack([boundaries, vmax])
-                extend_max = True
-                labels = labels + [f"> {bins[-1]}"]
-            else:
-                extend_max = False
-
-            colors = cmap(np.linspace(0, 1, boundaries.size - 1))
-            cmap = ListedColormap(colors)
-
-            legend_patches = [Patch(facecolor=icolor, label=label, edgecolor="lightgrey")
-                              for icolor, label in zip(colors, labels)]
-
-            end = -1 if extend_max else None
-            cmap_cbar = ListedColormap(colors[int(extend_min):end, :])
-            cmap_cbar.set_under(cmap(0))
-            cmap_cbar.set_over(cmap(cmap.N))
-            norm = BoundaryNorm(bins, len(bins) - 1)
-            im = ax.imshow(m, norm=norm, cmap=cmap_cbar, origin='upper', **kwargs)
+            im = ax.imshow(m, norm=norm, cmap=cmap, origin='upper', **kwargs)
 
             if legend == "legend":
                 if isinstance(legend_kwargs, type(None)):
@@ -134,14 +106,6 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
             elif legend == "colorbar":
                 if isinstance(legend_kwargs, type(None)):
                     legend_kwargs = {}
-                if extend_min and extend_max:
-                    extend = "both"
-                elif not extend_min and not extend_max:
-                    extend = "neither"
-                elif not extend_min and extend_max:
-                    extend = "max"
-                elif extend_min and not extend_max:
-                    extend = "min"
                 cbar = add_colorbar(im=im, extend=extend, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
 
     elif m.ndim == 3:

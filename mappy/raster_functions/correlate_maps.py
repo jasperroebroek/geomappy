@@ -394,7 +394,7 @@ def correlate_maps_njit(map1, map2, window_size=5, fraction_accepted=0.7):
     return _correlate_maps(map1=map1, map2=map2, window_size=window_size, fraction_accepted=fraction_accepted)
 
 
-@njit(cache=True)
+@njit
 def _correlate_maps(map1, map2, window_size=5, fraction_accepted=0.7):
     """
     Takes two maps and returning the local correlation between them with the same dimensions as the input maps.
