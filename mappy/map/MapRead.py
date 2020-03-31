@@ -16,10 +16,26 @@ from shapely.geometry import Point, Polygon
 from ..raster_functions import resample_profile, focal_statistics, correlate_maps
 from ..progress_bar.progress_bar import progress_bar
 import cartopy.crs as ccrs
+import dask
+from dask.distributed import Client
 
-
+@dask.delayed
+def correlate_maps_dask(loc1, loc2, tiles, i, window_size, fraction_accepted):
+    map1 = MapRead(loc1, tiles=tiles, window_size=window_size)
+    map1_data = map1[i]
+    if 'float' not in map1.dtype.name:
+        map1=map1_data.astype(float)
+    map2 = MapRead(loc2, tiles=tiles, window_size=window_size)
+    map2_data = map2[i]
+    if 'float' not in map2.dtype.name:
+        map2=map2_data.astype(float)
+    map1.close(verbose=False)
+    map2.close(verbose=False)
+    return correlate_maps(map1=map1_data, map2=map2_data, window_size=window_size,
+                          fraction_accepted=fraction_accepted)
 # TODO; Create option for multiple layers. Some functions already support it,
 #  like plot and get_data but others don't yet.
+
 
 class MapRead(MapBase):
     """
@@ -333,7 +349,7 @@ class MapRead(MapBase):
                                             majority_mode=majority_mode, **kwargs)
 
             if p_bar:
-                print("\n")
+                print()
 
         self.window_size = window_size_old
         np.seterr(**old_settings)  # reset to default
@@ -373,7 +389,8 @@ class MapRead(MapBase):
         """
         return self._focal_stat_iter(func="majority", **kwargs)
 
-    def correlate(self, other=None, *, output_file=None, verbose=False, overwrite=False, compress=False, p_bar=True):
+    def correlate(self, other=None, *, output_file=None, window_size=None, fraction_accepted=0.7, verbose=False,
+                  overwrite=False, compress=False, p_bar=True, parallel=False):
         """
         Correlate self and other and output the result to output_file.
         
@@ -383,6 +400,10 @@ class MapRead(MapBase):
             map to correlate with
         output_file : str
             Location of output file
+        window_size
+
+        fraction_accepted
+
         verbose : bool, optional
             Verbosity, default is False
         overwrite : bool, optional
@@ -392,7 +413,7 @@ class MapRead(MapBase):
         p_bar : bool, optional
             Show the progress bar. If verbose is True p_bar will be False. Default value is True.
         todo; create window_size parameter
-        
+
         Raises
         ------
         TypeError
@@ -429,19 +450,43 @@ class MapRead(MapBase):
         # todo; if updating to new version of correlate_maps this is not necessary anymore
         old_settings = np.seterr(all='ignore')  # silence all numpy warnings
 
+
         with MapWrite(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
                       ref_map=self._location, overwrite=overwrite, compress=compress, dtype=np.float64) as f:
-            for i in self:
-                if verbose:
-                    print(f"\nTILE: {i + 1}/{self._c_tiles}")
-                elif p_bar:
-                    progress_bar((i + 1) / self._c_tiles)
+            if not parallel:
+                for i in self:
+                    if verbose:
+                        print(f"\nTILE: {i + 1}/{self._c_tiles}")
+                    elif p_bar:
+                        progress_bar((i + 1) / self._c_tiles)
 
-                # todo; convert this to the optimised version and add preserve_input=False
-                f[i] = correlate_maps(self[i], other[i], window_size=self.window_size, verbose=verbose)
+                    f[i] = correlate_maps(self[i], other[i], window_size=self.window_size,
+                                          fraction_accepted=fraction_accepted, verbose=verbose)
+            else:
+
+                client = Client(processes=False)
+
+                p = len(client.cluster.workers)
+                chunks = np.array_split(np.arange(self._c_tiles), np.arange(p, self._c_tiles, p))
+                for i, chunk in enumerate(chunks):
+                    if verbose:
+                        print(f"\nTILE: {i + 1}/{len(chunks)}")
+                    elif p_bar:
+                        progress_bar((i + 1) / len(chunks))
+
+                    x = []
+                    for num in chunk:
+                        print(num)
+                        x.append(
+                            correlate_maps_dask(loc1=self._location, loc2=other._location, tiles=self.tiles, i=num,
+                                                window_size=self.window_size, fraction_accepted=fraction_accepted))
+                    result = dask.compute(x)
+
+                    for pos, num in enumerate(chunk):
+                        f[num] = x[pos]
 
             if p_bar:
-                print("\n")
+                print()
 
         np.seterr(**old_settings)  # reset to default
 

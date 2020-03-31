@@ -94,7 +94,9 @@ class MapWrite(MapBase):
         #   https://gdal.org/doxygen/classGDALRasterBand.html#a48883c1dae195b21b37b51b10e910f9b
         #   https://github.com/mapbox/rasterio/issues/244
         #   https://rasterio.readthedocs.io/en/latest/topics/tags.html
-        self._file = rio.open(location, "w", **self._profile)
+
+        # todo; create **kwargs that feed into the rio.open function
+        self._file = rio.open(location, "w", **self._profile, BIGTIFF="YES")
 
         # setting parameters by calling property functions
         self.window_size = window_size

@@ -42,7 +42,7 @@ def resample_profile(m, scale):
     return profile
 
 
-def reproject_map_like(input_map=None, ref_map=None, output_map=None, dtype=np.float64):
+def reproject_map_like(input_map=None, ref_map=None, output_map=None, resampling=Resampling.bilinear, dtype=None):
     """
     Reprojecting a map like a reference map.
 
@@ -51,9 +51,12 @@ def reproject_map_like(input_map=None, ref_map=None, output_map=None, dtype=np.f
     input_map : str
         Path to the input map
     ref_map : str
+        todo; make to accept profile directly
         Path to the reference map where the profile is pulled from
     output_map : str
         Path to the location where the transformed map is written to.
+    resampling : rasterio resampling object
+        resampling strategy
     dtype : numpy.dtype, optional
         export dtype
 
@@ -76,10 +79,14 @@ def reproject_map_like(input_map=None, ref_map=None, output_map=None, dtype=np.f
         ref_transform = ref_file.transform
         ref_crs = ref_file.crs
         shape = ref_file.shape
+        profile = ref_file.profile
 
     with rio.open(input_map) as src:
         current_transform = src.transform
         current_crs = src.crs
+        nodata = src.profile['nodata']
+        if isinstance(dtype, type(None)):
+            dtype = src.profile['dtype']
 
         if isinstance(current_crs, type(None)):
             print("input map does not have a CRS. Therefore the crs of the reference map is assumed")
@@ -92,13 +99,18 @@ def reproject_map_like(input_map=None, ref_map=None, output_map=None, dtype=np.f
                   src_crs=current_crs,
                   dst_transform=ref_transform,
                   dst_crs=ref_crs,
-                  resampling=Resampling.bilinear)
+                  src_nodata=nodata,
+                  dst_nodata=nodata,
+                  resampling=resampling)
 
     print("writing file")
-    with rio.open(output_map, "w", driver="GTiff", dtype=str(new_map.dtype), height=shape[0], width=shape[1],
-                  crs=ref_crs, count=1, transform=ref_transform) as dst:
-        dst.write(new_map, 1)
+    profile.update({"dtype": str(new_map.dtype),
+                    "driver": "GTiff",
+                    "count": 1,
+                    "nodata": nodata})
 
+    with rio.open(output_map, "w", **profile) as dst:
+        dst.write(new_map, 1)
     print("reprojection completed")
 
 

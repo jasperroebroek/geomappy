@@ -9,14 +9,19 @@ should run faster. This still requires some testing though.
 
 import numpy as np
 from numpy.lib.index_tricks import s_
-from numba import njit, prange
 from ..ndarray_functions.rolling_functions import rolling_window, rolling_sum
 from ..ndarray_functions.misc import overlapping_arrays
 from .focal_statistics import focal_statistics
 import time
 
+try:
+    from numba import njit
+    numba_present = True
+except ModuleNotFoundError:
+    numba_present = False
 
-def correlate_maps(map1, map2, *, window_size=5, fraction_accepted=0.7, verbose=False):
+
+def correlate_maps_base(map1, map2, *, window_size=5, fraction_accepted=0.7, verbose=False):
     """
     Takes two maps and returning the local correlation between them with the same dimensions as the input maps. 
     Correlation calculated in a rolling window with the size `window_size`. If either of the input maps contains 
@@ -345,7 +350,7 @@ def correlate_maps_opt(map1, map2, *, window_size=5, fraction_accepted=0.7, verb
     return corr
 
 
-def correlate_maps_njit(map1, map2, window_size=5, fraction_accepted=0.7):
+def correlate_maps_njit(map1, map2, window_size=5, fraction_accepted=0.7, verbose=True):
     """
     Takes two maps and returning the local correlation between them with the same dimensions as the input maps.
     Correlation calculated in a rolling window with the size `window_size`. If either of the input maps contains
@@ -452,3 +457,11 @@ def _correlate_maps(map1, map2, window_size=5, fraction_accepted=0.7):
             corr[i, j] = np.sum(d1_dist * d2_dist) / np.sqrt(np.sum(d1_dist ** 2) * np.sum(d2_dist ** 2))
 
     return corr
+
+
+if numba_present:
+    # print("Using numba implementation of correlate_maps")
+    correlate_maps = correlate_maps_njit
+else:
+    # print("Using numpy implementation of correlate_maps")
+    correlate_maps = correlate_maps_base

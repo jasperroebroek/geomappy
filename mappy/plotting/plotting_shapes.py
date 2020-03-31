@@ -12,9 +12,9 @@ from .colors import add_colorbar
 from .misc import _determine_cmap_boundaries
 
 
-def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, cmap=None, vmin=None, vmax=None,
-                legend="colorbar", clip_legend=False, ax=None, figsize=(10, 10), legend_kwargs=None, aspect=30,
-                pad_fraction=0.6, **kwargs):
+def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin_labels=None, cmap=None, vmin=None,
+                vmax=None, legend="colorbar", clip_legend=False, ax=None, figsize=(10, 10), legend_kwargs=None,
+                aspect=30, pad_fraction=0.6, linewidth=0, **kwargs):
     """
     Plot shapes in a continuous fashion
 
@@ -22,18 +22,21 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, cma
     ----------
     lat, lon : array-like
         Lattitude and Longitude
-    values : array-like
-        Values at each pair of lattitude and longitude entries
+    values : array-like or str
+        Values at each pair of lattitude and longitude entries, or if ``df`` is set, it is the name of the column that
+        is used to plot the data. The default string value is "values".
     s : array-like, optional
         Size values for each pair of lattitude and longitude entries
     df : GeoDataFrame, optional
         GeoDataFrame with columns values and s as described above. The size parameter only works when dealing with
         points
     bins : array-like, optional
-        todo; currently fails for one bin
         List of bins that will be used to create a BoundaryNorm instance to discretise the plotting. This does not work
         in conjunction with vmin and vmax. Bins in that case will take the upper hand.  Alternatively a 'norm' parameter
-        can be passed on in the have outside control on the behaviour.
+        can be passed on in the have outside control on the behaviour. This list should contain at least two numbers,
+        as otherwise the extends can't be drawn.
+    bin_labels : array-like, optional
+        This parameter can be used to override the labels on the colorbar. Should have the same length as bins.
     cmap : matplotlib.cmap or str, optional
         Matplotlib cmap instance or string the will be recognized by matplotlib
     vmin, vmax : float, optional
@@ -53,6 +56,8 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, cma
         aspact ratio of the colorbar
     pad_fraction : float, optional
         pad_fraction between the Axes and the colorbar if generated
+    linewidth : numeric, optional
+        width of the line around the shapes
     kwargs : dict, optional
         Keyword arguments for plt.imshow()
 
@@ -69,6 +74,10 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, cma
     if isinstance(ax, type(None)):
         f, ax = plt.subplots(figsize=figsize)
 
+    if isinstance(ax, cartopy.mpl.geoaxes.GeoAxesSubplot):
+        if 'transform' not in kwargs:
+            kwargs.update({'transform': ccrs.PlateCarree()})
+
     if isinstance(cmap, type(None)):
         cmap = plt.cm.get_cmap("viridis")
     elif isinstance(cmap, str):
@@ -82,41 +91,64 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, cma
         df = gpd.GeoDataFrame({'geometry': [Point(lon[i], lat[i]) for i in range(len(lon))],
                                'values': values,
                                's': s})
+        values = "values"
         if isinstance(s, type(None)):
             markersize = None
         else:
             markersize = "s"
     else:
+        if isinstance(values, type(None)):
+            values = "values"
         if 's' in df.columns:
             markersize = "s"
         else:
             markersize = None
 
     if isinstance(bins, type(None)):
+        minimum = df.loc[:,values].min()
+        maximum = df.loc[:,values].max()
         if isinstance(vmin, type(None)):
-            vmin = df.loc[:,'values'].min()
+            vmin = minimum
         if isinstance(vmax, type(None)):
-            vmax = df.loc[:, 'values'].max()
-        df.plot(column='values', vmin=vmin, vmax=vmax, markersize=markersize, linewidth=0, cmap=cmap,
-                transform=ccrs.PlateCarree(), ax=ax, **kwargs)
+            vmax = maximum
+
+        if minimum < vmin and maximum > vmax:
+            extend = 'both'
+        elif minimum < vmin and not maximum > vmax:
+            extend = 'min'
+        elif not minimum < vmin and maximum > vmax:
+            extend = 'max'
+        elif not minimum < vmin and not maximum > vmax:
+            extend = 'neither'
+
+        df.plot(column=values, vmin=vmin, vmax=vmax, markersize=markersize, linewidth=linewidth, cmap=cmap, ax=ax, **kwargs)
         im = matplotlib.cm.ScalarMappable(cmap=cmap, norm=Normalize(vmin, vmax))
-        if isinstance(legend_kwargs, type(None)):
-            legend_kwargs = {}
-        if legend == "colorbar":
-            add_colorbar(im, ax=ax, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
+
     else:
-        cmap, norm, legend_patches, extend = _determine_cmap_boundaries(m=values, bins=bins, cmap=cmap,
+        cmap, norm, legend_patches, extend = _determine_cmap_boundaries(m=df.loc[:,values], bins=bins, cmap=cmap,
                                                                         clip_legend=clip_legend)
-        df.plot(column='values', norm=norm, markersize=markersize, linewidth=0, cmap=cmap,
-                transform=ccrs.PlateCarree(), ax=ax, **kwargs)
+        df.plot(column=values, norm=norm, markersize=markersize, linewidth=linewidth, cmap=cmap, ax=ax, **kwargs)
         im = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
+
         if legend == "legend":
             if isinstance(legend_kwargs, type(None)):
                 legend_kwargs = {"facecolor": "white", "edgecolor": "lightgrey", 'loc': 0}
             ax.legend(handles=legend_patches, **legend_kwargs)
-        elif legend == "colorbar":
-            if isinstance(legend_kwargs, type(None)):
-                legend_kwargs = {}
-            cbar = add_colorbar(im=im, ax=ax, extend=extend, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
+
+    if isinstance(legend_kwargs, type(None)):
+        legend_kwargs = {}
+
+    if 'extend' not in legend_kwargs:
+        legend_kwargs.update({'extend': extend})
+
+    if legend == "colorbar":
+        cbar = add_colorbar(im=im, ax=ax, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
+        if not isinstance(bins, type(None)):
+            if isinstance(bin_labels, type(None)):
+                bin_labels = bins
+            if 'position' in legend_kwargs and legend_kwargs['position'] == 'bottom':
+                cbar.ax.set_xticklabels(bin_labels)
+            else:
+                cbar.ax.set_yticklabels(bin_labels)
 
     return ax
