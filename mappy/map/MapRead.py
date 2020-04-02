@@ -463,7 +463,7 @@ class MapRead(MapBase):
                     f[i] = correlate_maps(self[i], other[i], window_size=self.window_size,
                                           fraction_accepted=fraction_accepted, verbose=verbose)
             else:
-
+                raise NotImplementedError("Parallel computation does not yet work")
                 client = Client(processes=False)
 
                 p = len(client.cluster.workers)

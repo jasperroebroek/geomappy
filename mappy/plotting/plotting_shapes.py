@@ -105,8 +105,8 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
             markersize = None
 
     if isinstance(bins, type(None)):
-        minimum = df.loc[:,values].min()
-        maximum = df.loc[:,values].max()
+        minimum = df.loc[:, values].min()
+        maximum = df.loc[:, values].max()
         if isinstance(vmin, type(None)):
             vmin = minimum
         if isinstance(vmax, type(None)):
@@ -121,11 +121,12 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         elif not minimum < vmin and not maximum > vmax:
             extend = 'neither'
 
-        df.plot(column=values, vmin=vmin, vmax=vmax, markersize=markersize, linewidth=linewidth, cmap=cmap, ax=ax, **kwargs)
+        df.plot(column=values, vmin=vmin, vmax=vmax, markersize=markersize, linewidth=linewidth, cmap=cmap, ax=ax,
+                **kwargs)
         im = matplotlib.cm.ScalarMappable(cmap=cmap, norm=Normalize(vmin, vmax))
 
     else:
-        cmap, norm, legend_patches, extend = _determine_cmap_boundaries(m=df.loc[:,values], bins=bins, cmap=cmap,
+        cmap, norm, legend_patches, extend = _determine_cmap_boundaries(m=df.loc[:, values], bins=bins, cmap=cmap,
                                                                         clip_legend=clip_legend)
         df.plot(column=values, norm=norm, markersize=markersize, linewidth=linewidth, cmap=cmap, ax=ax, **kwargs)
         im = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
@@ -152,3 +153,7 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
                 cbar.ax.set_yticklabels(bin_labels)
 
     return ax
+
+
+def plot_classified_shapes(**kwargs):
+    raise NotImplementedError("This will be implemented in the future")

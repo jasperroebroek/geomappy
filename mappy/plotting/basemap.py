@@ -197,6 +197,50 @@ def _basemap_ticks(ax, ticks, tick_location, line_constructor, tick_extractor):
     return _ticks, ticklabels
 
 
+class ProjectCustomExtent(ccrs.Projection):
+    """
+    Creating a custom extent for a given epsg code, if the hard coded values do not suffice
+    """
+    def __init__(self, epsg=28992, extent=[-300000, 500000, -100000, 800000]):
+
+        xmin, xmax, ymin, ymax = extent
+
+        self.xmin = xmin
+        self.xmax = xmax
+        self.ymin = ymin
+        self.ymax = ymax
+
+        super().__init__(ccrs.epsg(epsg).proj4_params)
+
+    @property
+    def boundary(self):
+
+        coords = ((self.x_limits[0], self.y_limits[0]),
+                  (self.x_limits[0], self.y_limits[1]),
+                  (self.x_limits[1], self.y_limits[1]),
+                  (self.x_limits[1], self.y_limits[0]))
+
+        return ccrs.sgeom.LineString(coords)
+
+    @property
+    def bounds(self):
+        xlim = self.x_limits
+        ylim = self.y_limits
+        return xlim[0], xlim[1], ylim[0], ylim[1]
+
+    @property
+    def threshold(self):
+        return 1e5
+
+    @property
+    def x_limits(self):
+        return self.xmin, self.xmax
+
+    @property
+    def y_limits(self):
+        return self.ymin, self.ymax
+
+
 def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None, figsize=(10, 10), resolution="110m",
             coastlines=True, earth_image=False, land=False, ocean=False, yticks=30, xticks=30, grid=True, n_steps=300,
             linewidth=1, grid_linewidth=None, border_linewidth=None, coastline_linewidth=None, grid_alpha=0.5,

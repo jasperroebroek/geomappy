@@ -4,6 +4,7 @@ from numpy import s_
 from mappy import overlapping_arrays, rolling_mean, rolling_sum, rolling_window, focal_statistics, Map
 from scipy.stats import pearsonr
 from mappy.raster_functions.correlate_maps import correlate_maps_njit as correlate_maps
+from mappy.raster_functions.correlate_maps import correlate_maps_base
 
 
 def correlate_maps_simple(map1, map2, window_size=5, fraction_accepted=0.7):
@@ -92,11 +93,11 @@ class TestRollingSum(unittest.TestCase):
             rolling_sum(np.array([1, 2, 3]), 5)
 
 
-class TestCorrelateMaps(unittest.TestCase):
+class TestCorrelateMapsNumba(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestCorrelateMaps, self).__init__(*args, **kwargs)
-        # self.map1 = np.random.rand(20, 20)
-        # self.map2 = np.random.rand(20, 20)
+        super(TestCorrelateMapsNumba, self).__init__(*args, **kwargs)
+        self.map1 = np.random.rand(20, 20)
+        self.map2 = np.random.rand(20, 20)
 
     def test_assumptions(self):
         with self.assertRaises((ValueError, IndexError)):
@@ -105,6 +106,20 @@ class TestCorrelateMaps(unittest.TestCase):
         with self.assertRaises((ValueError, IndexError)):
             # Only 2D is supported
             correlate_maps(np.random.rand(10), np.random.rand(10))
+        with self.assertRaises(ValueError):
+            # fraction accepted needs to be in range 0-1
+            correlate_maps(self.map1, self.map2, fraction_accepted=-0.1)
+        with self.assertRaises(ValueError):
+            # fraction accepted needs to be in range 0-1
+            correlate_maps(self.map1, self.map2, fraction_accepted=1.1)
+        with self.assertRaises(ValueError):
+            # window_size should be bigger than 1
+            correlate_maps(self.map1, self.map2, window_size=1)
+        with self.assertRaises(ValueError):
+            # window_size can't be even
+            correlate_maps(self.map1, self.map2, window_size=4)
+        # window_size can't be even except when reduce=True
+        correlate_maps(self.map1, self.map2, window_size=4, reduce=True)
 
     def test_correlation(self):
         # fraction_accepted 0.7 and window_size 5
@@ -134,6 +149,76 @@ class TestCorrelateMaps(unittest.TestCase):
         self.assertTrue(np.allclose(pearsonr(c1.flatten(), c2.flatten())[0],
                                     correlate_maps(c1, c2, window_size=5)[2, 2]))
 
+    def test_reduce(self):
+        # Test if the right shape comes out
+        self.assertTrue(correlate_maps(self.map1, self.map2, window_size=4, reduce=True).shape == (5, 5))
+        # Test if the right value comes out
+        c1 = self.map1[:4, :4].flatten()
+        c2 = self.map2[:4, :4].flatten()
+        # print(correlate_maps(self.map1, self.map2, window_size=4, reduce=True))
+        # print(pearsonr(c1, c2))
+        self.assertTrue(np.allclose(correlate_maps(self.map1, self.map2, window_size=4, reduce=True)[0, 0],
+                                    pearsonr(c1, c2)[0]))
+
+
+class TestCorrelateMapsNumpy(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super(TestCorrelateMapsNumpy, self).__init__(*args, **kwargs)
+        self.map1 = np.random.rand(20, 20)
+        self.map2 = np.random.rand(20, 20)
+
+    def test_assumptions(self):
+        with self.assertRaises((ValueError, IndexError)):
+            # Only 2D is supported
+            correlate_maps_base(np.random.rand(10, 10, 10), np.random.rand(10, 10, 10))
+        with self.assertRaises((ValueError, IndexError)):
+            # Only 2D is supported
+            correlate_maps_base(np.random.rand(10), np.random.rand(10))
+        with self.assertRaises(ValueError):
+            # fraction accepted needs to be in range 0-1
+            correlate_maps_base(self.map1, self.map2, fraction_accepted=-0.1)
+        with self.assertRaises(ValueError):
+            # fraction accepted needs to be in range 0-1
+            correlate_maps_base(self.map1, self.map2, fraction_accepted=1.1)
+        with self.assertRaises(ValueError):
+            # window_size should be bigger than 1
+            correlate_maps_base(self.map1, self.map2, window_size=1)
+        with self.assertRaises(ValueError):
+            # window_size can't be even
+            correlate_maps_base(self.map1, self.map2, window_size=4)
+
+    def test_correlation(self):
+        # fraction_accepted 0.7 and window_size 5
+        c1 = correlate_maps_base(self.map1, self.map2)
+        c2 = correlate_maps_simple(self.map1, self.map2)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
+    def test_correlation_fraction_accepted_0(self):
+        c1 = correlate_maps_base(self.map1, self.map2, fraction_accepted=0)
+        c2 = correlate_maps_simple(self.map1, self.map2, fraction_accepted=0)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
+    def test_correlation_fraction_accepted_1(self):
+        c1 = correlate_maps_base(self.map1, self.map2, fraction_accepted=1)
+        c2 = correlate_maps_simple(self.map1, self.map2, fraction_accepted=1)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
+    def test_correlation_window_size_15(self):
+        c1 = correlate_maps_base(self.map1, self.map2, window_size=15)
+        c2 = correlate_maps_simple(self.map1, self.map2, window_size=15)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
+    def test_correlation_value(self):
+        # test the value of the correlation against scipys implementation
+        c1 = np.random.rand(5, 5)
+        c2 = np.random.rand(5, 5)
+        self.assertTrue(np.allclose(pearsonr(c1.flatten(), c2.flatten())[0],
+                                    correlate_maps_base(c1, c2, window_size=5)[2, 2]))
+
+    def test_reduce(self):
+        # As this is not yet implemented, it should raise an error
+        with self.assertRaises(NotImplementedError):
+            correlate_maps_base(self.map1, self.map2, window_size=5, reduce=True)
 
 class TestFocalStatistics(unittest.TestCase):
     def test_focalmean(self):
@@ -193,4 +278,3 @@ class TestFocalStatistics(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
