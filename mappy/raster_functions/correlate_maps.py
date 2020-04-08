@@ -5,9 +5,12 @@ Algorithm to correlate two arrays (2D) with each other. All implementations here
 The different functions have different scopes:
 - correlate_maps_base: numpy implementation, very memory intensive as the whole rolling window array will be cast into
   memory. Use with care
-- _correlate_maps: numba implementation. Is not mean to be called directly.
+- _correlate_maps_full: numba implementation. Is not mean to be called directly.
+  It returns an output with the same size as the inputs (shape)
+- _correlate_maps_reduce: numba implementation. Is not mean to be called directly.
+  It reduces the output (shape/window_size)
 - _correlate_maps_input_checks: function that reuses the input checks
-- correlate_maps_njit: calls _correlate_maps and wraps the input checks and timing
+- correlate_maps_njit: calls _correlate_maps_full and _correlate_maps_reduce and wraps the input checks and timing
 
 The Numba implementation is prefered. The user will be able to call ``correlate_maps`` which will either invoke
 correlate_maps_base or correlate_maps_njit based on the
@@ -28,7 +31,6 @@ except ModuleNotFoundError:
     # create empty decorator
     def njit(func):
         return func
-
 
 docstring = """
 Takes two maps and returning the local correlation between them with the same dimensions as the input maps.
@@ -58,26 +60,49 @@ corr : :obj:`~numpy.ndarray`
 """
 
 
-@njit
-def _correlate_maps(map1, map2, window_size=5, fraction_accepted=0.7, reduce=False, verbose=False):
-    fringe = window_size // 2
-    step_size = window_size if reduce else 1
-    shape = (map1.shape[0]//step_size, map2.shape[1]//step_size)
+@njit(cache=True)
+def _correlate_maps_reduce(map1, map2, window_size=5, fraction_accepted=0.7, reduce=False, verbose=False):
+    shape = (map1.shape[0] // window_size, map2.shape[1] // window_size)
     corr = np.full(shape, np.nan)
 
-    start = 0 if reduce else fringe
-    stop_i = map1.shape[0] if reduce else map1.shape[0] - fringe
-    stop_j = map1.shape[1] if reduce else map1.shape[1] - fringe
+    for i in range(0, map1.shape[0], window_size):
+        for j in range(0, map1.shape[1], window_size):
+            ind = (slice(i, i + window_size), slice(j, j + window_size))
 
-    for i in range(start, stop_i, step_size):
-        for j in range(start, stop_j, step_size):
-            if reduce:
-                ind = (slice(i, i + window_size), slice(j, j + window_size))
-            else:
-                ind = (slice(i - fringe, i + fringe + 1), slice(j - fringe, j + fringe + 1))
+            d1 = map1[ind].ravel()
+            d2 = map2[ind].ravel()
 
-            store_i = i//step_size if reduce else i
-            store_j = j//step_size if reduce else j
+            mask = np.logical_and(~np.isnan(d1), ~np.isnan(d2))
+            d1 = d1[mask]
+            d2 = d2[mask]
+
+            if d1.size < fraction_accepted * window_size ** 2:
+                continue
+
+            if np.all(d1 == d1[0]) or np.all(d2 == d2[0]):
+                corr[i // window_size, j // window_size]
+                continue
+
+            d1_mean = d1.mean()
+            d2_mean = d2.mean()
+
+            d1_dist = d1 - d1_mean
+            d2_dist = d2 - d2_mean
+
+            corr[i // window_size, j // window_size] = \
+                np.sum(d1_dist * d2_dist) / np.sqrt(np.sum(d1_dist ** 2) * np.sum(d2_dist ** 2))
+
+    return corr
+
+
+@njit(cache=True)
+def _correlate_maps_full(map1, map2, window_size=5, fraction_accepted=0.7, reduce=False, verbose=False):
+    fringe = window_size // 2
+    corr = np.full(map1.shape, np.nan)
+
+    for i in range(fringe, map1.shape[0] - fringe):
+        for j in range(fringe, map1.shape[1] - fringe):
+            ind = (slice(i - fringe, i + fringe + 1), slice(j - fringe, j + fringe + 1))
 
             if np.isnan(map1[i, j]) or np.isnan(map2[i, j]):
                 continue
@@ -93,7 +118,7 @@ def _correlate_maps(map1, map2, window_size=5, fraction_accepted=0.7, reduce=Fal
                 continue
 
             if np.all(d1 == d1[0]) or np.all(d2 == d2[0]):
-                corr[store_i, store_j] = 0
+                corr[i, j] = 0
                 continue
 
             d1_mean = d1.mean()
@@ -102,7 +127,7 @@ def _correlate_maps(map1, map2, window_size=5, fraction_accepted=0.7, reduce=Fal
             d1_dist = d1 - d1_mean
             d2_dist = d2 - d2_mean
 
-            corr[store_i, store_j] = np.sum(d1_dist * d2_dist) / np.sqrt(np.sum(d1_dist ** 2) * np.sum(d2_dist ** 2))
+            corr[i, j] = np.sum(d1_dist * d2_dist) / np.sqrt(np.sum(d1_dist ** 2) * np.sum(d2_dist ** 2))
 
     return corr
 
@@ -256,19 +281,27 @@ def correlate_maps_njit(map1, map2, window_size=5, fraction_accepted=0.7, reduce
     # Input checks
     _correlate_maps_input_checks(map1, map2, window_size, fraction_accepted, reduce, verbose)
 
-    corr = _correlate_maps(map1=map1, map2=map2,
-                           window_size=window_size,
-                           fraction_accepted=fraction_accepted,
-                           reduce=reduce)
+    if reduce:
+        corr = _correlate_maps_reduce(map1=map1, map2=map2,
+                                      window_size=window_size,
+                                      fraction_accepted=fraction_accepted)
+    else:
+        corr = _correlate_maps_full(map1=map1, map2=map2,
+                                    window_size=window_size,
+                                    fraction_accepted=fraction_accepted)
 
     if verbose:
         print(f"- correlation: {time.time() - start}")
 
     return corr
 
+
 correlate_maps_base.__doc__ = docstring
 correlate_maps_njit.__doc__ = docstring
-_correlate_maps.__doc__ = docstring + """
+_correlate_maps_full.__doc__ = docstring + """
+\n\n Note that this function is not performing any input checks. Use the function correlate_maps_njit for a wrapper
+around this functionality """
+_correlate_maps_reduce.__doc__ = docstring + """
 \n\n Note that this function is not performing any input checks. Use the function correlate_maps_njit for a wrapper
 around this functionality """
 

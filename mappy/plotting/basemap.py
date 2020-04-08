@@ -1,3 +1,4 @@
+import cartopy
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.ticker as mticker
@@ -316,13 +317,13 @@ def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None,
             else:
                 projection = ccrs.epsg(epsg)
 
-    if not isinstance(ax, type(None)):
-        position = ax.get_position(original=True)
-        ax.remove()
-        ax = plt.gcf().add_subplot(position=position, projection=projection)
-    else:
+    if isinstance(ax, type(None)):
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(projection=projection)
+    elif not isinstance(ax, cartopy.mpl.geoaxes.GeoAxesSubplot):
+        position = ax.get_position(original=True)
+        ax.figure.delaxes(ax)
+        ax = plt.gcf().add_subplot(position=position, projection=projection)
 
     extent = list(ax.get_extent(crs=ccrs.PlateCarree()))
     if extent[0] < x0:

@@ -4,6 +4,7 @@ from .MapBase import MapBase
 from .MapRead import MapRead
 from .MapWrite import MapWrite
 import numpy as np
+import warnings
 
 
 class Map:
@@ -74,9 +75,13 @@ class Map:
         tiles : int or tuple
             Parameter for setting the MapBase.tiles property
         """
-        # todo; make sure that all files can be set to exactly the same tile settings first!
+        l = []
         for m in MapBase.collector:
             m.tiles = tiles
+            l.append(m.tiles)
+        l = np.array(l)
+        if ~np.all(l == l[0, :]):
+            warnings.warn("Not all tiles are set equal")
 
     @staticmethod
     def get_window_size():

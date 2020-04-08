@@ -23,9 +23,6 @@ def grid_from_corners(v, shape, plotting=True, show=True):
         List of two integers, determining the shape of the array that will be returned
     plotting : bool, optional
         Plot the created array. Default is True.
-    # todo; remove parameter
-    show : bool, optional
-        Execute the plt.show() command. Default is True.
     
     Returns
     -------
@@ -56,13 +53,12 @@ def grid_from_corners(v, shape, plotting=True, show=True):
         im = plt.imshow(grid, aspect="auto")
         from mappy.plotting import add_colorbar
         add_colorbar(im)
-        if show:
-            plt.show()
+        plt.draw()
 
     return grid
 
 
-def overlapping_arrays(map1, map2):
+def overlapping_arrays(map1, map2, preserve_input=True):
     """
     Taking two maps of the same shape and returns them with  all the cells that don't exist in the other set to np.nan
 
@@ -70,6 +66,9 @@ def overlapping_arrays(map1, map2):
     ----------
     map1, map2 : :obj:`~numpy.ndarray`
         two identically shaped array objects
+    preserve_input : bool, optional
+        if set to True the data is copied before applying the mask to preserve the input arrays. If set to False the
+        memory space of the input arrays will be used.
 
     Returns
     -------
@@ -83,6 +82,9 @@ def overlapping_arrays(map1, map2):
     ValueError
         if maps don't match or are not of dtype np.float64
     """
+    # todo; make this function accept an unlimited amount of arrays in the first parameter `m` instead of just accepting
+    #  two input arrays
+
     if not isinstance(map1, np.ndarray):
         raise TypeError("Map1 not understood")
     if not isinstance(map2, np.ndarray):

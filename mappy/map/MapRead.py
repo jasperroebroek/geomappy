@@ -33,8 +33,7 @@ def correlate_maps_dask(loc1, loc2, tiles, i, window_size, fraction_accepted):
     map2.close(verbose=False)
     return correlate_maps(map1=map1_data, map2=map2_data, window_size=window_size,
                           fraction_accepted=fraction_accepted)
-# TODO; Create option for multiple layers. Some functions already support it,
-#  like plot and get_data but others don't yet.
+
 
 
 class MapRead(MapBase):
@@ -58,6 +57,8 @@ class MapRead(MapBase):
         Location not a string
     IOError
         Location of file not found
+
+    todo; Create option for multiple layers. Some functions already support it, like plot and get_data but others don't yet.
     """
 
     def __init__(self, location, *, tiles=1, window_size=1, fill_value=None):

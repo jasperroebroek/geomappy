@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from matplotlib.cm import ScalarMappable
+from matplotlib.lines import Line2D
 from mpl_toolkits import axes_grid1
 import matplotlib.pyplot as plt
 from matplotlib import colors, colorbar
 from matplotlib.colors import LinearSegmentedColormap, to_rgba_array
+from matplotlib.patches import Patch
 import numpy as np
 from ..ndarray_functions.misc import grid_from_corners
 import colorsys
@@ -331,7 +333,19 @@ def cmap_random(nlabels, color_type='pastel', first_color=None, last_color=None,
         return randRGBcolors
 
 
-def add_colorbar(im=None, ax=None, aspect=20, pad_fraction=0.5, position="right", **kwargs):
+def legend_patches(colors, labels, type='patch', **kwargs):
+    if len(colors) != len(labels):
+        raise IndexError("Length of labe and colors don't match")
+
+    if type=='patch':
+        return [Patch(facecolor=color, label=label, **kwargs)
+                for color, label in zip(colors, labels)]
+    else:
+        return [Line2D([0], [0], color=color, label=label, **kwargs)
+                for color, label in zip(colors, labels)]
+
+
+def add_colorbar(im=None, ax=None, aspect=30, pad_fraction=0.6, position="right", **kwargs):
     """
     Add colorbar to a plot
 

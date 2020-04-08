@@ -1,4 +1,5 @@
 import cartopy
+from geopandas.plotting import plot_polygon_collection, plot_linestring_collection, plot_point_collection
 from matplotlib.colors import Colormap, Normalize
 import matplotlib.pyplot as plt
 import matplotlib
@@ -95,12 +96,12 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         if isinstance(s, type(None)):
             markersize = None
         else:
-            markersize = "s"
+            markersize = df.loc[:, "s"]
     else:
         if isinstance(values, type(None)):
             values = "values"
         if 's' in df.columns:
-            markersize = "s"
+            markersize = df.loc[:, "s"]
         else:
             markersize = None
 
@@ -121,20 +122,42 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         elif not minimum < vmin and not maximum > vmax:
             extend = 'neither'
 
-        df.plot(column=values, vmin=vmin, vmax=vmax, markersize=markersize, linewidth=linewidth, cmap=cmap, ax=ax,
-                **kwargs)
-        im = matplotlib.cm.ScalarMappable(cmap=cmap, norm=Normalize(vmin, vmax))
+        norm = Normalize(vmin, vmax)
+        sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
 
     else:
         cmap, norm, legend_patches, extend = _determine_cmap_boundaries(m=df.loc[:, values], bins=bins, cmap=cmap,
                                                                         clip_legend=clip_legend)
-        df.plot(column=values, norm=norm, markersize=markersize, linewidth=linewidth, cmap=cmap, ax=ax, **kwargs)
-        im = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
 
         if legend == "legend":
             if isinstance(legend_kwargs, type(None)):
                 legend_kwargs = {"facecolor": "white", "edgecolor": "lightgrey", 'loc': 0}
             ax.legend(handles=legend_patches, **legend_kwargs)
+
+    colors = pd.Series(cmap(norm(df.loc[:, values].values)).tolist())
+
+    geom_types = df.geometry.type
+    poly_idx = np.asarray((geom_types == "Polygon") | (geom_types == "MultiPolygon"))
+    line_idx = np.asarray((geom_types == "LineString") | (geom_types == "MultiLineString"))
+    point_idx = np.asarray((geom_types == "Point") | (geom_types == "MultiPoint"))
+
+    # plot all Polygons and all MultiPolygon components in the same collection
+    polys = df.geometry[poly_idx]
+    if not polys.empty:
+        plot_polygon_collection(ax, polys, color=colors[poly_idx], linewidth=linewidth, **kwargs)
+
+    # plot all LineStrings and MultiLineString components in same collection
+    lines = df.geometry[line_idx]
+    if not lines.empty:
+        plot_linestring_collection(ax, lines, color=colors[line_idx], linewidth=linewidth, **kwargs)
+
+    # plot all Points in the same collection
+    points = df.geometry[point_idx]
+    if not points.empty:
+        if isinstance(markersize, np.ndarray):
+            markersize = markersize[point_idx]
+        plot_point_collection(ax, points,  color=colors[point_idx], markersize=markersize, linewidth=linewidth, **kwargs)
 
     if isinstance(legend_kwargs, type(None)):
         legend_kwargs = {}
@@ -143,7 +166,7 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         legend_kwargs.update({'extend': extend})
 
     if legend == "colorbar":
-        cbar = add_colorbar(im=im, ax=ax, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
+        cbar = add_colorbar(im=sm, ax=ax, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
         if not isinstance(bins, type(None)):
             if isinstance(bin_labels, type(None)):
                 bin_labels = bins
