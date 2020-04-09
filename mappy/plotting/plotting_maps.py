@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import numpy as np
-import geopandas as gpd
-import pandas as pd
 import cartopy
-from shapely.geometry import Point, Polygon
+import geopandas as gpd
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap, BoundaryNorm, LinearSegmentedColormap, Colormap
+import numpy as np
+import pandas as pd
+from matplotlib.colors import ListedColormap, Colormap
 from matplotlib.patches import Patch
-from mpl_toolkits import axes_grid1
-
+from shapely.geometry import Point, Polygon
 from mappy.plotting.misc import _determine_cmap_boundaries
-from ..plotting import add_colorbar, cmap_2d, cmap_random, cmap_discrete
 from ..ndarray_functions.nan_functions import nanunique, nandigitize
+from ..plotting import add_colorbar, cmap_2d, cmap_random
+from ..plotting import legend_patches as lp
 
 
 def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", clip_legend=False, ax=None,
@@ -25,10 +24,10 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
     m : array-like
         Input array. Needs to be either 2D or 3D if the third axis contains RGB(A) information
     bins : array-like, optional
-        todo; currently fails for one bin
         List of bins that will be used to create a BoundaryNorm instance to discretise the plotting. This does not work
-        in conjunction with vmin and vmax. Bins in that case will take the upper hand.  Alternatively a 'norm' parameter
-        can be passed on in the have outside control on the behaviour.
+        in conjunction with vmin and vmax. Bins in that case `bins` will take the upper hand.  Alternatively a 'norm'
+        parameter can be passed on in the have outside control on the behaviour. Note that at least two bins need to be
+        specified.
     cmap : matplotlib.cmap or str, optional
         Matplotlib cmap instance or string the will be recognized by matplotlib
     vmin, vmax : float, optional
@@ -37,29 +36,30 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
         Legend type that will be plotted. The 'legend' type will only work if bins are specified.
     clip_legend : bool, optional
         Clip the legend to the minimum and maximum of bins are provided. If False the colormap will remain intact over
-        the whole provided bins, which potentially lowers contrast a lot.
-    ax : matplotlib.Axes, optional
+        the whole provided bins, which potentially lowers contrast a lot, but works great for having a common colorbar
+        for several plots.
+    ax : `matplotlib.Axes`, optional
         Axes object. If not provided it will be created on the fly.
     figsize : tuple, optional
-        Matplotlib figsize parameter. Default is (10,10)
+        Matplotlib figsize parameter. Default is (10, 10)
     legend_kwargs : dict, optional
         Extra parameters for the colorbar call
     aspect : float, optional
         aspact ratio of the colorbar
     pad_fraction : float, optional
         pad_fraction between the Axes and the colorbar if generated
-    kwargs : dict, optional
+    **kwargs
         Keyword arguments for plt.imshow()
 
     Notes
     -----
     When providing a GeoAxes in the 'ax' parameter it needs to be noted that the 'extent' of the data should be provided
     if there is not a perfect overlap. If provided to this function it will be handled by **kwargs. The same goes for
-    'transform' if the plotting projection is different from the data projection.
+    'transform' if the plotting projection is different than the data projection.
 
     Returns
     -------
-    Axes
+    Axes or GeoAxes
     """
     if m.ndim not in (2, 3):
         raise ValueError("Input data needs to be 2D or present RGB(A) values on the third axis.")
@@ -81,9 +81,8 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
     elif not isinstance(cmap, Colormap):
         raise TypeError("cmap not recognized")
 
-
-    if not isinstance(bins, type(None)) and len(bins)==1:
-        m = (m>bins[0])
+    if not isinstance(bins, type(None)) and len(bins) == 1:
+        m = (m > bins[0])
         plot_classified_map(m.astype(int), colors=['lightgrey', 'red'], labels=[f'< {bins[0]}', f'> {bins[1]}'], ax=ax,
                             legend=legend, legend_kwargs=legend_kwargs, **kwargs)
     elif m.dtype != "bool_" and m.ndim == 2:
@@ -129,7 +128,7 @@ def plot_world(points=None, box_bounds=False, figsize=(10, 10)):
     Plotting the world. Points to plot should be given in a pandas dataframe with Lat and Lon column. Bounds object of
     a rasterio file can be plotted with box_bounds parameter.
 
-    # todo; check this function and if it still useful
+    # todo; deprecate
 
     Parameters
     ----------
@@ -189,8 +188,8 @@ def plot_world(points=None, box_bounds=False, figsize=(10, 10)):
     plt.show()
 
 
-def plot_classified_map(m, bins=None, colors=None, labels=None, legend="legend", clip_legend=False, ax=None,
-                        suppress_warnings=False, mode="classes", legend_kwargs=None, legend_title_pad=10, **kwargs):
+def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legend="legend", clip_legend=False, ax=None,
+                        suppress_warnings=False, mode="classes", legend_kwargs=None, **kwargs):
     """
     Plot a map with discrete classes or index
 
@@ -202,10 +201,12 @@ def plot_classified_map(m, bins=None, colors=None, labels=None, legend="legend",
         list of either bins as used in np.digitize or unique values corresponding to `colors` and `labels`. By default
         this parameter is not necessary, the unique values are taken from the input map
     colors : list, optional
-        list of colors in a format understandable by matplotlib. By default random colors are taken
+        List of colors in a format understandable by matplotlib. By default random colors are taken
+    cmap : matplotlib cmap or str
+        Can be used to set a colormap when no colors are provided.
     labels : list, optional
         list of labels for the different classes. By default the unique values are taken as labels
-    legend : ['legend', 'colorbar', False], optional
+    legend : {'legend', 'colorbar', False}, optional
         Presence and type of legend. 'Legend' wil insert patches, 'colorbar' wil insert a colorbar and False will
         prevent any legend to be printed.
     clip_legend : bool, optional
@@ -217,13 +218,10 @@ def plot_classified_map(m, bins=None, colors=None, labels=None, legend="legend",
     mode : {'classes', 'index'}
         'Classes' is used for individual values that can not directly be used as indices
         'Index' for raters that already contain the exact index for colors and labels lists
-    cmap : Colormap
-        parameter directly passed to matplotlib functions. Is used instead of colors when mode=='continues'. If specific
-        colors are required a ListedColormap can be passed in.
     legend_kwargs : dict, optional
-        kwargs passed into either the legend or colorbar function
-    legend_title_pad : float, optional
-        pad between colorbar and title of the colorbar
+        kwargs passed into either the legend or colorbar function.
+        A special `legend_title_pad` can be set to create a padding between the colorbar and the title of colorbar,
+        which can be set in these kwargs as `title`. The default `legend_title_pad` is 10.
     **kwargs : dict, optional
         kwargs for the plt.imshow command
 
@@ -288,16 +286,15 @@ def plot_classified_map(m, bins=None, colors=None, labels=None, legend="legend",
 
     cmap = ListedColormap(colors)
 
-    legend_patches = [Patch(facecolor=icolor, label=label, edgecolor="lightgrey")
-                      for icolor, label in zip(colors, labels)]
+    legend_patches = lp(colors=colors, labels=labels, edgecolor='lightgrey')
 
     # Plotting
     if clip_legend:
-        vmin=None
-        vmax=None
+        vmin = None
+        vmax = None
     else:
-        vmin=0
-        vmax=bins.size-1
+        vmin = 0
+        vmax = bins.size - 1
 
     im = ax.imshow(m_binned, cmap=cmap, origin='upper', vmin=vmin, vmax=vmax, **kwargs)
 
@@ -310,6 +307,7 @@ def plot_classified_map(m, bins=None, colors=None, labels=None, legend="legend",
         if isinstance(legend_kwargs, type(None)):
             legend_kwargs = {}
         title = legend_kwargs.pop("title", "")
+        legend_title_pad = legend_kwargs.pop("legend_title_pad", 10)
 
         cbar = add_colorbar(im=im, **legend_kwargs)
 

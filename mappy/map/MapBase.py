@@ -10,7 +10,7 @@ from ..raster_functions.bounds_to_polygons import bounds_to_polygons
 
 class MapBase:
     """
-    Main map object, bases on rasterio functionality.
+    Main map object, based on rasterio functionality. The rasterio pointer is exposed through MapBase._file
     
     Attributes
     ----------------
@@ -354,8 +354,6 @@ class MapBase:
         2: use numpy -> s_[1:2]
         
         """
-        # todo; update to accept custom Bounds object
-
         if isinstance(ind, (tuple, list)) and len(ind) == 2:
             if not isinstance(ind[0], int) or not isinstance(ind[1], int):
                 raise TypeError("Tuple of length two indexes on a grid, it needs two integers")
@@ -576,9 +574,8 @@ class MapBase:
 
         Parameters
         ----------
-        ind : . , optional
-            see `get_pointer`. Does not support custom inds and slices yet
-            todo; implement this
+        ind : ., optional
+            see `get_pointer`. The default is -1, which will highlight the last accessed tile
         numbers : bool, optional
             plot the numbers of the tiles on the map
         tiles : bool, optional
@@ -605,10 +602,9 @@ class MapBase:
         ind = self.get_pointer(ind)
 
         if isinstance(constrain_bounds, type(None)):
-            extent = [-180, 180, -90, 90]
+            extent = [-180, -90, 180, 90]
         else:
-            cb = constrain_bounds
-            extent = (cb[0], cb[2], cb[1], cb[3])
+            extent = constrain_bounds
 
         ax = basemap_function(*extent, ax=ax, **kwargs)
 

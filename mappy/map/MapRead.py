@@ -2,38 +2,17 @@
 # -*- coding: utf-8 -*-
 
 import os
-from ..plotting import add_colorbar
-import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+import numpy as np
+import pandas as pd
+import rasterio as rio
+from shapely.geometry import Point, Polygon
+from mappy.plotting import basemap as basemap_function
+from mappy.plotting import plot_world, plot_map, plot_classified_map
 from .MapBase import MapBase
 from .MapWrite import MapWrite
-import numpy as np
-import rasterio as rio
-import pandas as pd
-import copy
-from mappy.plotting import plot_world, plot_map, plot_classified_map
-from mappy.plotting import basemap as basemap_function
-from shapely.geometry import Point, Polygon
-from ..raster_functions import resample_profile, focal_statistics, correlate_maps
 from ..progress_bar.progress_bar import progress_bar
-import cartopy.crs as ccrs
-import dask
-from dask.distributed import Client
-
-@dask.delayed
-def correlate_maps_dask(loc1, loc2, tiles, i, window_size, fraction_accepted):
-    map1 = MapRead(loc1, tiles=tiles, window_size=window_size)
-    map1_data = map1[i]
-    if 'float' not in map1.dtype.name:
-        map1=map1_data.astype(float)
-    map2 = MapRead(loc2, tiles=tiles, window_size=window_size)
-    map2_data = map2[i]
-    if 'float' not in map2.dtype.name:
-        map2=map2_data.astype(float)
-    map1.close(verbose=False)
-    map2.close(verbose=False)
-    return correlate_maps(map1=map1_data, map2=map2_data, window_size=window_size,
-                          fraction_accepted=fraction_accepted)
-
+from ..raster_functions import resample_profile, focal_statistics, correlate_maps
 
 
 class MapRead(MapBase):
@@ -58,9 +37,9 @@ class MapRead(MapBase):
     IOError
         Location of file not found
 
-    todo; Create option for multiple layers. Some functions already support it, like plot and get_data but others don't yet.
+    todo; Create option for multiple layers. Some functions already support it,
+     like plot and get_data but others don't yet.
     """
-
     def __init__(self, location, *, tiles=1, window_size=1, fill_value=None):
         if type(location) != str:
             raise TypeError("Location not recognised")
@@ -402,7 +381,7 @@ class MapRead(MapBase):
         output_file : str
             Location of output file
         window_size
-
+            todo; create window_size parameter
         fraction_accepted
 
         verbose : bool, optional
@@ -413,7 +392,6 @@ class MapRead(MapBase):
             Compress calculated data, default is False.
         p_bar : bool, optional
             Show the progress bar. If verbose is True p_bar will be False. Default value is True.
-        todo; create window_size parameter
 
         Raises
         ------
@@ -451,40 +429,16 @@ class MapRead(MapBase):
         # todo; if updating to new version of correlate_maps this is not necessary anymore
         old_settings = np.seterr(all='ignore')  # silence all numpy warnings
 
-
         with MapWrite(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
                       ref_map=self._location, overwrite=overwrite, compress=compress, dtype=np.float64) as f:
-            if not parallel:
-                for i in self:
-                    if verbose:
-                        print(f"\nTILE: {i + 1}/{self._c_tiles}")
-                    elif p_bar:
-                        progress_bar((i + 1) / self._c_tiles)
+            for i in self:
+                if verbose:
+                    print(f"\nTILE: {i + 1}/{self._c_tiles}")
+                elif p_bar:
+                    progress_bar((i + 1) / self._c_tiles)
 
-                    f[i] = correlate_maps(self[i], other[i], window_size=self.window_size,
-                                          fraction_accepted=fraction_accepted, verbose=verbose)
-            else:
-                raise NotImplementedError("Parallel computation does not yet work")
-                client = Client(processes=False)
-
-                p = len(client.cluster.workers)
-                chunks = np.array_split(np.arange(self._c_tiles), np.arange(p, self._c_tiles, p))
-                for i, chunk in enumerate(chunks):
-                    if verbose:
-                        print(f"\nTILE: {i + 1}/{len(chunks)}")
-                    elif p_bar:
-                        progress_bar((i + 1) / len(chunks))
-
-                    x = []
-                    for num in chunk:
-                        print(num)
-                        x.append(
-                            correlate_maps_dask(loc1=self._location, loc2=other._location, tiles=self.tiles, i=num,
-                                                window_size=self.window_size, fraction_accepted=fraction_accepted))
-                    result = dask.compute(x)
-
-                    for pos, num in enumerate(chunk):
-                        f[num] = x[pos]
+                f[i] = correlate_maps(self[i], other[i], window_size=self.window_size,
+                                      fraction_accepted=fraction_accepted, verbose=verbose)
 
             if p_bar:
                 print()
@@ -583,8 +537,7 @@ class MapRead(MapBase):
             if isinstance(basemap_kwargs, type(None)):
                 basemap_kwargs = {}
 
-            extent = (bounds[0], bounds[2], bounds[1], bounds[3])
-            ax = basemap_function(*extent, ax=ax, epsg=epsg, figsize=figsize, **basemap_kwargs)
+            ax = basemap_function(*bounds, ax=ax, epsg=epsg, figsize=figsize, **basemap_kwargs)
 
             if isinstance(self.epsg, type(None)):
                 raise RuntimeError("This object does not contain a EPSG code. It can be set through set_epsg()")
@@ -593,7 +546,8 @@ class MapRead(MapBase):
             else:
                 transform = ccrs.epsg(self.epsg)
 
-            ax = plot_map(data, transform=transform, extent=extent, ax=ax, **kwargs)
+            ax = plot_map(data, transform=transform, extent=(bounds[0], bounds[2], bounds[1], bounds[3]),
+                          ax=ax, **kwargs)
 
         else:
             ax = plot_map(data, ax=ax, figsize=figsize, **kwargs)
@@ -655,8 +609,7 @@ class MapRead(MapBase):
             if isinstance(basemap_kwargs, type(None)):
                 basemap_kwargs = {}
 
-            extent = (bounds[0], bounds[2], bounds[1], bounds[3])
-            ax = basemap_function(*extent, ax=ax, epsg=epsg, figsize=figsize, **basemap_kwargs)
+            ax = basemap_function(*bounds, ax=ax, epsg=epsg, figsize=figsize, **basemap_kwargs)
 
             if isinstance(self.epsg, type(None)):
                 raise RuntimeError("This object does not contain a EPSG code. It can be set through set_epsg()")
@@ -665,8 +618,8 @@ class MapRead(MapBase):
             else:
                 transform = ccrs.epsg(self.epsg)
 
-            ax = plot_classified_map(data, ax=ax, legend_kwargs=legend_kwargs, transform=transform, extent=extent,
-                                     **kwargs)
+            ax = plot_classified_map(data, ax=ax, legend_kwargs=legend_kwargs, transform=transform,
+                                     extent=(bounds[0], bounds[2], bounds[1], bounds[3]), **kwargs)
         else:
             ax = plot_classified_map(data, ax=ax, figsize=figsize, legend_kwargs=legend_kwargs, **kwargs)
 

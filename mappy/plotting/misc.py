@@ -1,12 +1,13 @@
 import numpy as np
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.patches import Patch
+from .colors import legend_patches as lp
 
 
 def _determine_cmap_boundaries(m, bins, cmap, clip_legend=False):
     """
     Function that creates the BoundaryNorm instance and an adjusted Colormap to segregate the data that will be plotted
-    in bins.
+    in bins. It is called from `plot_maps` and `plot_shapes`.
 
     Parameters
     ----------
@@ -14,10 +15,10 @@ def _determine_cmap_boundaries(m, bins, cmap, clip_legend=False):
         Data
     bins : array_like
         Bins in which the data will be segragated
-    cmap : matplotlib.colors.Colormap instance
+    cmap : `matplotlib.colors.Colormap` instance
         Colormap used for plotting
     clip_legend : bool, optional
-        Remove the values from ``bins`` that fall outside the range found in ``m``
+        Remove the values from `bins` that fall outside the range found in `m`
 
     Returns
     -------
@@ -70,8 +71,7 @@ def _determine_cmap_boundaries(m, bins, cmap, clip_legend=False):
     colors = cmap(np.linspace(0, 1, boundaries.size - 1))
     cmap = ListedColormap(colors)
 
-    legend_patches = [Patch(facecolor=icolor, label=label, edgecolor="lightgrey")
-                      for icolor, label in zip(colors, labels)]
+    legend_patches = lp(colors=colors, labels=labels, edgecolor='lightgrey')
 
     end = -1 if extend_max else None
     cmap_cbar = ListedColormap(colors[int(extend_min):end, :])

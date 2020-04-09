@@ -1,0 +1,332 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>mappy.plotting.basemap module &mdash; mappy 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mappy
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">mappy.plotting.basemap module</a></li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mappy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>mappy.plotting.basemap module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/mappy.plotting.basemap.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-mappy.plotting.basemap">
+<span id="mappy-plotting-basemap-module"></span><h1>mappy.plotting.basemap module<a class="headerlink" href="#module-mappy.plotting.basemap" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="mappy.plotting.basemap.ProjectCustomExtent">
+<em class="property">class </em><code class="sig-name descname">ProjectCustomExtent</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">epsg</span><span class="o">=</span><span class="default_value">28992</span></em>, <em class="sig-param"><span class="n">extent</span><span class="o">=</span><span class="default_value">[- 300000, 500000, - 100000, 800000]</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/plotting/basemap.html#ProjectCustomExtent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.plotting.basemap.ProjectCustomExtent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">cartopy.crs.Projection</span></code></p>
+<p>Creating a custom extent for a given epsg code, if the hardcoded values do not suffice</p>
+<dl class="py method">
+<dt id="mappy.plotting.basemap.ProjectCustomExtent.boundary">
+<em class="property">property </em><code class="sig-name descname">boundary</code><a class="headerlink" href="#mappy.plotting.basemap.ProjectCustomExtent.boundary" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="mappy.plotting.basemap.ProjectCustomExtent.bounds">
+<em class="property">property </em><code class="sig-name descname">bounds</code><a class="headerlink" href="#mappy.plotting.basemap.ProjectCustomExtent.bounds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="mappy.plotting.basemap.ProjectCustomExtent.threshold">
+<em class="property">property </em><code class="sig-name descname">threshold</code><a class="headerlink" href="#mappy.plotting.basemap.ProjectCustomExtent.threshold" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="mappy.plotting.basemap.ProjectCustomExtent.x_limits">
+<em class="property">property </em><code class="sig-name descname">x_limits</code><a class="headerlink" href="#mappy.plotting.basemap.ProjectCustomExtent.x_limits" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="mappy.plotting.basemap.ProjectCustomExtent.y_limits">
+<em class="property">property </em><code class="sig-name descname">y_limits</code><a class="headerlink" href="#mappy.plotting.basemap.ProjectCustomExtent.y_limits" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="mappy.plotting.basemap._basemap_ticks">
+<code class="sig-name descname">_basemap_ticks</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ax</span></em>, <em class="sig-param"><span class="n">ticks</span></em>, <em class="sig-param"><span class="n">tick_location</span></em>, <em class="sig-param"><span class="n">line_constructor</span></em>, <em class="sig-param"><span class="n">tick_extractor</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/plotting/basemap.html#_basemap_ticks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.plotting.basemap._basemap_ticks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the tick locations and labels for an axis of an unsupported projection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> (<em>geoaxis</em>) – geoaxis that the ticks are inserted into</p></li>
+<li><p><strong>ticks</strong> (<em>list</em>) – tick locations in PlateCarree coordinates</p></li>
+<li><p><strong>tick_location</strong> (<em>{“left”, “right”, “bottom”, “top”}</em>) – the side of the axis that the ticks are inserted into</p></li>
+<li><p><strong>line_constructor</strong> (<em>function</em>) – function that creates a numpy version of the line from either top to bottom or left to right with a certain
+amount of steps</p></li>
+<li><p><strong>tick_extractor</strong> (<em>function</em>) – function that extracts either the first or second coordinate from the created lines</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(ticks, ticklabels)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mappy.plotting.basemap.basemap">
+<code class="sig-name descname">basemap</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x0</span><span class="o">=</span><span class="default_value">- 180</span></em>, <em class="sig-param"><span class="n">y0</span><span class="o">=</span><span class="default_value">- 90</span></em>, <em class="sig-param"><span class="n">x1</span><span class="o">=</span><span class="default_value">180</span></em>, <em class="sig-param"><span class="n">y1</span><span class="o">=</span><span class="default_value">90</span></em>, <em class="sig-param"><span class="n">epsg</span><span class="o">=</span><span class="default_value">4326</span></em>, <em class="sig-param"><span class="n">projection</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">figsize</span><span class="o">=</span><span class="default_value">10, 10</span></em>, <em class="sig-param"><span class="n">resolution</span><span class="o">=</span><span class="default_value">'110m'</span></em>, <em class="sig-param"><span class="n">coastlines</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">earth_image</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">land</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">ocean</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">yticks</span><span class="o">=</span><span class="default_value">30</span></em>, <em class="sig-param"><span class="n">xticks</span><span class="o">=</span><span class="default_value">30</span></em>, <em class="sig-param"><span class="n">grid</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">n_steps</span><span class="o">=</span><span class="default_value">300</span></em>, <em class="sig-param"><span class="n">linewidth</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">grid_linewidth</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">border_linewidth</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">coastline_linewidth</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">grid_alpha</span><span class="o">=</span><span class="default_value">0.5</span></em>, <em class="sig-param"><span class="n">fontsize</span><span class="o">=</span><span class="default_value">10</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/plotting/basemap.html#basemap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.plotting.basemap.basemap" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x0</strong> (<em>float, optional</em>) – most western latitude</p></li>
+<li><p><strong>x1</strong> (<em>float, optional</em>) – most eastern latitude</p></li>
+<li><p><strong>y0</strong> (<em>float, optional</em>) – most southern longitude</p></li>
+<li><p><strong>y1</strong> (<em>float, optional</em>) – most northern longitude</p></li>
+<li><p><strong>epsg</strong> (<em>int or str, optional</em>) – EPSG code of the geoaxes</p></li>
+<li><p><strong>projection</strong> (<cite>ccrs.projection</cite>) – cartopy projection object. If provided it overwrites the epsg code.</p></li>
+<li><p><strong>ax</strong> (<cite>plt.axes</cite> or GeoAxes) – if a regular matplotlib axis is provided here, it gets replaced by a geoaxis. If a geoaxis is inserted, it
+just perform all the operations on that.</p></li>
+<li><p><strong>figsize</strong> (<em>tuple, optional</em>) – matplotlib figsize parameter</p></li>
+<li><p><strong>resolution</strong> (<em>{“110m”, “50m”, “10m”} , optional</em>) – coastline resolution</p></li>
+<li><p><strong>coastlines</strong> (<em>bool, optional</em>) – switch to plot the coastlines</p></li>
+<li><p><strong>earth_image</strong> (<em>bool, optional</em>) – plot a background on the map, the default is False</p></li>
+<li><p><strong>land</strong> (<em>bool, optional</em>) – switch to color the landmass lightgrey</p></li>
+<li><p><strong>ocean</strong> (<em>bool, optional</em>) – switch to color the ocean lightblue</p></li>
+<li><p><strong>yticks</strong> (<em>float or list, optional</em>) – parameter that describes the distance between two gridlines in PlateCarree coordinate terms. The default 30
+means that every 30 degrees a gridline gets drawn. If a list is passed, the procedure is skipped and the
+coordinates in the list are used.</p></li>
+<li><p><strong>xticks</strong> (<em>float or list, optional</em>) – parameter that describes the distance between two gridlines in PlateCarree coordinate terms. The default 30
+means that every 30 degrees a gridline gets drawn. If a list is passed, the procedure is skipped and the
+coordinates in the list are used.</p></li>
+<li><p><strong>grid</strong> (<em>bool, optional</em>) – switch for gridlines and ticks</p></li>
+<li><p><strong>grid_linewidth</strong> (<em>float, optional</em>) – linewidth specifier for gridlines. If not specified, the value will be taken from ‘linewidth’.</p></li>
+<li><p><strong>border_linewidth</strong> (<em>float, optional</em>) – linewidth specifier for the borders around the plot. If not specified, the value will be taken from ‘linewidth’.</p></li>
+<li><p><strong>coastline_linewidth</strong> (<em>float, optional</em>) – linewidth specifier for the coastlines, If not specified, the value will be taken from ‘linewidth’.</p></li>
+<li><p><strong>linewidth</strong> (<em>float, optional</em>) – Default linewidth parameter for the gridlines, coastlines and border around the plot. Its value is used in case
+the others are not specifically specified.</p></li>
+<li><p><strong>n_steps</strong> (<em>int, optional</em>) – the number of discrete steps when plotting the gridlines. For circular gridlines this can be too low.</p></li>
+<li><p><strong>grid_alpha</strong> (<em>float, optional</em>) – opacity of the gridlines</p></li>
+<li><p><strong>fontsize</strong> (<em>float, optional</em>) – label fontsize</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Cartopy geoaxis</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mappy.plotting.basemap.basemap_xticks">
+<code class="sig-name descname">basemap_xticks</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ax</span></em>, <em class="sig-param"><span class="n">ticks</span></em>, <em class="sig-param"><span class="n">precision</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">side</span><span class="o">=</span><span class="default_value">'bottom'</span></em>, <em class="sig-param"><span class="n">add</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">fontsize</span><span class="o">=</span><span class="default_value">10</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/plotting/basemap.html#basemap_xticks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.plotting.basemap.basemap_xticks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate and insert xticks on a GeoAxis</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> (<em>geoaxis</em>) – geoaxis that the xticks need to be inserted in</p></li>
+<li><p><strong>ticks</strong> (<em>list</em>) – locations of the ticks in PlateCarree coordinates</p></li>
+<li><p><strong>precision</strong> (<em>int, optional</em>) – precision of the coordinates that are displayed. Default is 0.</p></li>
+<li><p><strong>side</strong> (<em>{“top”, “bottom”}</em>) – side of the axes that gets the ticks</p></li>
+<li><p><strong>add</strong> (<em>bool, optional</em>) – if both bottom and top are different and both need to be added, one (or both) of the calls to this function
+should have <cite>add</cite> = True</p></li>
+<li><p><strong>fontsize</strong> (<em>float, optional</em>) – fontsize of the labels</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mappy.plotting.basemap.basemap_yticks">
+<code class="sig-name descname">basemap_yticks</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ax</span></em>, <em class="sig-param"><span class="n">ticks</span></em>, <em class="sig-param"><span class="n">precision</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">side</span><span class="o">=</span><span class="default_value">'left'</span></em>, <em class="sig-param"><span class="n">add</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">fontsize</span><span class="o">=</span><span class="default_value">10</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/plotting/basemap.html#basemap_yticks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.plotting.basemap.basemap_yticks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate and insert yticks on a GeoAxis</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> (<em>geoaxis</em>) – geoaxis that the yticks need to be inserted in</p></li>
+<li><p><strong>ticks</strong> (<em>list</em>) – locations of the ticks in PlateCarree coordinates</p></li>
+<li><p><strong>precision</strong> (<em>int, optional</em>) – precision of the coordinates that are displayed. Default is 0.</p></li>
+<li><p><strong>side</strong> (<em>{“left”, “right”}</em>) – side of the axes that gets the ticks</p></li>
+<li><p><strong>add</strong> (<em>bool, optional</em>) – if both bottom and top are different and both need to be added, one (or both) of the calls to this function
+should have ‘add’ = True</p></li>
+<li><p><strong>fontsize</strong> (<em>float, optional</em>) – fontsize of the labels</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Jasper Roebroek
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

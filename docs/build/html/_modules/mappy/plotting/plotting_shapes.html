@@ -1,0 +1,368 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>mappy.plotting.plotting_shapes &mdash; mappy 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> mappy
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">mappy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>mappy.plotting.plotting_shapes</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for mappy.plotting.plotting_shapes</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">cartopy</span>
+<span class="kn">from</span> <span class="nn">geopandas.plotting</span> <span class="kn">import</span> <span class="n">plot_polygon_collection</span><span class="p">,</span> <span class="n">plot_linestring_collection</span><span class="p">,</span> <span class="n">plot_point_collection</span>
+<span class="kn">from</span> <span class="nn">matplotlib.colors</span> <span class="kn">import</span> <span class="n">Colormap</span><span class="p">,</span> <span class="n">Normalize</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">matplotlib</span>
+<span class="kn">import</span> <span class="nn">geopandas</span> <span class="k">as</span> <span class="nn">gpd</span>
+<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">Point</span><span class="p">,</span> <span class="n">Polygon</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">cartopy.crs</span> <span class="k">as</span> <span class="nn">ccrs</span>
+
+<span class="kn">from</span> <span class="nn">.colors</span> <span class="kn">import</span> <span class="n">add_colorbar</span>
+<span class="kn">from</span> <span class="nn">.misc</span> <span class="kn">import</span> <span class="n">_determine_cmap_boundaries</span>
+
+
+<div class="viewcode-block" id="plot_shapes"><a class="viewcode-back" href="../../../mappy.plotting.plotting_shapes.html#mappy.plotting.plotting_shapes.plot_shapes">[docs]</a><span class="k">def</span> <span class="nf">plot_shapes</span><span class="p">(</span><span class="n">lat</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lon</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">df</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bin_labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">vmax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">legend</span><span class="o">=</span><span class="s2">&quot;colorbar&quot;</span><span class="p">,</span> <span class="n">clip_legend</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="n">legend_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">aspect</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">pad_fraction</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot shapes in a continuous fashion</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    lat, lon : array-like</span>
+<span class="sd">        Lattitude and Longitude</span>
+<span class="sd">    values : array-like or str</span>
+<span class="sd">        Values at each pair of lattitude and longitude entries, or if `df` is set, it is the name of the column that</span>
+<span class="sd">        is used to plot the data. The default string value is &quot;values&quot;.</span>
+<span class="sd">    s : array-like, optional</span>
+<span class="sd">        Size values for each pair of lattitude and longitude entries. If `df` is set, the column named &#39;s&#39; will be used</span>
+<span class="sd">        if present. This only works with point data.</span>
+<span class="sd">    df : GeoDataFrame, optional</span>
+<span class="sd">        GeoDataFrame with columns values and s as described above.</span>
+<span class="sd">    bins : array-like, optional</span>
+<span class="sd">        List of bins that will be used to create a BoundaryNorm instance to discretise the plotting. This does not work</span>
+<span class="sd">        in conjunction with vmin and vmax. Bins in that case will take the upper hand.  Alternatively a &#39;norm&#39; parameter</span>
+<span class="sd">        can be passed on in the have outside control on the behaviour. This list should contain at least two numbers,</span>
+<span class="sd">        as otherwise the extends can&#39;t be drawn.</span>
+<span class="sd">    bin_labels : array-like, optional</span>
+<span class="sd">        This parameter can be used to override the labels on the colorbar. Should have the same length as bins.</span>
+<span class="sd">    cmap : matplotlib.cmap or str, optional</span>
+<span class="sd">        Matplotlib cmap instance or string that will be recognized by matplotlib</span>
+<span class="sd">    vmin, vmax : float, optional</span>
+<span class="sd">        vmin and vmax parameters for plt.imshow(). This does have no effect in conjunction with bins being provided.</span>
+<span class="sd">    legend : {&#39;colorbar&#39;, &#39;legend&#39;, False}, optional</span>
+<span class="sd">        Legend type that will be plotted. The &#39;legend&#39; type will only work if bins are specified.</span>
+<span class="sd">    clip_legend : bool, optional</span>
+<span class="sd">        Clip the legend to the minimum and maximum of bins are provided. If False the colormap will remain intact over</span>
+<span class="sd">        the whole provided bins, which potentially lowers contrast a lot.</span>
+<span class="sd">    ax : matplotlib.Axes, optional</span>
+<span class="sd">        Axes object. If not provided it will be created on the fly.</span>
+<span class="sd">    figsize : tuple, optional</span>
+<span class="sd">        Matplotlib figsize parameter. Default is (10,10)</span>
+<span class="sd">    legend_kwargs : dict, optional</span>
+<span class="sd">        Extra parameters for the colorbar call</span>
+<span class="sd">    aspect : float, optional</span>
+<span class="sd">        aspact ratio of the colorbar</span>
+<span class="sd">    pad_fraction : float, optional</span>
+<span class="sd">        pad_fraction between the Axes and the colorbar if generated</span>
+<span class="sd">    linewidth : numeric, optional</span>
+<span class="sd">        width of the line around the shapes</span>
+<span class="sd">    **kwargs</span>
+<span class="sd">        Keyword arguments for the geopandas plotting functions: plot_point_collection, plot_polygon_collection and</span>
+<span class="sd">        plot_linestring_collection</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    When providing a GeoAxes in the &#39;ax&#39; parameter it needs to be noted that the &#39;extent&#39; of the data should be provided</span>
+<span class="sd">    if there is not a perfect overlap. If provided to this function it will be handled by **kwargs. The same goes for</span>
+<span class="sd">    &#39;transform&#39; if the plotting projection is different from the data projection.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Axes</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">)):</span>
+        <span class="n">f</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="n">figsize</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">cartopy</span><span class="o">.</span><span class="n">mpl</span><span class="o">.</span><span class="n">geoaxes</span><span class="o">.</span><span class="n">GeoAxesSubplot</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s1">&#39;transform&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;transform&#39;</span><span class="p">:</span> <span class="n">ccrs</span><span class="o">.</span><span class="n">PlateCarree</span><span class="p">()})</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cmap</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">)):</span>
+        <span class="n">cmap</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s2">&quot;viridis&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cmap</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">cmap</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="n">cmap</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cmap</span><span class="p">,</span> <span class="n">Colormap</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;cmap not recognized&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">)):</span>
+        <span class="n">lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lon</span><span class="p">)</span>
+        <span class="n">lat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">({</span><span class="s1">&#39;geometry&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">Point</span><span class="p">(</span><span class="n">lon</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">lat</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lon</span><span class="p">))],</span>
+                               <span class="s1">&#39;values&#39;</span><span class="p">:</span> <span class="n">values</span><span class="p">,</span>
+                               <span class="s1">&#39;s&#39;</span><span class="p">:</span> <span class="n">s</span><span class="p">})</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="s2">&quot;values&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">)):</span>
+            <span class="n">markersize</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">markersize</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s2">&quot;s&quot;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">)):</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="s2">&quot;values&quot;</span>
+        <span class="k">if</span> <span class="s1">&#39;s&#39;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">markersize</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s2">&quot;s&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">markersize</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bins</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">)):</span>
+        <span class="n">minimum</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="n">values</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+        <span class="n">maximum</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="n">values</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vmin</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">)):</span>
+            <span class="n">vmin</span> <span class="o">=</span> <span class="n">minimum</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vmax</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">)):</span>
+            <span class="n">vmax</span> <span class="o">=</span> <span class="n">maximum</span>
+
+        <span class="k">if</span> <span class="n">minimum</span> <span class="o">&lt;</span> <span class="n">vmin</span> <span class="ow">and</span> <span class="n">maximum</span> <span class="o">&gt;</span> <span class="n">vmax</span><span class="p">:</span>
+            <span class="n">extend</span> <span class="o">=</span> <span class="s1">&#39;both&#39;</span>
+        <span class="k">elif</span> <span class="n">minimum</span> <span class="o">&lt;</span> <span class="n">vmin</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">maximum</span> <span class="o">&gt;</span> <span class="n">vmax</span><span class="p">:</span>
+            <span class="n">extend</span> <span class="o">=</span> <span class="s1">&#39;min&#39;</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">minimum</span> <span class="o">&lt;</span> <span class="n">vmin</span> <span class="ow">and</span> <span class="n">maximum</span> <span class="o">&gt;</span> <span class="n">vmax</span><span class="p">:</span>
+            <span class="n">extend</span> <span class="o">=</span> <span class="s1">&#39;max&#39;</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">minimum</span> <span class="o">&lt;</span> <span class="n">vmin</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">maximum</span> <span class="o">&gt;</span> <span class="n">vmax</span><span class="p">:</span>
+            <span class="n">extend</span> <span class="o">=</span> <span class="s1">&#39;neither&#39;</span>
+
+        <span class="n">norm</span> <span class="o">=</span> <span class="n">Normalize</span><span class="p">(</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="p">)</span>
+        <span class="n">sm</span> <span class="o">=</span> <span class="n">matplotlib</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">ScalarMappable</span><span class="p">(</span><span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="n">norm</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">cmap</span><span class="p">,</span> <span class="n">norm</span><span class="p">,</span> <span class="n">legend_patches</span><span class="p">,</span> <span class="n">extend</span> <span class="o">=</span> <span class="n">_determine_cmap_boundaries</span><span class="p">(</span><span class="n">m</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="n">values</span><span class="p">],</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span>
+                                                                        <span class="n">clip_legend</span><span class="o">=</span><span class="n">clip_legend</span><span class="p">)</span>
+        <span class="n">sm</span> <span class="o">=</span> <span class="n">matplotlib</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">ScalarMappable</span><span class="p">(</span><span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">norm</span><span class="o">=</span><span class="n">norm</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">legend</span> <span class="o">==</span> <span class="s2">&quot;legend&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">legend_kwargs</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">)):</span>
+                <span class="n">legend_kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;facecolor&quot;</span><span class="p">:</span> <span class="s2">&quot;white&quot;</span><span class="p">,</span> <span class="s2">&quot;edgecolor&quot;</span><span class="p">:</span> <span class="s2">&quot;lightgrey&quot;</span><span class="p">,</span> <span class="s1">&#39;loc&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">handles</span><span class="o">=</span><span class="n">legend_patches</span><span class="p">,</span> <span class="o">**</span><span class="n">legend_kwargs</span><span class="p">)</span>
+
+    <span class="n">colors</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">cmap</span><span class="p">(</span><span class="n">norm</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="n">values</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+
+    <span class="n">geom_types</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">type</span>
+    <span class="n">poly_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">((</span><span class="n">geom_types</span> <span class="o">==</span> <span class="s2">&quot;Polygon&quot;</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">geom_types</span> <span class="o">==</span> <span class="s2">&quot;MultiPolygon&quot;</span><span class="p">))</span>
+    <span class="n">line_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">((</span><span class="n">geom_types</span> <span class="o">==</span> <span class="s2">&quot;LineString&quot;</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">geom_types</span> <span class="o">==</span> <span class="s2">&quot;MultiLineString&quot;</span><span class="p">))</span>
+    <span class="n">point_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">((</span><span class="n">geom_types</span> <span class="o">==</span> <span class="s2">&quot;Point&quot;</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">geom_types</span> <span class="o">==</span> <span class="s2">&quot;MultiPoint&quot;</span><span class="p">))</span>
+
+    <span class="c1"># plot all Polygons and all MultiPolygon components in the same collection</span>
+    <span class="n">polys</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">geometry</span><span class="p">[</span><span class="n">poly_idx</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">polys</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="n">plot_polygon_collection</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">polys</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">poly_idx</span><span class="p">],</span> <span class="n">linewidth</span><span class="o">=</span><span class="n">linewidth</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="c1"># plot all LineStrings and MultiLineString components in same collection</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">geometry</span><span class="p">[</span><span class="n">line_idx</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">lines</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="n">plot_linestring_collection</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">lines</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">line_idx</span><span class="p">],</span> <span class="n">linewidth</span><span class="o">=</span><span class="n">linewidth</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="c1"># plot all Points in the same collection</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">geometry</span><span class="p">[</span><span class="n">point_idx</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">points</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">markersize</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">markersize</span> <span class="o">=</span> <span class="n">markersize</span><span class="p">[</span><span class="n">point_idx</span><span class="p">]</span>
+        <span class="n">plot_point_collection</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span>  <span class="n">color</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="n">point_idx</span><span class="p">],</span> <span class="n">markersize</span><span class="o">=</span><span class="n">markersize</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="n">linewidth</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">legend_kwargs</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">)):</span>
+        <span class="n">legend_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">if</span> <span class="s1">&#39;extend&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">legend_kwargs</span><span class="p">:</span>
+        <span class="n">legend_kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;extend&#39;</span><span class="p">:</span> <span class="n">extend</span><span class="p">})</span>
+
+    <span class="k">if</span> <span class="n">legend</span> <span class="o">==</span> <span class="s2">&quot;colorbar&quot;</span><span class="p">:</span>
+        <span class="n">cbar</span> <span class="o">=</span> <span class="n">add_colorbar</span><span class="p">(</span><span class="n">im</span><span class="o">=</span><span class="n">sm</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">aspect</span><span class="o">=</span><span class="n">aspect</span><span class="p">,</span> <span class="n">pad_fraction</span><span class="o">=</span><span class="n">pad_fraction</span><span class="p">,</span> <span class="o">**</span><span class="n">legend_kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bins</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bin_labels</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">)):</span>
+                <span class="n">bin_labels</span> <span class="o">=</span> <span class="n">bins</span>
+            <span class="k">if</span> <span class="s1">&#39;position&#39;</span> <span class="ow">in</span> <span class="n">legend_kwargs</span> <span class="ow">and</span> <span class="n">legend_kwargs</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;bottom&#39;</span><span class="p">:</span>
+                <span class="n">cbar</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="n">bin_labels</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cbar</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">(</span><span class="n">bin_labels</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ax</span></div>
+
+
+<div class="viewcode-block" id="plot_classified_shapes"><a class="viewcode-back" href="../../../mappy.plotting.plotting_shapes.html#mappy.plotting.plotting_shapes.plot_classified_shapes">[docs]</a><span class="k">def</span> <span class="nf">plot_classified_shapes</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;This will be implemented in the future&quot;</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Jasper Roebroek
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

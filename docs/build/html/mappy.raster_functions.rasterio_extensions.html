@@ -1,0 +1,275 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>mappy.raster_functions.rasterio_extensions module &mdash; mappy 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mappy
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">mappy.raster_functions.rasterio_extensions module</a></li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mappy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>mappy.raster_functions.rasterio_extensions module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/mappy.raster_functions.rasterio_extensions.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-mappy.raster_functions.rasterio_extensions">
+<span id="mappy-raster-functions-rasterio-extensions-module"></span><h1>mappy.raster_functions.rasterio_extensions module<a class="headerlink" href="#module-mappy.raster_functions.rasterio_extensions" title="Permalink to this headline">¶</a></h1>
+<dl class="py function">
+<dt id="mappy.raster_functions.rasterio_extensions.empty_map_like">
+<code class="sig-name descname">empty_map_like</code><span class="sig-paren">(</span><em class="sig-param">ref_map</em>, <em class="sig-param">output_map</em>, <em class="sig-param">dtype=&lt;class 'numpy.float64'&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/raster_functions/rasterio_extensions.html#empty_map_like"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.raster_functions.rasterio_extensions.empty_map_like" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function creates an empty tif file based on a reference map where
+the function gets the shape, transform and crs parameters from.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ref_map</strong> (<em>str</em>) – Path to the map where the profile is pulled from</p></li>
+<li><p><strong>output_map</strong> (<em>str</em>) – Path to the location where an empty array is written to</p></li>
+<li><p><strong>dtype</strong> (<cite>numpy.dtype</cite>, optional) – type of data written to the file</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#IOError" title="(in Python v3.8)"><strong>IOError</strong></a> – if reference map doesn’t exist or the output_map does already exist</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mappy.raster_functions.rasterio_extensions.export_map_like">
+<code class="sig-name descname">export_map_like</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">m</span></em>, <em class="sig-param"><span class="n">ref_map</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">output_map</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/raster_functions/rasterio_extensions.html#export_map_like"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.raster_functions.rasterio_extensions.export_map_like" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exporting a map, taking the needed parameters from a reference_map</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>m</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – 2D input map</p></li>
+<li><p><strong>ref_map</strong> (<em>str</em>) – Path of the reference map
+todo; make the direct insertion of a rasterio profile possible</p></li>
+<li><p><strong>output_map</strong> (<em>str</em>) – Path where the data will be written to. If extension is not given it will be added (.tif)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.8)"><strong>TypeError</strong></a> – if no input data is given</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.8)"><strong>ValueError</strong></a> – if data is not 2D</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#IOError" title="(in Python v3.8)"><strong>IOError</strong></a> – if output_map location already exists</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mappy.raster_functions.rasterio_extensions.reproject_map_like">
+<code class="sig-name descname">reproject_map_like</code><span class="sig-paren">(</span><em class="sig-param">input_map=None</em>, <em class="sig-param">ref_map=None</em>, <em class="sig-param">output_map=None</em>, <em class="sig-param">resampling=&lt;Resampling.bilinear: 1&gt;</em>, <em class="sig-param">dtype=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/raster_functions/rasterio_extensions.html#reproject_map_like"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.raster_functions.rasterio_extensions.reproject_map_like" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reprojecting a map like a reference map.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_map</strong> (<em>str</em>) – Path to the input map</p></li>
+<li><p><strong>ref_map</strong> (<em>str</em>) – todo; make to accept profile directly
+Path to the reference map where the profile is pulled from</p></li>
+<li><p><strong>output_map</strong> (<em>str</em>) – Path to the location where the transformed map is written to.</p></li>
+<li><p><strong>resampling</strong> (<cite>rio.Resampling</cite>) – resampling strategy</p></li>
+<li><p><strong>dtype</strong> (<cite>numpy.dtype</cite>, optional) – export dtype</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#IOError" title="(in Python v3.8)"><strong>IOError</strong></a> – reference map or input map not found or output_map already exists</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mappy.raster_functions.rasterio_extensions.resample_profile">
+<code class="sig-name descname">resample_profile</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">m</span></em>, <em class="sig-param"><span class="n">scale</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/raster_functions/rasterio_extensions.html#resample_profile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.raster_functions.rasterio_extensions.resample_profile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a rasterio profile with the dimensions resampled by a factor</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>m</strong> (<em>str, rasterio profile</em>) – location of the map or rasterio profile</p></li>
+<li><p><strong>scale</strong> (<em>float</em>) – factor with which height and width will be multiplied</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>rasterio profile</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Jasper Roebroek
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -24,13 +24,13 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
     lat, lon : array-like
         Lattitude and Longitude
     values : array-like or str
-        Values at each pair of lattitude and longitude entries, or if ``df`` is set, it is the name of the column that
+        Values at each pair of lattitude and longitude entries, or if `df` is set, it is the name of the column that
         is used to plot the data. The default string value is "values".
     s : array-like, optional
-        Size values for each pair of lattitude and longitude entries
+        Size values for each pair of lattitude and longitude entries. If `df` is set, the column named 's' will be used
+        if present. This only works with point data.
     df : GeoDataFrame, optional
-        GeoDataFrame with columns values and s as described above. The size parameter only works when dealing with
-        points
+        GeoDataFrame with columns values and s as described above.
     bins : array-like, optional
         List of bins that will be used to create a BoundaryNorm instance to discretise the plotting. This does not work
         in conjunction with vmin and vmax. Bins in that case will take the upper hand.  Alternatively a 'norm' parameter
@@ -39,7 +39,7 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
     bin_labels : array-like, optional
         This parameter can be used to override the labels on the colorbar. Should have the same length as bins.
     cmap : matplotlib.cmap or str, optional
-        Matplotlib cmap instance or string the will be recognized by matplotlib
+        Matplotlib cmap instance or string that will be recognized by matplotlib
     vmin, vmax : float, optional
         vmin and vmax parameters for plt.imshow(). This does have no effect in conjunction with bins being provided.
     legend : {'colorbar', 'legend', False}, optional
@@ -59,8 +59,9 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         pad_fraction between the Axes and the colorbar if generated
     linewidth : numeric, optional
         width of the line around the shapes
-    kwargs : dict, optional
-        Keyword arguments for plt.imshow()
+    **kwargs
+        Keyword arguments for the geopandas plotting functions: plot_point_collection, plot_polygon_collection and
+        plot_linestring_collection
 
     Notes
     -----

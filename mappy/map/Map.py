@@ -9,8 +9,7 @@ import warnings
 
 class Map:
     """
-    Creating a map object. Depending on the mode a MapRead() or MapWrite() object
-    will be returned.
+    Creating a map object. Depending on the `mode` a MapRead() or MapWrite() object will be returned.
     
     Parameters
     ----------
@@ -128,7 +127,7 @@ class Map:
         equality : [bool]
         """
         # todo; test this function
-        if type(m1) == MapWrite or type(m2) == MapWrite:
+        if isinstance(m1, MapWrite) or isinstance(m2, MapWrite):
             return False
         if m1.tiles != m2.tiles:
             print("Tiles don't match")
@@ -150,4 +149,5 @@ class Map:
                     return False
             except (ValueError, IndexError):
                 return False
+
         return True

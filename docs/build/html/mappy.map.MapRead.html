@@ -1,0 +1,470 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>mappy.map.MapRead module &mdash; mappy 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mappy
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">mappy.map.MapRead module</a></li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mappy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>mappy.map.MapRead module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/mappy.map.MapRead.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-mappy.map.MapRead">
+<span id="mappy-map-mapread-module"></span><h1>mappy.map.MapRead module<a class="headerlink" href="#module-mappy.map.MapRead" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="mappy.map.MapRead.MapRead">
+<em class="property">class </em><code class="sig-name descname">MapRead</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">location</span></em>, <em class="sig-param"><span class="o">*</span></em>, <em class="sig-param"><span class="n">tiles</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">window_size</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">fill_value</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="mappy.map.MapBase.html#mappy.map.MapBase.MapBase" title="mappy.map.MapBase.MapBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">mappy.map.MapBase.MapBase</span></code></a></p>
+<p>Instance of MapBase, file opened in ‘r’ mode.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>location</strong> (<em>str</em>) – Location of the map</p></li>
+<li><p><strong>tiles</strong> (<em>int or tuple of ints</em>) – See tiles property in MapBase</p></li>
+<li><p><strong>window_size</strong> (<em>int</em>) – Window size to be set on the map. See property in MapBase</p></li>
+<li><p><strong>fill_value</strong> (<em>numeric</em>) – Fill value used in rasterio.read call.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.8)"><strong>TypeError</strong></a> – Location not a string</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#IOError" title="(in Python v3.8)"><strong>IOError</strong></a> – Location of file not found</p></li>
+<li><p><strong>todo; Create option for multiple layers. Some functions already support it</strong><strong>,</strong> – like plot and get_data but others don’t yet.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="mappy.map.MapRead.MapRead.__getitem__">
+<code class="sig-name descname">__getitem__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ind</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead.__getitem__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead.__getitem__" title="Permalink to this definition">¶</a></dt>
+<dd><p>pointer to internal function get_data().</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapRead.MapRead._focal_stat_iter">
+<code class="sig-name descname">_focal_stat_iter</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">output_file</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">*</span></em>, <em class="sig-param"><span class="n">func</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">overwrite</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">compress</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">p_bar</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">reduce</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">window_size</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">dtype</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">majority_mode</span><span class="o">=</span><span class="default_value">'nan'</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead._focal_stat_iter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead._focal_stat_iter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that calculates focal statistics, in tiled fashion if c_tiles is bigger than 1. The result is outputted
+to ‘output_file’</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>func</strong> (<em>{“nanmean”, “nanmin”, “nanmax”, “nanstd”, “majority”}</em>) – todo; check for the presence of nans and switch behaviour if possible
+function to be applied to the map in a windowed fashion.</p></li>
+<li><p><strong>output_file</strong> (<em>str</em>) – location of output file.
+todo; should have a default behaviour that is slightly more functional</p></li>
+<li><p><strong>overwrite</strong> (<em>bool, optional</em>) – If allowed to overwrite the output_file. The default is False.</p></li>
+<li><p><strong>compress</strong> (<em>bool, optional</em>) – Compress output data, the default is False</p></li>
+<li><p><strong>p_bar</strong> (<em>bool, optional</em>) – Show the progress bar. If verbose is True p_bar will be False. The default behaviour is True.</p></li>
+<li><p><strong>verbose</strong> (<em>bool, optional</em>) – Verbosity; the default is False</p></li>
+<li><p><strong>reduce</strong> (<em>bool, optional</em>) – If True, the dimensions of the output map are divided by <cite>window_size</cite>. If False the resulting file has the
+same shape as the input, which is the default.</p></li>
+<li><p><strong>window_size</strong> (<em>int, optional</em>) – If <cite>reduce</cite> is False window_size of the whole object is set temporarily. If <cite>reduce</cite> is True, the
+window_size of the whole object is set to 1. The default is None, in which case it will be taken from the
+object: self.window_size.</p></li>
+<li><p><strong>majority_mode</strong> (<em>{“nan”, “ascending”, “descending”}, optional</em>) – nan: when more than one class has the same score NaN will be assigned ascending: the first occurrence of the
+maximum count will be assigned descending: the last occurence of the maximum count will be assigned.
+Parameter only used when the <cite>func</cite> is majority.</p></li>
+<li><p><strong>**kwargs</strong> – passed to focal_statistics()</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapRead.MapRead.correlate">
+<code class="sig-name descname">correlate</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">other</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">*</span></em>, <em class="sig-param"><span class="n">output_file</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">window_size</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fraction_accepted</span><span class="o">=</span><span class="default_value">0.7</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">overwrite</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">compress</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">p_bar</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">parallel</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead.correlate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead.correlate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Correlate self and other and output the result to output_file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>other</strong> (<em>MapRead</em>) – map to correlate with</p></li>
+<li><p><strong>output_file</strong> (<em>str</em>) – Location of output file</p></li>
+<li><p><strong>window_size</strong> – todo; create window_size parameter</p></li>
+<li><p><strong>fraction_accepted</strong></p></li>
+<li><p><strong>verbose</strong> (<em>bool, optional</em>) – Verbosity, default is False</p></li>
+<li><p><strong>overwrite</strong> (<em>bool, optional</em>) – If allowed to overwrite the output_file, default is False</p></li>
+<li><p><strong>compress</strong> (<em>bool, optional</em>) – Compress calculated data, default is False.</p></li>
+<li><p><strong>p_bar</strong> (<em>bool, optional</em>) – Show the progress bar. If verbose is True p_bar will be False. Default value is True.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.8)"><strong>TypeError</strong></a> – 1: Other is not of type MapRead</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.8)"><strong>ValueError</strong></a> – 1: v_tiles don’t match
+    2: h_tiles don’t match
+    3: shapes don’t match
+    4: bounds don’t match
+    5: window_size too small</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapRead.MapRead.cross_profile">
+<code class="sig-name descname">cross_profile</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">c1</span></em>, <em class="sig-param"><span class="n">c2</span></em>, <em class="sig-param"><span class="n">n</span><span class="o">=</span><span class="default_value">100</span></em>, <em class="sig-param"><span class="o">*</span></em>, <em class="sig-param"><span class="n">plotting</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">figsize</span><span class="o">=</span><span class="default_value">10, 10</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead.cross_profile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead.cross_profile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Routine to create a cross profile, based on self.sample_raster</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>c1, c2</strong> (<em>tuple</em>) – Location of the start and end of the cross profile (Lat, Lon)</p></li>
+<li><p><strong>n</strong> (<em>int, optional</em>) – Number of sampling points</p></li>
+<li><p><strong>plotting</strong> (<em>bool, optional</em>) – Plot the resulting cross_profile</p></li>
+<li><p><strong>figsize</strong> (<em>tuple of ints</em>) – Matplotlib figsize parameter if ‘plotting’ is set to True</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapRead.MapRead.export_tile">
+<code class="sig-name descname">export_tile</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ind</span><span class="o">=</span><span class="default_value">- 1</span></em>, <em class="sig-param"><span class="n">output_file</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead.export_tile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead.export_tile" title="Permalink to this definition">¶</a></dt>
+<dd><p>exports a tile of the currently opened map.</p>
+<p>Function takes ‘ind’, which means that a tile or a custom window can be exported. The data is written to
+‘output_file’.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ind</strong> (<em>.</em>) – see self.get_pointer()</p></li>
+<li><p><strong>output_file</strong> (<em>str</em>) – path to the location where the data will be written to</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapRead.MapRead.focal_majority">
+<code class="sig-name descname">focal_majority</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead.focal_majority"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead.focal_majority" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function passes call to MapRead._focal_stat_iter with func = “majority”. If <cite>majority_mode</cite> is not given as a
+parameter or set to “nan” the dtype will be forced to float64.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapRead.MapRead.focal_max">
+<code class="sig-name descname">focal_max</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead.focal_max"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead.focal_max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function passes call to MapRead._focal_stat_iter with func = “nanmax”</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapRead.MapRead.focal_mean">
+<code class="sig-name descname">focal_mean</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead.focal_mean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead.focal_mean" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function passes call to MapRead._focal_stat_iter with func = “nanmean”. Function forces float64 dtype.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapRead.MapRead.focal_min">
+<code class="sig-name descname">focal_min</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead.focal_min"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead.focal_min" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function passes call to MapRead._focal_stat_iter with func = “nanmin”</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapRead.MapRead.focal_std">
+<code class="sig-name descname">focal_std</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead.focal_std"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead.focal_std" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function passes call to MapRead._focal_stat_iter with func = “nanstd”.</p>
+<p>Function forces float dtype.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapRead.MapRead.get_data">
+<code class="sig-name descname">get_data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ind</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead.get_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead.get_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the data associated with the index of the tile. Layers are set on the third axis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>ind</strong> (<em>.</em>) – see MapBase.get_pointer()</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>numpy array of shape self.get_shape()</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapRead.MapRead.get_file_data">
+<code class="sig-name descname">get_file_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead.get_file_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead.get_file_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads all data from the file without a fringe</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>np.array with all data of the file</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapRead.MapRead.plot">
+<code class="sig-name descname">plot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ind</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">*</span></em>, <em class="sig-param"><span class="n">mode</span><span class="o">=</span><span class="default_value">'ind'</span></em>, <em class="sig-param"><span class="n">basemap</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">figsize</span><span class="o">=</span><span class="default_value">10, 10</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">log</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">epsg</span><span class="o">=</span><span class="default_value">4326</span></em>, <em class="sig-param"><span class="n">basemap_kwargs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead.plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead.plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>plot data at given index (ind)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ind</strong> (<em>.</em>) – check self.get_pointer(). The default is None which will set <cite>mode</cite> to “all”</p></li>
+<li><p><strong>mode</strong> (<em>{“ind”, “all”}</em>) – if ind is passed, only the data at the given index is plotted. If all is given, it will plot the whole file.</p></li>
+<li><p><strong>basemap</strong> (<em>bool, optional</em>) – plot a basemap behind the data</p></li>
+<li><p><strong>figsize</strong> (<em>tuple, optional</em>) – matplotlib figsize parameter</p></li>
+<li><p><strong>ax</strong> (<em>Axes, optional</em>) – matplotlib axes where plot is drawn on</p></li>
+<li><p><strong>log</strong> (<em>bool, optional</em>) – plot the colors on a log scale</p></li>
+<li><p><strong>epsg</strong> (<em>int, optional</em>) – todo; add a possibility to take the native one
+EPSG code that will be used to render the plot, the default is 4326</p></li>
+<li><p><strong>basemap_kwargs</strong> – kwargs going to the basemap command</p></li>
+<li><p><strong>**kwargs</strong> – kwargs going to the plot_map() command</p></li>
+<li><p><strong># todo; at least add resolution, xticks and yticks as parameters here</strong></p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.1)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Axes</span></code></a> or GeoAxis if basemap=True</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapRead.MapRead.plot_classified">
+<code class="sig-name descname">plot_classified</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ind</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">*</span></em>, <em class="sig-param"><span class="n">mode</span><span class="o">=</span><span class="default_value">'ind'</span></em>, <em class="sig-param"><span class="n">basemap</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">figsize</span><span class="o">=</span><span class="default_value">10, 10</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">epsg</span><span class="o">=</span><span class="default_value">4326</span></em>, <em class="sig-param"><span class="n">basemap_kwargs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead.plot_classified"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead.plot_classified" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots data in a classified way. Look at plot_classified_map for the implementation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ind</strong> (<em>.</em>) – check self.get_pointer(). The default is None which will set <cite>mode</cite> to “all”</p></li>
+<li><p><strong>mode</strong> (<em>{“ind”, “all”}</em>) – if ind is passed, only the data at the given index is plotted. If all is given, it will plot the whole file.</p></li>
+<li><p><strong>basemap</strong> (<em>bool, optional</em>) – plot a basemap behind the data</p></li>
+<li><p><strong>figsize</strong> (<em>tuple, optional</em>) – matplotlib figsize parameter</p></li>
+<li><p><strong>ax</strong> (<em>Axes, optional</em>) – matplotlib axes where plot is drawn on</p></li>
+<li><p><strong>epsg</strong> (<em>int, optional</em>) – EPSG code that will be used to render the plot, the default is 4326</p></li>
+<li><p><strong>basemap_kwargs</strong> (<em>dict, optional</em>) – kwargs for basemap</p></li>
+<li><p><strong>**kwargs</strong> – kwargs going to the plot_classified_map() command itself</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://matplotlib.org/api/axes_api.html#matplotlib.axes.Axes" title="(in Matplotlib v3.2.1)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Axes</span></code></a> or GeoAxis if basemap=True</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapRead.MapRead.sample_raster">
+<code class="sig-name descname">sample_raster</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">points</span></em>, <em class="sig-param"><span class="o">*</span></em>, <em class="sig-param"><span class="n">plotting</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">figsize</span><span class="o">=</span><span class="default_value">10, 10</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapRead.html#MapRead.sample_raster"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapRead.MapRead.sample_raster" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to sample the raster at a list of given points</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul>
+<li><p><strong>points</strong> –</p>
+<dl class="simple">
+<dt>1: [list]</dt><dd><p>list of tuples with longitude and latitude</p>
+</dd>
+<dt>2: [DataFrame]</dt><dd><p>must contain a Lon and Lat column</p>
+</dd>
+</dl>
+</li>
+<li><p><strong>plotting</strong> (<em>bool, optional</em>) – plotting the world with bounding box of the file and points
+in the points parameter</p></li>
+<li><p><strong>figsize</strong> (<em>tuple, optional</em>) – matplotlib figsize parameter</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list of values in the same order as the points were given</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.8)"><strong>TypeError</strong></a> – 1: wrong type of parameter passed to plotting
+    2: points not a list of lists or pandas dataframe</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.8)"><strong>ValueError</strong></a> – 1: single points don’t have exactly two coordinates
+    2: longitude out of bounds
+    3: latitude out of bounds</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Jasper Roebroek
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

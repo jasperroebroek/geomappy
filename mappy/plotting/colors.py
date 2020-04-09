@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+The functions here implement shortcuts to create different sort of colors/cmap instances for different scenarios. It
+also contains a convenient function to add a colorbar that has the right size for the plots.
+"""
 from matplotlib.cm import ScalarMappable
 from matplotlib.lines import Line2D
 from mpl_toolkits import axes_grid1
@@ -8,7 +12,7 @@ from matplotlib import colors, colorbar
 from matplotlib.colors import LinearSegmentedColormap, to_rgba_array
 from matplotlib.patches import Patch
 import numpy as np
-from ..ndarray_functions.misc import grid_from_corners
+from mappy.ndarray_functions.misc import grid_from_corners
 import colorsys
 from matplotlib.colorbar import ColorbarBase
 
@@ -20,13 +24,13 @@ def plot_colors(c, figsize=(10, 1), ticks=False, **kwargs):
     Parameters
     ----------
     c : array-like or Colormap instance
-        Iterable containing colors. A numpy ndarray with 3 dimensions will be interpreted as RBA(A).
+        Iterable containing colors. A :obj:`~numpy.ndarray` with 3 dimensions will be interpreted as RBA(A).
     figsize : tuple, optional
         Matplotlib figsize parameter
     ticks : bool, optional
         Add ticks to the figure
-    show : bool, optional
-        Execute the plt.show() command
+    **kwargs
+        Parameters for `plt.ColorBase`
     """
     plt.rcParams['savefig.pad_inches'] = 0
 
@@ -61,8 +65,8 @@ def plot_colors(c, figsize=(10, 1), ticks=False, **kwargs):
     plt.tight_layout()
 
 
-def cmap_2d(shape=(1000, 1000), v=None, alpha=0, plotting=False, show=False, diverging=False, diverging_alpha=0.5,
-            silent=False, rotate=0, flip=False, ax=None):
+def cmap_2d(shape=(1000, 1000), v=None, alpha=0, plotting=False, diverging=False, diverging_alpha=0.5, rotate=0,
+            flip=False, ax=None):
     """
     Creates a 2 dimensional legend
     
@@ -77,27 +81,22 @@ def cmap_2d(shape=(1000, 1000), v=None, alpha=0, plotting=False, show=False, div
         Value between 0 and 1. For details check Ryan's paper. Default is 0.
     plotting : bool, optional
         Plotting cmap. Default is False
-    show : bool, optional
-        Execute the plt.show() command
-        todo; deprecate
     diverging : bool, optional
         Apply whitening kernel causing the centre of the cmap to be white if v is left to None. Default is False.
     diverging_alpha : float, optional
         The central RGB components are raised with this number. The default is 0.5, which is also the maximum, and will
         lead to white as the central colors. The minimum is -0.5 which will lead to black as the central color.
-    silent : bool, optional
-        Prevent returning the array, for testing purposes. Default is False.
     rotate : int, optional
         Rotate the created array clockwise. The default is zero. Options are 1, 2 or 3 which will lead to 90, 180 or 270
         degrees rotation.
     flip : bool, optional
         Flip the array left to right. Default is False.
-    ax : Axes, optional
+    ax : `plt.Axes`, optional
         matplotlib Axes to plot on. If not provided it is created on the fly.
     
     Returns
     -------
-    cmap : array
+    cmap : :obj:`~numpy.ndarray`
         The created two dimensional legend. Array of dimensions (*shape, 3). 
         RGB configuration
     """
@@ -117,19 +116,14 @@ def cmap_2d(shape=(1000, 1000), v=None, alpha=0, plotting=False, show=False, div
 
     if type(plotting) != bool:
         raise TypeError("plotting needs to be a boolean")
-    if type(show) != bool:
-        raise TypeError("show needs to be a boolean")
     if type(diverging) != bool:
         raise TypeError("diverging needs to be a boolean")
-    if type(silent) != bool:
-        raise TypeError("silent needs to be a boolean")
-
     if type(rotate) != int:
         raise TypeError("rotate should be an integer")
     if type(flip) != bool:
         raise TypeError("flip should be a boolean")
 
-    if type(v) == type(None):
+    if isinstance(v, type(None)):
         v = [0, 0, 0, 0]
         v[0] = (0, 0.5, 1)  # left upper corner
         v[1] = (1 - alpha, 0, 1 - alpha)  # right upper corner
@@ -146,8 +140,7 @@ def cmap_2d(shape=(1000, 1000), v=None, alpha=0, plotting=False, show=False, div
         cmap[:, :, i] = grid_from_corners(corner_colors[:, i], shape=shape,
                                           plotting=False)
     if diverging:
-        x, y = np.mgrid[-1:1:shape[0] * 1j,
-               -1:1:shape[1] * 1j]
+        x, y = np.mgrid[-1:1:shape[0] * 1j, -1:1:shape[1] * 1j]
         cmap += (-diverging_alpha * x ** 2 / 2 + -diverging_alpha * y ** 2 / 2 + diverging_alpha)[:, :, np.newaxis]
 
     cmap = np.maximum(0, cmap)
@@ -159,13 +152,11 @@ def cmap_2d(shape=(1000, 1000), v=None, alpha=0, plotting=False, show=False, div
         ax.set_xticks([])
         ax.set_yticks([])
         ax.set_title(f"shape : {shape}, alpha : {alpha}, diverging : {diverging}")
-        if show:
-            plt.show()
-    if not silent:
-        return cmap
+
+    return cmap
 
 
-def cmap_discrete(n, cmap='hsv', return_type='cmap', plotting=False):
+def cmap_discrete(cmap='hsv', n=256, return_type='cmap'):
     """
     Returns a function that maps each index in 0, 1, ..., n-1 to a distinct RGB color as obtained from a matplotlib
     cmap instance as indicated with the 'cmap' parameter.
@@ -175,11 +166,10 @@ def cmap_discrete(n, cmap='hsv', return_type='cmap', plotting=False):
     n : int
         Number of colors
     cmap : str or cmap instance, optional
-        Name of cmap (or cmap itself), needs to be available in the matplotlib namespace
+        Name of cmap (or cmap itself). If `cmap` is a string it needs to be available in the matplotlib namespace
     return_type : str, optional
-        'cmap' returns a linearly segmented cmap, 'list' returns a numpy array with the colors
-    plotting : bool, optional
-        plot the created cmap, the default is False
+        'cmap' returns a linearly segmented cmap, 'list' returns a :obj:`~numpy.ndarray` array with the colors. This
+        array will have shape (n, 4).
 
     Returns
     -------
@@ -192,15 +182,13 @@ def cmap_discrete(n, cmap='hsv', return_type='cmap', plotting=False):
     else:
         cmap = LinearSegmentedColormap.from_list("new_cmap", cmap(np.linspace(0, 1, n)), n)
 
-    if plotting:
-        plot_colors(cmap)
     if return_type == 'cmap':
         return cmap
     elif return_type == 'list':
         return cmap(np.linspace(0, 1, n))
 
 
-def cmap_from_borders(colors, n=256, return_type='cmap', plotting=False):
+def cmap_from_borders(colors=['white', 'black'], n=256, return_type='cmap'):
     """
     Creates a cmap based on two colors
 
@@ -213,8 +201,6 @@ def cmap_from_borders(colors, n=256, return_type='cmap', plotting=False):
         gradient
     return_type : str, optional
         'cmap' returns a cmap object, 'list' returns an ndarray.
-    plotting : bool, optional
-        plot colors
 
     Returns
     -------
@@ -224,36 +210,28 @@ def cmap_from_borders(colors, n=256, return_type='cmap', plotting=False):
     colors = to_rgba_array(colors)[:, :-1]
     cmap = np.vstack([np.linspace(colors[0][i], colors[1][i], num=n) for i in range(3)]).T
 
-    if plotting:
-        plot_colors(cmap)
-
     if return_type == 'list':
         return cmap
     if return_type == 'cmap':
         return LinearSegmentedColormap.from_list("new_cmap", cmap, N=n)
 
 
-def cmap_random(nlabels, color_type='pastel', first_color=None, last_color=None, verbose=False, return_type="cmap"):
+def cmap_random(n, color_type='pastel', first_color=None, last_color=None, return_type="cmap"):
     """
     Creates a random colormap to be used together with matplotlib. Useful for segmentation tasks
 
-    # todo; revisit
-
     Parameters
     ----------
-    nlabels : int
+    n : int
         Number of labels (size of colormap)
     color_type : {"bright","pastel"}
         'bright' for strong colors, 'soft' for pastel colors, which is the default behaviour
-    first_color : {"black", "white"}
-        Option to set first color to black/ white or to take a random color
-    last_color : {"black", "white"}
-        Option to set last color to black/ white or to take a random color
-    verbose : bool
-        Prints the number of labels and shows the colormap. True or False
-    return_type : {'cmap', 'rgb']
-        Returning a matplotlib cmap or a list of RGB colors
-        todo; change to 'list' of 'rgb'
+    first_color : str, optional
+        Option to set first color if necessary
+    last_color : str, optional
+        Option to set last color if necessary
+    return_type : str, optional
+        'cmap' returns a cmap object, 'list' returns an ndarray.
     
     Returns
     -------
@@ -269,14 +247,11 @@ def cmap_random(nlabels, color_type='pastel', first_color=None, last_color=None,
         print('Please choose "bright" or "soft" for type')
         return
 
-    if verbose:
-        print('Number of labels: ' + str(nlabels))
-
     # Generate color map for bright colors, based on hsv
     if color_type == 'bright':
         randHSVcolors = [(np.random.uniform(low=0.0, high=1),
                           np.random.uniform(low=0.2, high=1),
-                          np.random.uniform(low=0.9, high=1)) for i in range(nlabels)]
+                          np.random.uniform(low=0.9, high=1)) for i in range(n)]
 
         # Convert HSV list to RGB
         randRGBcolors = []
@@ -294,15 +269,13 @@ def cmap_random(nlabels, color_type='pastel', first_color=None, last_color=None,
             if last_color == "white":
                 randRGBcolors[-1] = [1, 1, 1]
 
-        random_colormap = LinearSegmentedColormap.from_list('new_map', randRGBcolors, N=nlabels)
-
     # Generate soft pastel colors, by limiting the RGB spectrum
     if color_type == 'pastel':
         low = 0.6
         high = 0.95
         randRGBcolors = [(np.random.uniform(low=low, high=high),
                           np.random.uniform(low=low, high=high),
-                          np.random.uniform(low=low, high=high)) for i in range(nlabels)]
+                          np.random.uniform(low=low, high=high)) for i in range(n)]
 
         if first_color in ("black", "white"):
             if first_color == "black":
@@ -315,21 +288,11 @@ def cmap_random(nlabels, color_type='pastel', first_color=None, last_color=None,
             if last_color == "white":
                 randRGBcolors[-1] = [1, 1, 1]
 
-        random_colormap = LinearSegmentedColormap.from_list('new_map', randRGBcolors, N=nlabels)
-
-    # Display colorbar
-    if verbose:
-        fig, ax = plt.subplots(1, 1, figsize=(15, 0.5))
-
-        bounds = np.linspace(0, nlabels, nlabels + 1)
-        norm = colors.BoundaryNorm(bounds, nlabels)
-
-        colorbar.ColorbarBase(ax, cmap=random_colormap, norm=norm, spacing='proportional', ticks=None,
-                              boundaries=bounds, format='%1i', orientation=u'horizontal')
+    random_colormap = LinearSegmentedColormap.from_list('new_map', randRGBcolors, N=n)
 
     if return_type == "cmap":
         return random_colormap
-    if return_type == "rgb":
+    if return_type == "list":
         return randRGBcolors
 
 
@@ -337,7 +300,7 @@ def legend_patches(colors, labels, type='patch', **kwargs):
     if len(colors) != len(labels):
         raise IndexError("Length of labe and colors don't match")
 
-    if type=='patch':
+    if type == 'patch':
         return [Patch(facecolor=color, label=label, **kwargs)
                 for color, label in zip(colors, labels)]
     else:
@@ -368,10 +331,6 @@ def add_colorbar(im=None, ax=None, aspect=30, pad_fraction=0.6, position="right"
     Returns
     -------
     Colorbar
-
-    Notes
-    -----
-    https://stackoverflow.com/questions/18195758/set-matplotlib-colorbar-size-to-match-graph
     """
     if isinstance(im, type(None)):
         if isinstance(ax, type(None)):

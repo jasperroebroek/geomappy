@@ -1,0 +1,296 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>mappy.map.MapWrite module &mdash; mappy 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mappy
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">mappy.map.MapWrite module</a></li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mappy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>mappy.map.MapWrite module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/mappy.map.MapWrite.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-mappy.map.MapWrite">
+<span id="mappy-map-mapwrite-module"></span><h1>mappy.map.MapWrite module<a class="headerlink" href="#module-mappy.map.MapWrite" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="mappy.map.MapWrite.MapWrite">
+<em class="property">class </em><code class="sig-name descname">MapWrite</code><span class="sig-paren">(</span><em class="sig-param">location</em>, <em class="sig-param">*</em>, <em class="sig-param">tiles=1</em>, <em class="sig-param">window_size=1</em>, <em class="sig-param">ref_map=None</em>, <em class="sig-param">overwrite=False</em>, <em class="sig-param">compress=False</em>, <em class="sig-param">dtype=&lt;class 'numpy.float64'&gt;</em>, <em class="sig-param">nodata=nan</em>, <em class="sig-param">profile=None</em>, <em class="sig-param">count=-1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapWrite.html#MapWrite"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapWrite.MapWrite" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="mappy.map.MapBase.html#mappy.map.MapBase.MapBase" title="mappy.map.MapBase.MapBase"><code class="xref py py-class docutils literal notranslate"><span class="pre">mappy.map.MapBase.MapBase</span></code></a></p>
+<p>Subclass of MapBase, file opened in ‘w’ mode.</p>
+<dl class="simple">
+<dt>_writing_buffer<span class="classifier">ndarray</span></dt><dd><p>this array is the temporary place where an array is store before it is written to disk</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>location</strong> (<em>str</em>) – Location of the map</p></li>
+<li><p><strong>tiles</strong> (<em>int or tuple of ints</em>) – Tiles object. See property</p></li>
+<li><p><strong>window_size</strong> (<em>int, optional</em>) – Window size to be set on the map. See property</p></li>
+<li><p><strong>ref_map</strong> (<em>str, optional</em>) – Location of file that a rasterio profile is pulled from and used for the creation of self. The reference map
+will not do anything if a profile is passed to the ‘profile’ parameter.</p></li>
+<li><p><strong>overwrite</strong> (<em>bool, optional</em>) – Allowed to overwrite a file if it already exists. Default is False</p></li>
+<li><p><strong>compress</strong> (<em>bool, optional</em>) – compress the output file, default is False. If profile is provided the compression parameter is taken from there</p></li>
+<li><p><strong>dtype</strong> (<em>numpy dtype, optional</em>) – Type of data that is going to be written to the file. This parameter doesn’t work in combination with passing a
+rasterio profile to the ‘profile’ parameter. The default is ‘np.float64’</p></li>
+<li><p><strong>nodata</strong> (<em>numeric, optional</em>) – nodata value that is used for the rasterio profile. The default is np.nan. This parameter doesn’t work in
+combination with passing a rasterio profile to the ‘profile’ parameter.</p></li>
+<li><p><strong>count</strong> (<em>int, optional</em>) – Count of layers of the file. If -1 it will be taken from the reference file. The default is 1.</p></li>
+<li><p><strong>profile</strong> (<em>dict, optional</em>) – custom rasterio profile can be passed which will be used directly to create the file with. All the other
+parameters are neglected.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#IOError" title="(in Python v3.8)"><strong>IOError</strong></a> – <ul class="simple">
+<li><p><cite>location</cite> doesn’t exist to pull a profile from and no reference map is given
+    - reference maps is given but can’t be found
+    - can’t overwrite an already existing file if not specified with the ‘overwrite’ parameter</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="mappy.map.MapWrite.MapWrite.__setitem__">
+<code class="sig-name descname">__setitem__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ind</span></em>, <em class="sig-param"><span class="n">writing_buffer</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapWrite.html#MapWrite.__setitem__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapWrite.MapWrite.__setitem__" title="Permalink to this definition">¶</a></dt>
+<dd><p>redirects to self.set_writing_buffer and self.write</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapWrite.MapWrite.get_writing_buffer">
+<code class="sig-name descname">get_writing_buffer</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapWrite.html#MapWrite.get_writing_buffer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapWrite.MapWrite.get_writing_buffer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the current writing buffer</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>np.ndarray of the current writing buffer or None when it is not set</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapWrite.MapWrite.set_writing_buffer">
+<code class="sig-name descname">set_writing_buffer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">writing_buffer</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapWrite.html#MapWrite.set_writing_buffer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapWrite.MapWrite.set_writing_buffer" title="Permalink to this definition">¶</a></dt>
+<dd><p>set buffer that will be used when writing data. Layer information should be presented on the third axis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>writing_buffer</strong> (<em>np.ndarray</em>) – data that will be used when writing to the output file</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.8)"><strong>TypeError</strong></a> – writing_buffer is not an ndarray</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.8)"><strong>ValueError</strong></a> – Shape of writing_buffer is not of the dimensions and shape that is expected with the current tiles</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapWrite.MapWrite.write">
+<code class="sig-name descname">write</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ind</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/MapWrite.html#MapWrite.write"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.MapWrite.MapWrite.write" title="Permalink to this definition">¶</a></dt>
+<dd><p>write data to file at the current tile</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>ind</strong> (<em>.</em>) – see self.get_pointer()</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#NameError" title="(in Python v3.8)"><strong>NameError</strong></a> – when writing buffer is not set</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.MapWrite.MapWrite.writing_buffer">
+<em class="property">property </em><code class="sig-name descname">writing_buffer</code><a class="headerlink" href="#mappy.map.MapWrite.MapWrite.writing_buffer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the current writing buffer</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>np.ndarray of the current writing buffer or None when it is not set</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Jasper Roebroek
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

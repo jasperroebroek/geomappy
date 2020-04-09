@@ -5,23 +5,21 @@ Algorithm to correlate two arrays (2D) with each other. All implementations here
 The different functions have different scopes:
 - correlate_maps_base: numpy implementation, very memory intensive as the whole rolling window array will be cast into
   memory. Use with care
-- _correlate_maps_full: numba implementation. Is not mean to be called directly.
+- _correlate_maps_full: numba implementation. Is not meant to be called directly.
   It returns an output with the same size as the inputs (shape)
-- _correlate_maps_reduce: numba implementation. Is not mean to be called directly.
+- _correlate_maps_reduce: numba implementation. Is not meant to be called directly.
   It reduces the output (shape/window_size)
 - _correlate_maps_input_checks: function that reuses the input checks
 - correlate_maps_njit: calls _correlate_maps_full and _correlate_maps_reduce and wraps the input checks and timing
 
-The Numba implementation is prefered. The user will be able to call ``correlate_maps`` which will either invoke
+The Numba implementation is preferred. The user will be able to call ``correlate_maps`` which will either invoke
 correlate_maps_base or correlate_maps_njit based on the
 """
 
+import time
 import numpy as np
 from numpy.lib.index_tricks import s_
 from ..ndarray_functions.rolling_functions import rolling_window, rolling_sum
-from ..ndarray_functions.misc import overlapping_arrays
-from .focal_statistics import focal_statistics
-import time
 
 try:
     from numba import njit
@@ -40,7 +38,8 @@ a NaN value on a location, the output map will also have a NaN on that location.
 Parameters
 ----------
 map1, map2 : array-like
-    Input arrays that will be correlated. If not present in dtype `np.float64` it will be converted internally.
+    Input arrays that will be correlated. If not present in dtype `np.float64` it will be converted internally. They
+    have exatly the same shape and have two dimensions.
 window_size : int, optional
     Size of the window used for the correlation calculations. It should be bigger than 1, the default is 5.
 fraction_accepted : float, optional

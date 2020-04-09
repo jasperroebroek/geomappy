@@ -1,0 +1,248 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>mappy.neighborhood.Neighborhood module &mdash; mappy 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mappy
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">mappy.neighborhood.Neighborhood module</a></li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mappy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>mappy.neighborhood.Neighborhood module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/mappy.neighborhood.Neighborhood.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-mappy.neighborhood.Neighborhood">
+<span id="mappy-neighborhood-neighborhood-module"></span><h1>mappy.neighborhood.Neighborhood module<a class="headerlink" href="#module-mappy.neighborhood.Neighborhood" title="Permalink to this headline">¶</a></h1>
+<p>These objects, with the base being Neighborhood, can be used to in the rolling_functions to create non patterns as is
+used in for example ArcGIS.</p>
+<dl class="py class">
+<dt id="mappy.neighborhood.Neighborhood.NbrCircular">
+<em class="property">class </em><code class="sig-name descname">NbrCircular</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">radius</span></em>, <em class="sig-param"><span class="n">ndim</span><span class="o">=</span><span class="default_value">2</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/neighborhood/Neighborhood.html#NbrCircular"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.neighborhood.Neighborhood.NbrCircular" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#mappy.neighborhood.Neighborhood.Neighborhood" title="mappy.neighborhood.Neighborhood.Neighborhood"><code class="xref py py-class docutils literal notranslate"><span class="pre">mappy.neighborhood.Neighborhood.Neighborhood</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="mappy.neighborhood.Neighborhood.NbrIrregular">
+<em class="property">class </em><code class="sig-name descname">NbrIrregular</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mask</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/neighborhood/Neighborhood.html#NbrIrregular"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.neighborhood.Neighborhood.NbrIrregular" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#mappy.neighborhood.Neighborhood.Neighborhood" title="mappy.neighborhood.Neighborhood.Neighborhood"><code class="xref py py-class docutils literal notranslate"><span class="pre">mappy.neighborhood.Neighborhood.Neighborhood</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="mappy.neighborhood.Neighborhood.NbrRectangle">
+<em class="property">class </em><code class="sig-name descname">NbrRectangle</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">window_size</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/neighborhood/Neighborhood.html#NbrRectangle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.neighborhood.Neighborhood.NbrRectangle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#mappy.neighborhood.Neighborhood.Neighborhood" title="mappy.neighborhood.Neighborhood.Neighborhood"><code class="xref py py-class docutils literal notranslate"><span class="pre">mappy.neighborhood.Neighborhood.Neighborhood</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="mappy.neighborhood.Neighborhood.Neighborhood">
+<em class="property">class </em><code class="sig-name descname">Neighborhood</code><a class="reference internal" href="_modules/mappy/neighborhood/Neighborhood.html#Neighborhood"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.neighborhood.Neighborhood.Neighborhood" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="py method">
+<dt id="mappy.neighborhood.Neighborhood.Neighborhood.mask">
+<em class="property">property </em><code class="sig-name descname">mask</code><a class="headerlink" href="#mappy.neighborhood.Neighborhood.Neighborhood.mask" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="mappy.neighborhood.Neighborhood.Neighborhood.mask_flag">
+<em class="property">property </em><code class="sig-name descname">mask_flag</code><a class="headerlink" href="#mappy.neighborhood.Neighborhood.Neighborhood.mask_flag" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="mappy.neighborhood.Neighborhood.Neighborhood.ndim">
+<em class="property">property </em><code class="sig-name descname">ndim</code><a class="headerlink" href="#mappy.neighborhood.Neighborhood.Neighborhood.ndim" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="mappy.neighborhood.Neighborhood.Neighborhood.plot">
+<code class="sig-name descname">plot</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/neighborhood/Neighborhood.html#Neighborhood.plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.neighborhood.Neighborhood.Neighborhood.plot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="mappy.neighborhood.Neighborhood.Neighborhood.shape">
+<em class="property">property </em><code class="sig-name descname">shape</code><a class="headerlink" href="#mappy.neighborhood.Neighborhood.Neighborhood.shape" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="mappy.neighborhood.Neighborhood.Neighborhood.value_count">
+<em class="property">property </em><code class="sig-name descname">value_count</code><a class="headerlink" href="#mappy.neighborhood.Neighborhood.Neighborhood.value_count" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Jasper Roebroek
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

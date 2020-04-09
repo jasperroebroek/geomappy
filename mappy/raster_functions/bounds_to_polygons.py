@@ -15,6 +15,7 @@ def bounds_to_polygons(bounds_list, max_bounds=None):
     max_bounds : list, optional
         Rasterio bounds object containing the maximum bounds that are enforced. By default it is the whole earth,
         meaning [-180,-90,180,90].
+
     Returns
     -------
     gdf : geopandas.geodataframe

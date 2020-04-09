@@ -1,0 +1,260 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>mappy.raster_functions.focal_statistics module &mdash; mappy 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mappy
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">mappy.raster_functions.focal_statistics module</a></li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mappy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>mappy.raster_functions.focal_statistics module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/mappy.raster_functions.focal_statistics.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-mappy.raster_functions.focal_statistics">
+<span id="mappy-raster-functions-focal-statistics-module"></span><h1>mappy.raster_functions.focal_statistics module<a class="headerlink" href="#module-mappy.raster_functions.focal_statistics" title="Permalink to this headline">¶</a></h1>
+<dl class="py function">
+<dt id="mappy.raster_functions.focal_statistics.focal_majority">
+<code class="sig-name descname">focal_majority</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">a</span></em>, <em class="sig-param"><span class="o">*</span></em>, <em class="sig-param"><span class="n">window_size</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fraction_accepted</span><span class="o">=</span><span class="default_value">0.7</span></em>, <em class="sig-param"><span class="n">reduce</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">majority_mode</span><span class="o">=</span><span class="default_value">'nan'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/raster_functions/focal_statistics.html#focal_majority"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.raster_functions.focal_statistics.focal_majority" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="mappy.raster_functions.focal_statistics.focal_statistics">
+<code class="sig-name descname">focal_statistics</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">a</span></em>, <em class="sig-param"><span class="o">*</span></em>, <em class="sig-param"><span class="n">window_size</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">func</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fraction_accepted</span><span class="o">=</span><span class="default_value">0.7</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">std_df</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">reduce</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">majority_mode</span><span class="o">=</span><span class="default_value">'nan'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/raster_functions/focal_statistics.html#focal_statistics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.raster_functions.focal_statistics.focal_statistics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Focal statistics wrapper.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>a</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – Input array (2D). If not np.float64 it will be converted internally, except when the majority function is called
+in which case the input array’s dtype is preserved.</p></li>
+<li><p><strong>window_size</strong> (<em>int</em>) – Window size for focal statistics. Should be bigger than 1.</p></li>
+<li><p><strong>func</strong> (<em>{“mean”,”min”,”max”,”std”,”nanmean”,”nanmin”,”nanmax”,”nanstd”,”majority”}</em>) – Function to be applied on the windows</p></li>
+<li><p><strong>fraction_accepted</strong> (<em>float, optional</em>) – Fraction of valid cells per window that is deemed acceptable
+0: all window are calculated if at least 1 value is present
+1: only windows completely filled with values are calculated
+0-1: fraction of acceptability
+Note that this parameter has no effect yet when calculating with ‘nanmax’ and ‘nanmin’</p></li>
+<li><p><strong>verbose</strong> (<em>bool, optional</em>) – Verbosity with timing. False by default</p></li>
+<li><p><strong>std_df</strong> (<em>{1,0}, optional</em>) – Only for nanstd and std calculations. Degrees of freedom; meaning if the function is devided by the count of
+observations or the count of observations minus one. Should be 0 or 1.</p></li>
+<li><p><strong>reduce</strong> (<em>bool, optional</em>) – The way in which the windowed array is created. If true, all values are used exactly once. If False (which is
+the default), values are reduced and the output array has the same shape as the input array, albeit with a
+border of nans where there are not enough values to calculate the cells.</p></li>
+<li><p><strong>majority_mode</strong> (<em>{“nan”, “ascending”, “descending”}, optional</em>) – nan: when more than one class has the same score NaN will be assigned
+ascending: the first occurrence of the maximum count will be assigned
+descending: the last occurrence of the maximum count will be assigned.
+Parameter only used when the <cite>func</cite> is “majority”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl>
+<dt>if <cite>reduce</cite> is False:</dt><dd><p>numpy ndarray of the function applied to input array <cite>a</cite>. The shape will
+be the same as the input array. The border of the map will be np.nan,
+because of the lack of data to calculate the border. In the future other
+behaviours might be implemented. To obtain only the useful cells the
+following might be done:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">window_size</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fringe</span> <span class="o">=</span> <span class="n">window_size</span> <span class="o">//</span> <span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ind_inner</span> <span class="o">=</span> <span class="n">s_</span><span class="p">[</span><span class="n">fringe</span><span class="p">:</span><span class="o">-</span><span class="n">fringe</span><span class="p">,</span> <span class="n">fringe</span><span class="p">:</span><span class="o">-</span><span class="n">fringe</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">ind_inner</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>in which case a will only contain the cells for which all data was
+present</p>
+</dd>
+<dt>if <cite>reduce</cite> is True:</dt><dd><p>numpy ndarray of the function applied on input array <cite>a</cite>. The shape
+will be the original shape divided by the <cite>window_size</cite>. Dimensions
+remain equal. No border of NaN values is present.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.8)"><strong>KeyError</strong></a> – Function not in the list of allowed functions</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.8)"><strong>ValueError</strong></a> – If data is not a 2D array</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Jasper Roebroek
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

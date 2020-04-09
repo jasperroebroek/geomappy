@@ -1,0 +1,496 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>mappy.raster_functions.correlate_maps &mdash; mappy 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> mappy
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">mappy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>mappy.raster_functions.correlate_maps</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for mappy.raster_functions.correlate_maps</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Algorithm to correlate two arrays (2D) with each other. All implementations here should yield an equal result.</span>
+<span class="sd">The different functions have different scopes:</span>
+<span class="sd">- correlate_maps_base: numpy implementation, very memory intensive as the whole rolling window array will be cast into</span>
+<span class="sd">  memory. Use with care</span>
+<span class="sd">- _correlate_maps_full: numba implementation. Is not meant to be called directly.</span>
+<span class="sd">  It returns an output with the same size as the inputs (shape)</span>
+<span class="sd">- _correlate_maps_reduce: numba implementation. Is not meant to be called directly.</span>
+<span class="sd">  It reduces the output (shape/window_size)</span>
+<span class="sd">- _correlate_maps_input_checks: function that reuses the input checks</span>
+<span class="sd">- correlate_maps_njit: calls _correlate_maps_full and _correlate_maps_reduce and wraps the input checks and timing</span>
+
+<span class="sd">The Numba implementation is preferred. The user will be able to call ``correlate_maps`` which will either invoke</span>
+<span class="sd">correlate_maps_base or correlate_maps_njit based on the</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy.lib.index_tricks</span> <span class="kn">import</span> <span class="n">s_</span>
+<span class="kn">from</span> <span class="nn">..ndarray_functions.rolling_functions</span> <span class="kn">import</span> <span class="n">rolling_window</span><span class="p">,</span> <span class="n">rolling_sum</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">numba</span> <span class="kn">import</span> <span class="n">njit</span>
+    <span class="n">numba_present</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="n">ModuleNotFoundError</span><span class="p">:</span>
+    <span class="n">numba_present</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="c1"># create empty decorator</span>
+    <span class="k">def</span> <span class="nf">njit</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">func</span>
+
+<span class="n">docstring</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">Takes two maps and returning the local correlation between them with the same dimensions as the input maps.</span>
+<span class="s2">Correlation calculated in a rolling window with the size `window_size`. If either of the input maps contains</span>
+<span class="s2">a NaN value on a location, the output map will also have a NaN on that location. </span>
+
+<span class="s2">Parameters</span>
+<span class="s2">----------</span>
+<span class="s2">map1, map2 : array-like</span>
+<span class="s2">    Input arrays that will be correlated. If not present in dtype `np.float64` it will be converted internally. They</span>
+<span class="s2">    have exatly the same shape and have two dimensions.</span>
+<span class="s2">window_size : int, optional</span>
+<span class="s2">    Size of the window used for the correlation calculations. It should be bigger than 1, the default is 5.</span>
+<span class="s2">fraction_accepted : float, optional</span>
+<span class="s2">    Fraction of the window that has to contain not-nans for the function to calculate the correlation. The default</span>
+<span class="s2">    is 0.7.</span>
+<span class="s2">reduce : bool, optional</span>
+<span class="s2">    Reuse all cells exactly once by setting a stepsize of the same size as window_size. The resulting map will have</span>
+<span class="s2">    the shape: shape/window_size</span>
+<span class="s2">verbose ; bool, optional</span>
+<span class="s2">    Times the correlation calculations</span>
+
+<span class="s2">Returns</span>
+<span class="s2">-------</span>
+<span class="s2">corr : :obj:`~numpy.ndarray`</span>
+<span class="s2">    numpy array of the local correlation. If reduce is set to False, the output has the same shape as the input maps,</span>
+<span class="s2">    while if reduce is True, the output is reduce by the window size: shape//window_size.</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="_correlate_maps_reduce"><a class="viewcode-back" href="../../../mappy.raster_functions.correlate_maps.html#mappy.raster_functions.correlate_maps._correlate_maps_reduce">[docs]</a><span class="nd">@njit</span><span class="p">(</span><span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_correlate_maps_reduce</span><span class="p">(</span><span class="n">map1</span><span class="p">,</span> <span class="n">map2</span><span class="p">,</span> <span class="n">window_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">fraction_accepted</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">reduce</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">map1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="n">window_size</span><span class="p">,</span> <span class="n">map2</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="n">window_size</span><span class="p">)</span>
+    <span class="n">corr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">map1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">window_size</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">map1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">window_size</span><span class="p">):</span>
+            <span class="n">ind</span> <span class="o">=</span> <span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="n">window_size</span><span class="p">),</span> <span class="nb">slice</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">j</span> <span class="o">+</span> <span class="n">window_size</span><span class="p">))</span>
+
+            <span class="n">d1</span> <span class="o">=</span> <span class="n">map1</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+            <span class="n">d2</span> <span class="o">=</span> <span class="n">map2</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">d1</span><span class="p">),</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">d2</span><span class="p">))</span>
+            <span class="n">d1</span> <span class="o">=</span> <span class="n">d1</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+            <span class="n">d2</span> <span class="o">=</span> <span class="n">d2</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">d1</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="n">fraction_accepted</span> <span class="o">*</span> <span class="n">window_size</span> <span class="o">**</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">d1</span> <span class="o">==</span> <span class="n">d1</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">d2</span> <span class="o">==</span> <span class="n">d2</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="n">corr</span><span class="p">[</span><span class="n">i</span> <span class="o">//</span> <span class="n">window_size</span><span class="p">,</span> <span class="n">j</span> <span class="o">//</span> <span class="n">window_size</span><span class="p">]</span>
+                <span class="k">continue</span>
+
+            <span class="n">d1_mean</span> <span class="o">=</span> <span class="n">d1</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="n">d2_mean</span> <span class="o">=</span> <span class="n">d2</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+            <span class="n">d1_dist</span> <span class="o">=</span> <span class="n">d1</span> <span class="o">-</span> <span class="n">d1_mean</span>
+            <span class="n">d2_dist</span> <span class="o">=</span> <span class="n">d2</span> <span class="o">-</span> <span class="n">d2_mean</span>
+
+            <span class="n">corr</span><span class="p">[</span><span class="n">i</span> <span class="o">//</span> <span class="n">window_size</span><span class="p">,</span> <span class="n">j</span> <span class="o">//</span> <span class="n">window_size</span><span class="p">]</span> <span class="o">=</span> \
+                <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">d1_dist</span> <span class="o">*</span> <span class="n">d2_dist</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">d1_dist</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">d2_dist</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">corr</span></div>
+
+
+<div class="viewcode-block" id="_correlate_maps_full"><a class="viewcode-back" href="../../../mappy.raster_functions.correlate_maps.html#mappy.raster_functions.correlate_maps._correlate_maps_full">[docs]</a><span class="nd">@njit</span><span class="p">(</span><span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_correlate_maps_full</span><span class="p">(</span><span class="n">map1</span><span class="p">,</span> <span class="n">map2</span><span class="p">,</span> <span class="n">window_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">fraction_accepted</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">reduce</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">fringe</span> <span class="o">=</span> <span class="n">window_size</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="n">corr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">map1</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">fringe</span><span class="p">,</span> <span class="n">map1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">fringe</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">fringe</span><span class="p">,</span> <span class="n">map1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">fringe</span><span class="p">):</span>
+            <span class="n">ind</span> <span class="o">=</span> <span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="n">i</span> <span class="o">-</span> <span class="n">fringe</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="n">fringe</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="nb">slice</span><span class="p">(</span><span class="n">j</span> <span class="o">-</span> <span class="n">fringe</span><span class="p">,</span> <span class="n">j</span> <span class="o">+</span> <span class="n">fringe</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">map1</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">])</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">map2</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]):</span>
+                <span class="k">continue</span>
+
+            <span class="n">d1</span> <span class="o">=</span> <span class="n">map1</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+            <span class="n">d2</span> <span class="o">=</span> <span class="n">map2</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+
+            <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">d1</span><span class="p">),</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">d2</span><span class="p">))</span>
+            <span class="n">d1</span> <span class="o">=</span> <span class="n">d1</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+            <span class="n">d2</span> <span class="o">=</span> <span class="n">d2</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">d1</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="n">fraction_accepted</span> <span class="o">*</span> <span class="n">window_size</span> <span class="o">**</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">d1</span> <span class="o">==</span> <span class="n">d1</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">d2</span> <span class="o">==</span> <span class="n">d2</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="n">corr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">continue</span>
+
+            <span class="n">d1_mean</span> <span class="o">=</span> <span class="n">d1</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="n">d2_mean</span> <span class="o">=</span> <span class="n">d2</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+            <span class="n">d1_dist</span> <span class="o">=</span> <span class="n">d1</span> <span class="o">-</span> <span class="n">d1_mean</span>
+            <span class="n">d2_dist</span> <span class="o">=</span> <span class="n">d2</span> <span class="o">-</span> <span class="n">d2_mean</span>
+
+            <span class="n">corr</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">d1_dist</span> <span class="o">*</span> <span class="n">d2_dist</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">d1_dist</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">d2_dist</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">corr</span></div>
+
+
+<div class="viewcode-block" id="_correlate_maps_input_checks"><a class="viewcode-back" href="../../../mappy.raster_functions.correlate_maps.html#mappy.raster_functions.correlate_maps._correlate_maps_input_checks">[docs]</a><span class="k">def</span> <span class="nf">_correlate_maps_input_checks</span><span class="p">(</span><span class="n">map1</span><span class="p">,</span> <span class="n">map2</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span> <span class="n">fraction_accepted</span><span class="p">,</span> <span class="n">reduce</span><span class="p">,</span> <span class="n">verbose</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Input checks for correlate_maps_base and correlate_maps_njit. Check their docstring for input requirements.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">verbose</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;verbose is a boolean variable&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reduce</span><span class="p">,</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;reduce is a boolean variable&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">map1</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s2">&quot;Only two dimensional arrays are supported&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">map2</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s2">&quot;Only two dimensional arrays are supported&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">map1</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">map2</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Different shapes: </span><span class="si">{map1.shape}</span><span class="s2">, </span><span class="si">{map2.shape}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">window_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;window_size should be an integer&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">window_size</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;window_size should be uneven and bigger than or equal to 2&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">map1</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">window_size</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s2">&quot;window is bigger than the input array on at least one of the dimensions&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">reduce</span><span class="p">:</span>
+        <span class="k">if</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">map1</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">%</span> <span class="n">window_size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The reduce parameter only works when providing a window_size that divedes the input &quot;</span>
+                             <span class="s2">&quot;exactly.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">window_size</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;window_size should be uneven if reduce is set to False&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fraction_accepted</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;fraction_accepted should be numeric&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">fraction_accepted</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">fraction_accepted</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;fraction_accepted should be between 0 and 1&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="correlate_maps_base"><a class="viewcode-back" href="../../../mappy.raster_functions.correlate_maps.html#mappy.raster_functions.correlate_maps.correlate_maps_base">[docs]</a><span class="k">def</span> <span class="nf">correlate_maps_base</span><span class="p">(</span><span class="n">map1</span><span class="p">,</span> <span class="n">map2</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">window_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">fraction_accepted</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">reduce</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;testing validity of request&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Input checks</span>
+    <span class="n">_correlate_maps_input_checks</span><span class="p">(</span><span class="n">map1</span><span class="p">,</span> <span class="n">map2</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span> <span class="n">fraction_accepted</span><span class="p">,</span> <span class="n">reduce</span><span class="p">,</span> <span class="n">verbose</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">reduce</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Reduction option is currently not implemented. Install Numba to gain access to this &quot;</span>
+                                  <span class="s2">&quot;functionality&quot;</span><span class="p">)</span>
+
+    <span class="n">map1</span> <span class="o">=</span> <span class="n">map1</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="n">map2</span> <span class="o">=</span> <span class="n">map2</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+    <span class="c1"># overlapping the maps</span>
+    <span class="n">nans</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">map1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">map2</span><span class="p">))</span>
+    <span class="n">map1</span><span class="p">[</span><span class="n">nans</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">map2</span><span class="p">[</span><span class="n">nans</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="c1"># parameters</span>
+    <span class="n">fringe</span> <span class="o">=</span> <span class="n">window_size</span> <span class="o">//</span> <span class="mi">2</span>  <span class="c1"># count of neighbouring cells in each window</span>
+    <span class="n">ind_inner</span> <span class="o">=</span> <span class="n">s_</span><span class="p">[</span><span class="n">fringe</span><span class="p">:</span><span class="o">-</span><span class="n">fringe</span><span class="p">,</span> <span class="n">fringe</span><span class="p">:</span><span class="o">-</span><span class="n">fringe</span><span class="p">]</span>
+
+    <span class="c1"># prepare storage for correlation maps</span>
+    <span class="n">corr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">map1</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+    <span class="c1"># Start main calculation</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+    <span class="c1"># create the windowed view on the data. These are views, no copies</span>
+    <span class="n">map1_view</span> <span class="o">=</span> <span class="n">rolling_window</span><span class="p">(</span><span class="n">map1</span><span class="p">,</span> <span class="n">window_size</span><span class="p">)</span>
+    <span class="n">map2_view</span> <span class="o">=</span> <span class="n">rolling_window</span><span class="p">(</span><span class="n">map2</span><span class="p">,</span> <span class="n">window_size</span><span class="p">)</span>
+
+    <span class="c1"># boolean mask if values are present</span>
+    <span class="n">values</span> <span class="o">=</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">map1</span><span class="p">)</span>
+
+    <span class="c1"># sum up the boolean mask in the windows to get the amount of values</span>
+    <span class="n">count_values</span> <span class="o">=</span> <span class="n">rolling_sum</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">window_size</span><span class="p">)</span>
+
+    <span class="c1"># remove cases from count_values where the original cell was NaN and where there are too many NaNs present</span>
+    <span class="n">count_values</span><span class="p">[</span><span class="n">count_values</span> <span class="o">&lt;</span> <span class="n">fraction_accepted</span> <span class="o">*</span> <span class="n">window_size</span> <span class="o">**</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">count_values</span><span class="p">[</span><span class="o">~</span><span class="n">values</span><span class="p">[</span><span class="n">ind_inner</span><span class="p">]]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">valid_cells</span> <span class="o">=</span> <span class="n">count_values</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+    <span class="k">if</span> <span class="n">valid_cells</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;- empty tile&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">corr</span>
+
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;- preparation: {time.time() - start}&quot;</span><span class="p">)</span>
+
+    <span class="c1"># create a focal statistics mean map</span>
+    <span class="n">map1</span><span class="p">[</span><span class="n">nans</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">map2</span><span class="p">[</span><span class="n">nans</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">map1_sum</span> <span class="o">=</span> <span class="n">rolling_sum</span><span class="p">(</span><span class="n">map1</span><span class="p">,</span> <span class="n">window_size</span><span class="p">)</span>
+    <span class="n">map1_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">map1_sum</span><span class="p">,</span> <span class="n">count_values</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="n">valid_cells</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">map1_sum</span><span class="p">)</span>
+
+    <span class="n">map2_sum</span> <span class="o">=</span> <span class="n">rolling_sum</span><span class="p">(</span><span class="n">map2</span><span class="p">,</span> <span class="n">window_size</span><span class="p">)</span>
+    <span class="n">map2_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">map2_sum</span><span class="p">,</span> <span class="n">count_values</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="n">valid_cells</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">map2_sum</span><span class="p">)</span>
+
+    <span class="c1"># add empty dimensions to make it possible to broadcast</span>
+    <span class="n">map1_mean</span> <span class="o">=</span> <span class="n">map1_mean</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+    <span class="n">map2_mean</span> <span class="o">=</span> <span class="n">map2_mean</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;- mean: {time.time() - start}&quot;</span><span class="p">)</span>
+
+    <span class="c1"># subtract all values from the mean map, with a sampling mask to prevent nan operations. map1/2_dist will therefore</span>
+    <span class="c1"># not contain any NaNs but only zero because of np.full is 0 initialisation</span>
+    <span class="n">sampling_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">valid_cells</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">],</span>
+                                   <span class="n">rolling_window</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">window_size</span><span class="p">))</span>
+    <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="o">*</span><span class="n">count_values</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span> <span class="n">window_size</span><span class="p">)</span>
+
+    <span class="n">map1_dist</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">map1_view</span><span class="p">,</span> <span class="n">map1_mean</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="n">sampling_mask</span><span class="p">,</span>
+                            <span class="n">out</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+    <span class="n">map2_dist</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">map2_view</span><span class="p">,</span> <span class="n">map2_mean</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="n">sampling_mask</span><span class="p">,</span>
+                            <span class="n">out</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">))</span>
+
+    <span class="c1"># add empty dimensions (shape=1) to make it possible to broadcast</span>
+    <span class="n">map1_dist</span> <span class="o">=</span> <span class="n">map1_dist</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="n">valid_cells</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">window_size</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">map2_dist</span> <span class="o">=</span> <span class="n">map2_dist</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="n">valid_cells</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">window_size</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;- distances: {time.time() - start}&quot;</span><span class="p">)</span>
+
+    <span class="c1"># calculate the numerator and denominator of the correlation formula</span>
+    <span class="n">r_num</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">map1_dist</span> <span class="o">*</span> <span class="n">map2_dist</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">r_den</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">map1_dist</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">map2_dist</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span>
+                    <span class="n">where</span><span class="o">=</span><span class="n">valid_cells</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">corr</span><span class="p">[</span><span class="n">ind_inner</span><span class="p">])</span>
+
+    <span class="c1"># insert the correlation (r_num/r_den) into the predefined correlation map</span>
+    <span class="n">corr_inner</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">r_num</span><span class="p">,</span> <span class="n">r_den</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">valid_cells</span><span class="p">,</span> <span class="n">r_den</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">),</span> <span class="n">out</span><span class="o">=</span><span class="n">corr</span><span class="p">[</span><span class="n">ind_inner</span><span class="p">])</span>
+
+    <span class="c1"># todo; this likely is referencing nan values because it is written to the same memory space</span>
+    <span class="n">corr_inner</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">r_den</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="c1"># End main calculation</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;- correlation: {time.time() - start}&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">corr</span></div>
+
+
+<div class="viewcode-block" id="correlate_maps_njit"><a class="viewcode-back" href="../../../mappy.raster_functions.correlate_maps.html#mappy.raster_functions.correlate_maps.correlate_maps_njit">[docs]</a><span class="k">def</span> <span class="nf">correlate_maps_njit</span><span class="p">(</span><span class="n">map1</span><span class="p">,</span> <span class="n">map2</span><span class="p">,</span> <span class="n">window_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">fraction_accepted</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">reduce</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+    <span class="c1"># Input checks</span>
+    <span class="n">_correlate_maps_input_checks</span><span class="p">(</span><span class="n">map1</span><span class="p">,</span> <span class="n">map2</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span> <span class="n">fraction_accepted</span><span class="p">,</span> <span class="n">reduce</span><span class="p">,</span> <span class="n">verbose</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">reduce</span><span class="p">:</span>
+        <span class="n">corr</span> <span class="o">=</span> <span class="n">_correlate_maps_reduce</span><span class="p">(</span><span class="n">map1</span><span class="o">=</span><span class="n">map1</span><span class="p">,</span> <span class="n">map2</span><span class="o">=</span><span class="n">map2</span><span class="p">,</span>
+                                      <span class="n">window_size</span><span class="o">=</span><span class="n">window_size</span><span class="p">,</span>
+                                      <span class="n">fraction_accepted</span><span class="o">=</span><span class="n">fraction_accepted</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">corr</span> <span class="o">=</span> <span class="n">_correlate_maps_full</span><span class="p">(</span><span class="n">map1</span><span class="o">=</span><span class="n">map1</span><span class="p">,</span> <span class="n">map2</span><span class="o">=</span><span class="n">map2</span><span class="p">,</span>
+                                    <span class="n">window_size</span><span class="o">=</span><span class="n">window_size</span><span class="p">,</span>
+                                    <span class="n">fraction_accepted</span><span class="o">=</span><span class="n">fraction_accepted</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;- correlation: {time.time() - start}&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">corr</span></div>
+
+
+<span class="n">correlate_maps_base</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">docstring</span>
+<span class="n">correlate_maps_njit</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">docstring</span>
+<span class="n">_correlate_maps_full</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">docstring</span> <span class="o">+</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="se">\n\n</span><span class="s2"> Note that this function is not performing any input checks. Use the function correlate_maps_njit for a wrapper</span>
+<span class="s2">around this functionality &quot;&quot;&quot;</span>
+<span class="n">_correlate_maps_reduce</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">docstring</span> <span class="o">+</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="se">\n\n</span><span class="s2"> Note that this function is not performing any input checks. Use the function correlate_maps_njit for a wrapper</span>
+<span class="s2">around this functionality &quot;&quot;&quot;</span>
+
+<span class="k">if</span> <span class="n">numba_present</span><span class="p">:</span>
+    <span class="n">correlate_maps</span> <span class="o">=</span> <span class="n">correlate_maps_njit</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;correlation of maps can be performed faster by installing Numba&quot;</span><span class="p">)</span>
+    <span class="n">correlate_maps</span> <span class="o">=</span> <span class="n">correlate_maps_base</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Jasper Roebroek
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

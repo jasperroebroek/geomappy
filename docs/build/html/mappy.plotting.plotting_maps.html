@@ -1,0 +1,336 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>mappy.plotting.plotting_maps module &mdash; mappy 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mappy
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">mappy.plotting.plotting_maps module</a></li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mappy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>mappy.plotting.plotting_maps module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/mappy.plotting.plotting_maps.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-mappy.plotting.plotting_maps">
+<span id="mappy-plotting-plotting-maps-module"></span><h1>mappy.plotting.plotting_maps module<a class="headerlink" href="#module-mappy.plotting.plotting_maps" title="Permalink to this headline">¶</a></h1>
+<dl class="py function">
+<dt id="mappy.plotting.plotting_maps.create_map_cmap_2d">
+<code class="sig-name descname">create_map_cmap_2d</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">map1</span></em>, <em class="sig-param"><span class="n">map2</span></em>, <em class="sig-param"><span class="n">bin1</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bin2</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">vmin1</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">vmax1</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">vmin2</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">vmax2</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cmap</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">diverging</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">plotting</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">figsize</span><span class="o">=</span><span class="default_value">10, 10</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">silent</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">show</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/plotting/plotting_maps.html#create_map_cmap_2d"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.plotting.plotting_maps.create_map_cmap_2d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Combine two maps with a two dimensional legend.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>map1, map2</strong> (<em>array</em>) – two identically shaped arrays</p></li>
+<li><p><strong>bin1, bin2</strong> (<em>list, optional</em>) – bins used for digitization with raster_functions.misc.nandigitize().</p></li>
+<li><p><strong>vmin1, vmax1, vmin2, vmax2</strong> – min and max of both input maps used for plotting (like vmin and vmax in imshow). Ff None, which is the default,
+they will be calculated from the data. These values are only considered when no bin is passed.</p></li>
+<li><p><strong>cmap</strong> (<em>array, optional</em>) – 3D array providing bins for map1 and map2 and RGB colors on the third axis. This can be created with the cmap_2d
+interface. If not provided it will be created on the fly. If the map is already classified by np.digitize it
+will be recognized and that specific axis will be split in the number of bins as intended. If not digitized
+1000 bins will be created, which will be a smooth scale.</p></li>
+<li><p><strong>diverging</strong> (<em>bool, optional</em>) – Use a diverging color scale if cmap is not provided. This means that the center of the 2D color legend will  be
+white instead of grey to notify divergence. Default is False.</p></li>
+<li><p><strong>plotting</strong> (<em>bool, optional</em>) – plotting the created result</p></li>
+<li><p><strong>show</strong> (<em>bool, optional</em>) – Execute the plt.plot() command</p></li>
+<li><p><strong>ax</strong> (<em>Axis, optional</em>) – matplotlib axes where the plot should be plotted to. If not given a new
+figure is created, which is the default behaviour.</p></li>
+<li><p><strong>figsize</strong> (<em>list, optional</em>) – Figsize parameter for matplotlib. Default is (10,10)</p></li>
+<li><p><strong>silent</strong> (<em>bool, optional</em>) – Return the created map, which is a 3D numpy array with on the last axis the
+RGB color components (0-1).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>map</strong> – numpy array containing the newly created map. Dimensionality depends on ‘cmap’ parameter. If none is passed a
+RGB legend is created, resulting in a 3D array</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mappy.plotting.plotting_maps.plot_classified_map">
+<code class="sig-name descname">plot_classified_map</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">m</span></em>, <em class="sig-param"><span class="n">bins</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">colors</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cmap</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">labels</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">legend</span><span class="o">=</span><span class="default_value">'legend'</span></em>, <em class="sig-param"><span class="n">clip_legend</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">suppress_warnings</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">mode</span><span class="o">=</span><span class="default_value">'classes'</span></em>, <em class="sig-param"><span class="n">legend_kwargs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/plotting/plotting_maps.html#plot_classified_map"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.plotting.plotting_maps.plot_classified_map" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a map with discrete classes or index</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>m</strong> (<em>array</em>) – input map</p></li>
+<li><p><strong>bins</strong> (<em>list, optional</em>) – list of either bins as used in np.digitize or unique values corresponding to <cite>colors</cite> and <cite>labels</cite>. By default
+this parameter is not necessary, the unique values are taken from the input map</p></li>
+<li><p><strong>colors</strong> (<em>list, optional</em>) – List of colors in a format understandable by matplotlib. By default random colors are taken</p></li>
+<li><p><strong>cmap</strong> (<em>matplotlib cmap or str</em>) – Can be used to set a colormap when no colors are provided.</p></li>
+<li><p><strong>labels</strong> (<em>list, optional</em>) – list of labels for the different classes. By default the unique values are taken as labels</p></li>
+<li><p><strong>legend</strong> (<em>{‘legend’, ‘colorbar’, False}, optional</em>) – Presence and type of legend. ‘Legend’ wil insert patches, ‘colorbar’ wil insert a colorbar and False will
+prevent any legend to be printed.</p></li>
+<li><p><strong>clip_legend</strong> (<em>bool, optional</em>) – remove the items from the legend that don’t occur on the map but are passed in</p></li>
+<li><p><strong>ax</strong> (<em>axes, optional</em>) – matplotlib axes to plot the map on. If not given it is created on the fly. A cartopty GeoAxis can be provided.</p></li>
+<li><p><strong>suppress_warnings</strong> (<em>bool, optional</em>) – By default 15 classes is the maximum that can be plotted. If set to True this maximum is removed</p></li>
+<li><p><strong>mode</strong> (<em>{‘classes’, ‘index’}</em>) – ‘Classes’ is used for individual values that can not directly be used as indices
+‘Index’ for raters that already contain the exact index for colors and labels lists</p></li>
+<li><p><strong>legend_kwargs</strong> (<em>dict, optional</em>) – kwargs passed into either the legend or colorbar function.
+A special <cite>legend_title_pad</cite> can be set to create a padding between the colorbar and the title of colorbar,
+which can be set in these kwargs as <cite>title</cite>. The default <cite>legend_title_pad</cite> is 10.</p></li>
+<li><p><strong>**kwargs</strong> (<em>dict, optional</em>) – kwargs for the plt.imshow command</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>When providing a GeoAxes in the ‘ax’ parameter it needs to be noted that the ‘extent’ of the data should be provided
+if there is not a perfect overlap. If provided to this function it will be handled by <a href="#id1"><span class="problematic" id="id2">**</span></a>kwargs. The same goes for
+‘transform’ if the plotting projection is different from the data projection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>Axes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mappy.plotting.plotting_maps.plot_map">
+<code class="sig-name descname">plot_map</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">m</span></em>, <em class="sig-param"><span class="n">bins</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cmap</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">vmin</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">vmax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">legend</span><span class="o">=</span><span class="default_value">'colorbar'</span></em>, <em class="sig-param"><span class="n">clip_legend</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">ax</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">figsize</span><span class="o">=</span><span class="default_value">10, 10</span></em>, <em class="sig-param"><span class="n">legend_kwargs</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">aspect</span><span class="o">=</span><span class="default_value">30</span></em>, <em class="sig-param"><span class="n">pad_fraction</span><span class="o">=</span><span class="default_value">0.6</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/plotting/plotting_maps.html#plot_map"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.plotting.plotting_maps.plot_map" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot rasters in a continuous fashion</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>m</strong> (<em>array-like</em>) – Input array. Needs to be either 2D or 3D if the third axis contains RGB(A) information</p></li>
+<li><p><strong>bins</strong> (<em>array-like, optional</em>) – List of bins that will be used to create a BoundaryNorm instance to discretise the plotting. This does not work
+in conjunction with vmin and vmax. Bins in that case <cite>bins</cite> will take the upper hand.  Alternatively a ‘norm’
+parameter can be passed on in the have outside control on the behaviour. Note that at least two bins need to be
+specified.</p></li>
+<li><p><strong>cmap</strong> (<em>matplotlib.cmap or str, optional</em>) – Matplotlib cmap instance or string the will be recognized by matplotlib</p></li>
+<li><p><strong>vmin, vmax</strong> (<em>float, optional</em>) – vmin and vmax parameters for plt.imshow(). This does have no effect in conjunction with bins being provided.</p></li>
+<li><p><strong>legend</strong> (<em>{‘colorbar’, ‘legend’, False}, optional</em>) – Legend type that will be plotted. The ‘legend’ type will only work if bins are specified.</p></li>
+<li><p><strong>clip_legend</strong> (<em>bool, optional</em>) – Clip the legend to the minimum and maximum of bins are provided. If False the colormap will remain intact over
+the whole provided bins, which potentially lowers contrast a lot, but works great for having a common colorbar
+for several plots.</p></li>
+<li><p><strong>ax</strong> (<cite>matplotlib.Axes</cite>, optional) – Axes object. If not provided it will be created on the fly.</p></li>
+<li><p><strong>figsize</strong> (<em>tuple, optional</em>) – Matplotlib figsize parameter. Default is (10, 10)</p></li>
+<li><p><strong>legend_kwargs</strong> (<em>dict, optional</em>) – Extra parameters for the colorbar call</p></li>
+<li><p><strong>aspect</strong> (<em>float, optional</em>) – aspact ratio of the colorbar</p></li>
+<li><p><strong>pad_fraction</strong> (<em>float, optional</em>) – pad_fraction between the Axes and the colorbar if generated</p></li>
+<li><p><strong>**kwargs</strong> – Keyword arguments for plt.imshow()</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>When providing a GeoAxes in the ‘ax’ parameter it needs to be noted that the ‘extent’ of the data should be provided
+if there is not a perfect overlap. If provided to this function it will be handled by <a href="#id3"><span class="problematic" id="id4">**</span></a>kwargs. The same goes for
+‘transform’ if the plotting projection is different than the data projection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>Axes or GeoAxes</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mappy.plotting.plotting_maps.plot_world">
+<code class="sig-name descname">plot_world</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">points</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">box_bounds</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">figsize</span><span class="o">=</span><span class="default_value">10, 10</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/plotting/plotting_maps.html#plot_world"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.plotting.plotting_maps.plot_world" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plotting the world. Points to plot should be given in a pandas dataframe with Lat and Lon column. Bounds object of
+a rasterio file can be plotted with box_bounds parameter.</p>
+<p># todo; deprecate</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul>
+<li><p><strong>points</strong> –</p>
+<dl class="simple">
+<dt>1: [DataFrame]</dt><dd><p>Need to contain the columns “Lat” and “Lon”</p>
+</dd>
+<dt>2: [GeoDataFrame]</dt><dd><p>Contains column with shapely Point geometry</p>
+</dd>
+<dt>3: [list<span class="classifier">Point]</span></dt><dd><p>Contains shapely Points</p>
+</dd>
+</dl>
+</li>
+<li><p><strong>box_bounds</strong> (<em>rasterio.bounds</em>) – bounds from rasterio profile</p></li>
+<li><p><strong>figsize</strong> (<em>[tuple : ints]</em>) – Two ints, passed to the plotting functions based on matplotlib</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Jasper Roebroek
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

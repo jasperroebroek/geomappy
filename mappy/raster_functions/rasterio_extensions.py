@@ -55,9 +55,9 @@ def reproject_map_like(input_map=None, ref_map=None, output_map=None, resampling
         Path to the reference map where the profile is pulled from
     output_map : str
         Path to the location where the transformed map is written to.
-    resampling : rasterio resampling object
+    resampling : `rio.Resampling`
         resampling strategy
-    dtype : numpy.dtype, optional
+    dtype : `numpy.dtype`, optional
         export dtype
 
     Raises
@@ -66,7 +66,6 @@ def reproject_map_like(input_map=None, ref_map=None, output_map=None, resampling
         reference map or input map not found or output_map already exists
     """
     # todo; make it possible to write several bands instead of just one
-    # todo; implement different resampling options
     # todo; make it accept Map
     if not os.path.isfile(ref_map):
         raise IOError("no reference map provided")
@@ -125,7 +124,7 @@ def empty_map_like(ref_map, output_map, dtype=np.float64):
         Path to the map where the profile is pulled from
     output_map : str
         Path to the location where an empty array is written to
-    dtype : numpy.dtype, optional
+    dtype : `numpy.dtype`, optional
         type of data written to the file
 
     Raises
@@ -155,7 +154,7 @@ def empty_map_like(ref_map, output_map, dtype=np.float64):
 
 def export_map_like(m, ref_map=None, output_map=None):
     """
-    Exporting map, taking the needed parameters from a reference_map
+    Exporting a map, taking the needed parameters from a reference_map
 
     Parameters
     ----------
@@ -165,8 +164,7 @@ def export_map_like(m, ref_map=None, output_map=None):
         Path of the reference map
         todo; make the direct insertion of a rasterio profile possible
     output_map : str
-        Path where the data will be written to. If extension is given
-        it will be added (.tif)
+        Path where the data will be written to. If extension is not given it will be added (.tif)
 
     Raises
     ------

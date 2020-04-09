@@ -1,0 +1,281 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>mappy.map.Map module &mdash; mappy 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mappy
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">mappy.map.Map module</a></li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mappy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>mappy.map.Map module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/mappy.map.Map.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-mappy.map.Map">
+<span id="mappy-map-map-module"></span><h1>mappy.map.Map module<a class="headerlink" href="#module-mappy.map.Map" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="mappy.map.Map.Map">
+<em class="property">class </em><code class="sig-name descname">Map</code><a class="reference internal" href="_modules/mappy/map/Map.html#Map"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.Map.Map" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.8)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Creating a map object. Depending on the <cite>mode</cite> a MapRead() or MapWrite() object will be returned.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>location</strong> (<em>str</em>) – Pathname to the raster file, either to create or the read.</p></li>
+<li><p><strong>mode</strong> (<em>{‘r’,’w’}</em>) – Mode of opening the file. Corresponds  with standard rasterio functionality</p></li>
+<li><p><strong>**kwargs</strong> – Arguments to be passed to either MapRead or MapWrite class creation functions</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>If mode == “r”</em> – <cite>MapRead</cite> object</p></li>
+<li><p><em>If mode == “w”</em> – <cite>MapWrite</cite> object</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.8)"><strong>ValueError</strong></a> – Error is raised when mode is not ‘r’ and not ‘w’</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="mappy.map.Map.Map.close">
+<em class="property">static </em><code class="sig-name descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/Map.html#Map.close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.Map.Map.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>function closing all connections created with the MapBase class and its subclasses.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.Map.Map.equal">
+<em class="property">static </em><code class="sig-name descname">equal</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">m1</span></em>, <em class="sig-param"><span class="n">m2</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/Map.html#Map.equal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.Map.Map.equal" title="Permalink to this definition">¶</a></dt>
+<dd><p>function to check equality of two maps, on all parameters as well as values</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>m1, m2</strong> (<em>MapRead</em>) – Maps to be compared on settings and values</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>equality</strong></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)">bool</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.Map.Map.get_tiles">
+<em class="property">static </em><code class="sig-name descname">get_tiles</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/Map.html#Map.get_tiles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.Map.Map.get_tiles" title="Permalink to this definition">¶</a></dt>
+<dd><p>returning tile settings for all open maps</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.Map.Map.get_window_size">
+<em class="property">static </em><code class="sig-name descname">get_window_size</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/Map.html#Map.get_window_size"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.Map.Map.get_window_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>retrieve window_size settings for all open maps</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.Map.Map.maps">
+<em class="property">static </em><code class="sig-name descname">maps</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/Map.html#Map.maps"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.Map.Map.maps" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a list of all open maps</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.Map.Map.set_tiles">
+<em class="property">static </em><code class="sig-name descname">set_tiles</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">tiles</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/Map.html#Map.set_tiles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.Map.Map.set_tiles" title="Permalink to this definition">¶</a></dt>
+<dd><p>setting tile settings for all open maps</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>tiles</strong> (<em>int or tuple</em>) – Parameter for setting the MapBase.tiles property</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="mappy.map.Map.Map.set_window_size">
+<em class="property">static </em><code class="sig-name descname">set_window_size</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">window_size</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mappy/map/Map.html#Map.set_window_size"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#mappy.map.Map.Map.set_window_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>set window_size settings for all open maps</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>window_size</strong> (<em>int, optional</em>) – ‘window_size’ parameter for MapBase.window_size property</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Jasper Roebroek
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

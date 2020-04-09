@@ -41,7 +41,7 @@ def basemap_xticks(ax, ticks, precision=0, side='bottom', add=True, fontsize=10)
         side of the axes that gets the ticks
     add : bool, optional
         if both bottom and top are different and both need to be added, one (or both) of the calls to this function
-        should have 'add' = True
+        should have `add` = True
     fontsize : float, optional
         fontsize of the labels
     """
@@ -137,7 +137,9 @@ def basemap_yticks(ax, ticks, precision=0, side='left', add=True, fontsize=10):
 
 
 def _basemap_ticks(ax, ticks, tick_location, line_constructor, tick_extractor):
-    """Get the tick locations and labels for an axis of an unsupported projection.
+    """
+    Get the tick locations and labels for an axis of an unsupported projection.
+
     Parameters
     ----------
     ax : geoaxis
@@ -200,7 +202,7 @@ def _basemap_ticks(ax, ticks, tick_location, line_constructor, tick_extractor):
 
 class ProjectCustomExtent(ccrs.Projection):
     """
-    Creating a custom extent for a given epsg code, if the hard coded values do not suffice
+    Creating a custom extent for a given epsg code, if the hardcoded values do not suffice
     """
     def __init__(self, epsg=28992, extent=[-300000, 500000, -100000, 800000]):
 
@@ -242,7 +244,7 @@ class ProjectCustomExtent(ccrs.Projection):
         return self.ymin, self.ymax
 
 
-def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None, figsize=(10, 10), resolution="110m",
+def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None, figsize=(10, 10), resolution="110m",
             coastlines=True, earth_image=False, land=False, ocean=False, yticks=30, xticks=30, grid=True, n_steps=300,
             linewidth=1, grid_linewidth=None, border_linewidth=None, coastline_linewidth=None, grid_alpha=0.5,
             fontsize=10):
@@ -259,10 +261,11 @@ def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None,
         most northern longitude
     epsg : int or str, optional
         EPSG code of the geoaxes
-    projection : .
+    projection : `ccrs.projection`
         cartopy projection object. If provided it overwrites the epsg code.
-    ax : plt.axes
-        if a regular matplotlib axis is provided here, it gets replaced by a geoaxis
+    ax : `plt.axes` or GeoAxes
+        if a regular matplotlib axis is provided here, it gets replaced by a geoaxis. If a geoaxis is inserted, it
+        just perform all the operations on that.
     figsize : tuple, optional
         matplotlib figsize parameter
     resolution : {"110m", "50m", "10m"} , optional
@@ -413,50 +416,49 @@ def basemap(x0=-180, x1=180, y0=-90, y1=90, epsg=4326, projection=None, ax=None,
 
 # TESTS
 if __name__ == "__main__":
-    pass
-    # basemap()
-    # plt.show()
-    #
-    # basemap(x0=0)
-    # plt.show()
-    #
-    # basemap(epsg=3857)
-    # plt.show()
-    #
-    # ax = basemap(y0=0, epsg=3857)
-    # plt.show()
-    #
-    # # Trying out different projections
-    # basemap(epsg=3035, resolution="10m", grid=True)
-    # plt.show()
-    #
-    # basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5)
-    # plt.show()
-    #
-    # basemap(epsg=3857, resolution="10m", grid=True)
-    # plt.show()
-    #
-    # basemap(epsg=5643, resolution="10m", grid=True, xticks=5, yticks=5)
-    # plt.show()
-    #
-    # # Add labels on four axes
-    # ax = basemap(epsg=5643, resolution="10m", grid=True, xticks=2, yticks=2)
-    # basemap_xticks(ax, list(np.linspace(-180, 180, (360 // 2 + 1))), side="top")
-    # basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 2 + 1))), side="right")
-    # plt.show()
-    #
+    basemap()
+    plt.show()
+
+    basemap(x0=0)
+    plt.show()
+
+    basemap(epsg=3857)
+    plt.show()
+
+    ax = basemap(y0=0, epsg=3857)
+    plt.show()
+
+    # Trying out different projections
+    basemap(epsg=3035, resolution="10m", grid=True)
+    plt.show()
+
+    basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5)
+    plt.show()
+
+    basemap(epsg=3857, resolution="10m", grid=True)
+    plt.show()
+
+    basemap(epsg=5643, resolution="10m", grid=True, xticks=5, yticks=5)
+    plt.show()
+
+    # Add labels on four axes
+    ax = basemap(epsg=5643, resolution="10m", grid=True, xticks=2, yticks=2)
+    basemap_xticks(ax, list(np.linspace(-180, 180, (360 // 2 + 1))), side="top")
+    basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 2 + 1))), side="right")
+    plt.show()
+
     # Add labels on three axes
-    # ax = basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5)
-    # basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 5 + 1))), side="right")
-    # plt.show()
-    #
-    # # Changing fontsize
-    # ax = basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5, fontsize=6)
-    # basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 5 + 1))), side="right", fontsize=6)
-    # plt.show()
+    ax = basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5)
+    basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 5 + 1))), side="right")
+    plt.show()
+
+    # Changing fontsize
+    ax = basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5, fontsize=6)
+    basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 5 + 1))), side="right", fontsize=6)
+    plt.show()
 
     # Smaller extent and labels on both sides
-    # ax = basemap(x0=0, epsg=3035, resolution="10m", grid=True, xticks=5, yticks=10)
-    # basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 5 + 1))), side="right")
-    # plt.tight_layout()
-    # plt.show()
+    ax = basemap(x0=0, epsg=3035, resolution="10m", grid=True, xticks=5, yticks=10)
+    basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 5 + 1))), side="right")
+    plt.tight_layout()
+    plt.show()

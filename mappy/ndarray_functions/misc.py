@@ -5,12 +5,9 @@ Created on Wed May  8 18:28:12 2019
 @author: jroebroek
 """
 import numpy as np
-import matplotlib.pyplot as plt
-# todo; circular references
-# from plotting import add_colorbar
 
 
-def grid_from_corners(v, shape, plotting=True, show=True):
+def grid_from_corners(v, shape):
     """
     function returns an linearly interpolated grid from values at the corners
     
@@ -21,19 +18,12 @@ def grid_from_corners(v, shape, plotting=True, show=True):
         left corner.
     shape : list
         List of two integers, determining the shape of the array that will be returned
-    plotting : bool, optional
-        Plot the created array. Default is True.
     
     Returns
     -------
     :obj:`~numpy.ndarray`
         Interpolated array
     """
-
-    if type(plotting) != bool:
-        raise TypeError("plotting is a boolean variable")
-    if type(show) != bool:
-        raise TypeError("show is a boolean variable")
     if type(v) not in (tuple, list, np.ndarray):
         raise TypeError("corner values need to be supplied in a list")
     else:
@@ -49,60 +39,49 @@ def grid_from_corners(v, shape, plotting=True, show=True):
 
     grid = np.linspace(np.linspace(v[0], v[1], shape[1]),
                        np.linspace(v[3], v[2], shape[1]), shape[0])
-    if plotting:
-        im = plt.imshow(grid, aspect="auto")
-        from mappy.plotting import add_colorbar
-        add_colorbar(im)
-        plt.draw()
-
     return grid
 
 
-def overlapping_arrays(map1, map2, preserve_input=True):
+def overlapping_arrays(m, preserve_input=True):
     """
     Taking two maps of the same shape and returns them with  all the cells that don't exist in the other set to np.nan
 
     Parameters
     ----------
-    map1, map2 : :obj:`~numpy.ndarray`
-        two identically shaped array objects
+    m: iterable of :obj:`~numpy.ndarray`
+        list of a minimum of 2 identically shaped numpy arrays.
     preserve_input : bool, optional
         if set to True the data is copied before applying the mask to preserve the input arrays. If set to False the
         memory space of the input arrays will be used.
 
     Returns
     -------
-    map1, map2 : :obj:`~numpy.ndarray`
-        two identically shaped array objects of dtype np.float64
+    m : list of :obj:`~numpy.ndarray`
 
     Raises
     ------
     TypeError
         if arrays are unreadable
-    ValueError
-        if maps don't match or are not of dtype np.float64
     """
-    # todo; make this function accept an unlimited amount of arrays in the first parameter `m` instead of just accepting
-    #  two input arrays
+    if len(m) < 2:
+        raise IndexError("list needs to contain a minimum of two arrays")
 
-    if not isinstance(map1, np.ndarray):
-        raise TypeError("Map1 not understood")
-    if not isinstance(map2, np.ndarray):
-        raise TypeError("Map2 not understood")
+    for a in m:
+        if not isinstance(a, np.ndarray):
+            raise TypeError("all entries in the list need to be ndarrays")
 
-    if map1.shape != map2.shape:
-        raise ValueError("Maps don't exist or are not of the same size")
-    if map1.dtype != np.float64:
-        raise ValueError("Can't perform on map1, not formatted as float64")
-    if map2.dtype != np.float64:
-        raise ValueError("Can't perform on map2, not formatted as float64")
+    if not np.all([a.shape == m[0].shape for a in m]):
+        raise ValueError("arrays are not of the same size")
 
-    map1 = map1.copy()
-    map2 = map2.copy()
+    for a in m:
+        if a.dtype != np.float64:
+            a = a.astype(np.float64)
+        elif preserve_input:
+            a = a.copy()
 
-    valid_cells = np.logical_and(~np.isnan(map1), ~np.isnan(map2))
-    map1[~valid_cells] = np.nan
-    map2[~valid_cells] = np.nan
+    valid_cells = np.logical_and.reduce([~np.isnan(a) for a in m])
 
-    return map1, map2
+    for a in m:
+        a[~valid_cells] = np.nan
 
+    return m

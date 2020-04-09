@@ -6,15 +6,16 @@ import time
 from ..ndarray_functions.rolling_functions import rolling_window
 
 
-def focal_statistics(a, *, window_size=None, func=None, fraction_accepted=0.7, verbose=False, count_values=None,
-                     std_df=1, reduce=False, majority_mode="nan"):
+def focal_statistics(a, *, window_size=None, func=None, fraction_accepted=0.7, verbose=False, std_df=1, reduce=False,
+                     majority_mode="nan"):
     """
     Focal statistics wrapper.
     
     Parameters
     ----------
     a : :obj:`~numpy.ndarray`
-        Input array (2D). If not np.float64 it will be converted internally
+        Input array (2D). If not np.float64 it will be converted internally, except when the majority function is called
+        in which case the input array's dtype is preserved.
     window_size : int
         Window size for focal statistics. Should be bigger than 1.
     func : {"mean","min","max","std","nanmean","nanmin","nanmax","nanstd","majority"}
@@ -24,13 +25,9 @@ def focal_statistics(a, *, window_size=None, func=None, fraction_accepted=0.7, v
         0: all window are calculated if at least 1 value is present
         1: only windows completely filled with values are calculated
         0-1: fraction of acceptability
+        Note that this parameter has no effect yet when calculating with 'nanmax' and 'nanmin'
     verbose : bool, optional
         Verbosity with timing. False by default
-    count_values : :obj:`~numpy.ndarray`, optional
-        Values per  window that are present. If not given it is calculated. Giving it gives outside control of ignoring
-        certain windows. Should have the same shape as the windowed input array. Cells that shouldn't be calculated can
-        be given as 0 in this array. This is only functional on calculations with NaN.
-        todo; deprecate this functionality (fix correlation function beforehand)
     std_df : {1,0}, optional
         Only for nanstd and std calculations. Degrees of freedom; meaning if the function is devided by the count of
         observations or the count of observations minus one. Should be 0 or 1.
@@ -42,7 +39,7 @@ def focal_statistics(a, *, window_size=None, func=None, fraction_accepted=0.7, v
         nan: when more than one class has the same score NaN will be assigned
         ascending: the first occurrence of the maximum count will be assigned
         descending: the last occurrence of the maximum count will be assigned.
-        Parameter only used when the 'func' is "majority".
+        Parameter only used when the `func` is "majority".
         
     Returns
     -------
@@ -73,7 +70,6 @@ def focal_statistics(a, *, window_size=None, func=None, fraction_accepted=0.7, v
     ValueError
         If data is not a 2D array
     """
-    # todo; get rid of count_values
     # todo; use rolling_sum and rolling_mean for speadup of calculations. Be sure to check for consistency
     # todo; split this function up in several functions, this function may remain as a wrapper
     # todo; 3D
@@ -130,15 +126,6 @@ def focal_statistics(a, *, window_size=None, func=None, fraction_accepted=0.7, v
         r = np.full(shape, np.nan)
         ind_inner = s_[:, :]
 
-    if not isinstance(count_values, type(None)):
-        if count_values.shape != a[ind_inner].shape and not reduce:
-            raise ValueError("Count values has a different shape than the input array")
-        if count_values.shape != r.shape and reduce:
-            raise ValueError("Count values has a different shape than the input array")
-        count_values_flag = True
-    else:
-        count_values_flag = False
-
     start = time.time()
 
     if func[:3] == "nan":
@@ -152,17 +139,14 @@ def focal_statistics(a, *, window_size=None, func=None, fraction_accepted=0.7, v
                 print("- Empty array")
             return r
 
-        # if count_values is not given, calculate it
-        if not count_values_flag:
-            # Find the amount of true values in each window
-            # !! only works 2D
-            count_values = rolling_window(values, window_size, reduce=reduce).sum(axis=(2, 3))
+        # Find the amount of true values in each window
+        count_values = rolling_window(values, window_size, reduce=reduce).sum(axis=(2, 3))
 
-            # Remove windows that have too many NaN values
-            if not reduce:
-                count_values[~values[ind_inner]] = 0
+        # Remove windows that have too many NaN values
+        if not reduce:
+            count_values[~values[ind_inner]] = 0
 
-            count_values[count_values < fraction_accepted * (window_size ** 2)] = 0
+        count_values[count_values < fraction_accepted * (window_size ** 2)] = 0
 
     # FOCAL STATISTICS FUNCTIONS    
     a_view = rolling_window(a, window_size=window_size, reduce=reduce)
@@ -211,7 +195,6 @@ def focal_statistics(a, *, window_size=None, func=None, fraction_accepted=0.7, v
             print(f"- preparation: {time.time() - start}")
 
         a_mean = focal_statistics(a, window_size=window_size, func="nanmean",
-                                  count_values=count_values,
                                   fraction_accepted=fraction_accepted,
                                   reduce=reduce)[ind_inner]
 
@@ -287,45 +270,6 @@ def focal_statistics(a, *, window_size=None, func=None, fraction_accepted=0.7, v
 
         if verbose:
             print(f"- calculation: {time.time() - start}")
-
-    if func == "majority_old":
-        unique = np.unique(a)
-
-        if unique.size > 100:
-            raise ValueError("More than 100 unique values")
-
-        unique = list(unique)
-
-        if majority_mode == "descending":
-            unique = unique[::-1]
-
-        unique_to_index = {value: index for index, value in enumerate(unique)}
-        map_unique_to_index = np.vectorize(lambda x: unique_to_index[x])
-
-        index_to_unique = {index: value for index, value in enumerate(unique)}
-        index_to_unique[-1] = np.nan
-
-        if majority_mode == "nan":
-            map_index_to_unique = np.vectorize(lambda x: np.float64(index_to_unique[x]))
-        else:
-            map_index_to_unique = np.vectorize(lambda x: index_to_unique[x])
-
-        unique_array = map_unique_to_index(a)
-        unique_array_view = rolling_window(unique_array, window_size,
-                                           reduce=reduce, flatten=True)
-
-        value_count = np.apply_along_axis(lambda x: np.bincount(x, minlength=len(unique)),
-                                          axis=2, arr=unique_array_view)
-
-        max_index = np.argmax(value_count, axis=2)
-        max_count = np.max(value_count, axis=2)
-
-        count_max = (value_count == max_count[:, :, np.newaxis]).sum(axis=2)
-
-        if majority_mode == "nan":
-            max_index[count_max > 1] = -1
-
-        r[ind_inner] = map_index_to_unique(max_index)
 
     if func == "majority":
         return focal_majority(a=a, window_size=window_size, fraction_accepted=fraction_accepted, reduce=reduce,

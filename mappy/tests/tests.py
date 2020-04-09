@@ -31,7 +31,7 @@ def correlate_maps_simple(map1, map2, window_size=5, fraction_accepted=0.7):
         numpy array of the same shape as map1 and map2 with the local correlation
 
     """
-    map1, map2 = overlapping_arrays(map1.astype(np.float64), map2.astype(np.float64))
+    map1, map2 = overlapping_arrays([map1, map2])
     fringe = window_size // 2
     corr = np.full(map1.shape, np.nan)
     for i in range(fringe, map1.shape[0] - fringe):
