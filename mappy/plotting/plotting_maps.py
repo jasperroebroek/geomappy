@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.colors import ListedColormap, Colormap
-from matplotlib.patches import Patch
+from mpl_toolkits import axes_grid1
 from shapely.geometry import Point, Polygon
 from mappy.plotting.misc import _determine_cmap_boundaries
 from ..ndarray_functions.nan_functions import nanunique, nandigitize
@@ -105,7 +105,7 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
             elif legend == "colorbar":
                 if isinstance(legend_kwargs, type(None)):
                     legend_kwargs = {}
-                cbar = add_colorbar(im=im, extend=extend, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
+                cbar = add_colorbar(im=im, ax=ax, extend=extend, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
 
     elif m.ndim == 3:
         ax.imshow(m, origin='upper', **kwargs)
@@ -189,7 +189,8 @@ def plot_world(points=None, box_bounds=False, figsize=(10, 10)):
 
 
 def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legend="legend", clip_legend=False, ax=None,
-                        suppress_warnings=False, mode="classes", legend_kwargs=None, **kwargs):
+                        suppress_warnings=False, mode="classes", legend_kwargs=None, aspect=30, pad_fraction=0.6,
+                        force_equal_figsize=False, **kwargs):
     """
     Plot a map with discrete classes or index
 
@@ -204,6 +205,7 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
         List of colors in a format understandable by matplotlib. By default random colors are taken
     cmap : matplotlib cmap or str
         Can be used to set a colormap when no colors are provided.
+        todo; implement
     labels : list, optional
         list of labels for the different classes. By default the unique values are taken as labels
     legend : {'legend', 'colorbar', False}, optional
@@ -222,6 +224,14 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
         kwargs passed into either the legend or colorbar function.
         A special `legend_title_pad` can be set to create a padding between the colorbar and the title of colorbar,
         which can be set in these kwargs as `title`. The default `legend_title_pad` is 10.
+    aspect : float, optional
+        aspact ratio of the colorbar
+    pad_fraction : float, optional
+        pad_fraction between the Axes and the colorbar if generated
+    force_equal_figsize : bool, optional
+        when plotting with a colorbar the figure is going be slightly smaller than when you are using `legend` or non
+        at all. This parameter can be used to force equal sizes, meaning that the version with a `legend` is going to
+        be slightly reduced.
     **kwargs : dict, optional
         kwargs for the plt.imshow command
 
@@ -261,7 +271,7 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
         if len(bins) != len(colors):
             raise IndexError(f"length of bins and colors don't match\nbins: {len(bins)}\ncolors: {len(colors)}")
     else:
-        colors = cmap_random(len(bins), verbose=False, return_type="rgb", color_type="pastel")
+        colors = cmap_random(len(bins), return_type="list", color_type="pastel")
 
     if not isinstance(labels, type(None)):
         if len(bins) != len(labels):
@@ -303,13 +313,14 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
         if isinstance(legend_kwargs, type(None)):
             legend_kwargs = {"facecolor": "white", "edgecolor": "lightgrey", 'loc': 0}
         ax.legend(handles=legend_patches, **legend_kwargs)
+
     elif legend == "colorbar":
         if isinstance(legend_kwargs, type(None)):
             legend_kwargs = {}
         title = legend_kwargs.pop("title", "")
         legend_title_pad = legend_kwargs.pop("legend_title_pad", 10)
 
-        cbar = add_colorbar(im=im, **legend_kwargs)
+        cbar = add_colorbar(im=im, ax=ax, **legend_kwargs)
 
         N = colors.shape[0]
         step = (cbar.vmax - cbar.vmin) / N
@@ -318,6 +329,15 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
         cbar.set_ticks(np.linspace(cbar.vmin + margin, cbar.vmax - margin, num=N))
         cbar.ax.set_yticklabels(labels)
         cbar.ax.set_title(title, pad=legend_title_pad)
+
+    if force_equal_figsize and legend != 'colorbar':
+        divider = axes_grid1.make_axes_locatable(ax)
+        width = axes_grid1.axes_size.AxesY(ax, aspect=1. / aspect)
+        pad = axes_grid1.axes_size.Fraction(pad_fraction, width)
+        current_ax = plt.gca()
+        position = legend_kwargs.get('position', 'vertical')
+        divider.append_axes(position=position, size=width, pad=pad, axes_class=plt.Axes)
+        plt.sca(current_ax)
 
     return ax
 

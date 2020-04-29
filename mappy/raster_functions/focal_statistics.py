@@ -281,8 +281,6 @@ def focal_majority(a, *, window_size=None, fraction_accepted=0.7, reduce=False, 
     if a.dtype not in ('float32', 'float64'):
         a = a.astype(np.float64)
 
-    if isinstance(a, type(None)):
-        raise ValueError("No input array given")
     if isinstance(window_size, type(None)):
         raise ValueError("No window size given")
 
@@ -324,6 +322,7 @@ def focal_majority(a, *, window_size=None, fraction_accepted=0.7, reduce=False, 
     if values.size == 0:
         return r
 
+    # todo; convert to rolling sum (when reduce option is available)
     count_values = rolling_window(~np.isnan(a), window_size=window_size, reduce=reduce).sum(axis=(2, 3))
     if not reduce:
         count_values[np.isnan(a[ind_inner])] = 0
@@ -348,8 +347,6 @@ def focal_majority(a, *, window_size=None, fraction_accepted=0.7, reduce=False, 
 
     t[count_values == 0] = np.nan
 
-    # TODO; rewrite to prevent copying
     r[ind_inner] = t
-
     return r
 

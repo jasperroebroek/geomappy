@@ -298,7 +298,7 @@ def cmap_random(n, color_type='pastel', first_color=None, last_color=None, retur
 
 def legend_patches(colors, labels, type='patch', **kwargs):
     if len(colors) != len(labels):
-        raise IndexError("Length of labe and colors don't match")
+        raise IndexError("Length of labels and colors don't match")
 
     if type == 'patch':
         return [Patch(facecolor=color, label=label, **kwargs)
@@ -337,10 +337,11 @@ def add_colorbar(im=None, ax=None, aspect=30, pad_fraction=0.6, position="right"
             ax = plt.gca()
         im = ax.images[-1]
     else:
-        if isinstance(ax, ScalarMappable):
-            ax = plt.gca()
-        elif isinstance(ax, type(None)):
-            ax = im.axes
+        if isinstance(ax, type(None)):
+            if isinstance(im, ScalarMappable):
+                ax = plt.gca()
+            else:
+                ax = im.axes
 
     orientation = "vertical" if position in ("right", "left") else "horizontal"
 

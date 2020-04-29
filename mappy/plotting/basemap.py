@@ -245,9 +245,9 @@ class ProjectCustomExtent(ccrs.Projection):
 
 
 def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None, figsize=(10, 10), resolution="110m",
-            coastlines=True, earth_image=False, land=False, ocean=False, yticks=30, xticks=30, grid=True, n_steps=300,
-            linewidth=1, grid_linewidth=None, border_linewidth=None, coastline_linewidth=None, grid_alpha=0.5,
-            fontsize=10):
+            coastlines=True, earth_image=False, land=False, ocean=False, yticks=30, xticks=30, grid=True, precision=0,
+            n_steps=300, linewidth=1, grid_linewidth=None, border_linewidth=None, coastline_linewidth=None,
+            grid_alpha=0.5, fontsize=10):
     """
     Parameters
     ----------
@@ -288,6 +288,8 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
         coordinates in the list are used.
     grid : bool, optional
         switch for gridlines and ticks
+    precision : int, optional
+        the numerical precision of the labels
     grid_linewidth : float, optional
         linewidth specifier for gridlines. If not specified, the value will be taken from 'linewidth'.
     border_linewidth : float, optional
@@ -404,8 +406,8 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
             g.ylocator = mticker.FixedLocator(ytick_locations)
             g.n_steps = n_steps
 
-            basemap_xticks(ax, list(xtick_locations), add=False)
-            basemap_yticks(ax, list(ytick_locations), add=False)
+            basemap_xticks(ax, list(xtick_locations), add=False, precision=precision)
+            basemap_yticks(ax, list(ytick_locations), add=False, precision=precision)
 
     ax.outline_patch.set_linewidth(border_linewidth)
     ax.tick_params(axis='both', which='both', length=0, labelsize=fontsize)

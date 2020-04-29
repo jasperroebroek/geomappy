@@ -1,36 +1,83 @@
 import cartopy
-from geopandas.plotting import plot_polygon_collection, plot_linestring_collection, plot_point_collection
-from matplotlib.colors import Colormap, Normalize
-import matplotlib.pyplot as plt
-import matplotlib
-import geopandas as gpd
-from shapely.geometry import Point, Polygon
-import pandas as pd
-import numpy as np
 import cartopy.crs as ccrs
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from geopandas.plotting import plot_polygon_collection, plot_linestring_collection, plot_point_collection
+from matplotlib.colors import Colormap, Normalize, ListedColormap, BoundaryNorm
+from mpl_toolkits import axes_grid1
 
-from .colors import add_colorbar
-from .misc import _determine_cmap_boundaries
+from .colors import add_colorbar, cmap_random
+from .misc import _determine_cmap_boundaries, _create_geometry_values_and_sizes
+from ..ndarray_functions import nanunique, nandigitize
+from ..plotting import legend_patches as lp
+
+
+def _plot_geometries(ax, df, colors, linewidth, markersize, **kwargs):
+    """
+    internal plotting function for geometries, called by plot_shapes and plot_classified_shapes
+
+    Parameters
+    ----------
+    ax : matplotlib.Axes
+        axes to plot on
+    df : GeoDataFrame
+        geodataframe containing the geometries
+    colors : pd.Series
+        Series object containing the colors
+    linewidth : numeric
+        linewidth of the geometries
+    markersize : pd.Series
+        size of points in `df`
+    **kwargs
+        Keyword arguments for the geopandas plotting functions: plot_point_collection, plot_polygon_collection and
+        plot_linestring_collection
+    """
+    geom_types = df.geometry.type
+    poly_idx = np.asarray((geom_types == "Polygon") | (geom_types == "MultiPolygon"))
+    line_idx = np.asarray((geom_types == "LineString") | (geom_types == "MultiLineString"))
+    point_idx = np.asarray((geom_types == "Point") | (geom_types == "MultiPoint"))
+
+    # plot all Polygons and all MultiPolygon components in the same collection
+    polys = df.geometry[poly_idx]
+    if not polys.empty:
+        plot_polygon_collection(ax, polys, color=colors[poly_idx], linewidth=linewidth, **kwargs)
+
+    # plot all LineStrings and MultiLineString components in same collection
+    lines = df.geometry[line_idx]
+    if not lines.empty:
+        plot_linestring_collection(ax, lines, color=colors[line_idx], linewidth=linewidth, **kwargs)
+
+    # plot all Points in the same collection
+    points = df.geometry[point_idx]
+    if not points.empty:
+        if isinstance(markersize, np.ndarray):
+            markersize = markersize[point_idx]
+        plot_point_collection(ax, points, color=colors[point_idx], markersize=markersize, linewidth=linewidth, **kwargs)
+
 
 
 def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin_labels=None, cmap=None, vmin=None,
                 vmax=None, legend="colorbar", clip_legend=False, ax=None, figsize=(10, 10), legend_kwargs=None,
-                aspect=30, pad_fraction=0.6, linewidth=0, **kwargs):
+                aspect=30, pad_fraction=0.6, linewidth=0, nan_color="White", **kwargs):
     """
     Plot shapes in a continuous fashion
 
     Parameters
     ----------
     lat, lon : array-like
-        Lattitude and Longitude
-    values : array-like or str
-        Values at each pair of lattitude and longitude entries, or if `df` is set, it is the name of the column that
-        is used to plot the data. The default string value is "values".
+        Latitude and Longitude
+    values : array-like or numeric or str
+        Values at each pair of latitude and longitude entries if list like. A single numeric value will be cast to all
+        geometries. If `df` is set a string can be passed to values which will be interpreted as the name of the column
+        holding the values (the default string if None is set is "values).
     s : array-like, optional
-        Size values for each pair of lattitude and longitude entries. If `df` is set, the column named 's' will be used
-        if present. This only works with point data.
+        Size values for each pair of latitude and longitude entries if list like. A single numeric value will be cast
+        to all geometries. If `df` is set a string will be interpreted as the name of the column holding the sizes. If
+        None is set no sizes will be set.
     df : GeoDataFrame, optional
-        GeoDataFrame with columns values and s as described above.
+        Optional GeoDataframe which can be used to plot different shapes than points.
     bins : array-like, optional
         List of bins that will be used to create a BoundaryNorm instance to discretise the plotting. This does not work
         in conjunction with vmin and vmax. Bins in that case will take the upper hand.  Alternatively a 'norm' parameter
@@ -59,6 +106,8 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         pad_fraction between the Axes and the colorbar if generated
     linewidth : numeric, optional
         width of the line around the shapes
+    nan_color : matplotlib color, optional
+        Color used for shapes with NaN value. The default is 'white'
     **kwargs
         Keyword arguments for the geopandas plotting functions: plot_point_collection, plot_polygon_collection and
         plot_linestring_collection
@@ -87,28 +136,16 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
     elif not isinstance(cmap, Colormap):
         raise TypeError("cmap not recognized")
 
-    if isinstance(df, type(None)):
-        lon = np.array(lon)
-        lat = np.array(lat)
-        df = gpd.GeoDataFrame({'geometry': [Point(lon[i], lat[i]) for i in range(len(lon))],
-                               'values': values,
-                               's': s})
-        values = "values"
-        if isinstance(s, type(None)):
-            markersize = None
-        else:
-            markersize = df.loc[:, "s"]
-    else:
-        if isinstance(values, type(None)):
-            values = "values"
-        if 's' in df.columns:
-            markersize = df.loc[:, "s"]
-        else:
-            markersize = None
+    geometry, values, markersize = _create_geometry_values_and_sizes(lat=lat, lon=lon, values=values, s=s, df=df)
 
     if isinstance(bins, type(None)):
-        minimum = df.loc[:, values].min()
-        maximum = df.loc[:, values].max()
+        if values.dtype == np.float:
+            data = values[~np.isnan(values)]
+        else:
+            data = values
+        minimum = data.min()
+        maximum = data.max()
+
         if isinstance(vmin, type(None)):
             vmin = minimum
         if isinstance(vmax, type(None)):
@@ -127,7 +164,7 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
 
     else:
-        cmap, norm, legend_patches, extend = _determine_cmap_boundaries(m=df.loc[:, values], bins=bins, cmap=cmap,
+        cmap, norm, legend_patches, extend = _determine_cmap_boundaries(m=values, bins=bins, cmap=cmap,
                                                                         clip_legend=clip_legend)
         sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
 
@@ -136,29 +173,10 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
                 legend_kwargs = {"facecolor": "white", "edgecolor": "lightgrey", 'loc': 0}
             ax.legend(handles=legend_patches, **legend_kwargs)
 
-    colors = pd.Series(cmap(norm(df.loc[:, values].values)).tolist())
+    colors = pd.Series(cmap(norm(values)).tolist())
+    colors[pd.isna(values)] = nan_color
 
-    geom_types = df.geometry.type
-    poly_idx = np.asarray((geom_types == "Polygon") | (geom_types == "MultiPolygon"))
-    line_idx = np.asarray((geom_types == "LineString") | (geom_types == "MultiLineString"))
-    point_idx = np.asarray((geom_types == "Point") | (geom_types == "MultiPoint"))
-
-    # plot all Polygons and all MultiPolygon components in the same collection
-    polys = df.geometry[poly_idx]
-    if not polys.empty:
-        plot_polygon_collection(ax, polys, color=colors[poly_idx], linewidth=linewidth, **kwargs)
-
-    # plot all LineStrings and MultiLineString components in same collection
-    lines = df.geometry[line_idx]
-    if not lines.empty:
-        plot_linestring_collection(ax, lines, color=colors[line_idx], linewidth=linewidth, **kwargs)
-
-    # plot all Points in the same collection
-    points = df.geometry[point_idx]
-    if not points.empty:
-        if isinstance(markersize, np.ndarray):
-            markersize = markersize[point_idx]
-        plot_point_collection(ax, points,  color=colors[point_idx], markersize=markersize, linewidth=linewidth, **kwargs)
+    _plot_geometries(ax, geometry, colors, linewidth, markersize, **kwargs)
 
     if isinstance(legend_kwargs, type(None)):
         legend_kwargs = {}
@@ -171,13 +189,167 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         if not isinstance(bins, type(None)):
             if isinstance(bin_labels, type(None)):
                 bin_labels = bins
-            if 'position' in legend_kwargs and legend_kwargs['position'] == 'bottom':
-                cbar.ax.set_xticklabels(bin_labels)
-            else:
-                cbar.ax.set_yticklabels(bin_labels)
-
+            cbar.set_ticks(bins)
+            cbar.set_ticklabels(bin_labels)
     return ax
 
 
-def plot_classified_shapes(**kwargs):
-    raise NotImplementedError("This will be implemented in the future")
+def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, colors=None, cmap=None,
+                           labels=None, legend="legend", clip_legend=False, ax=None, mode="classes",
+                           suppress_warnings=False, legend_kwargs=None, aspect=30, pad_fraction=0.6, linewidth=0,
+                           force_equal_figsize=False, nan_color="White", **kwargs):
+    """
+    Plot shapes with discrete classes or index
+
+    Parameters
+    ----------
+    lat, lon : array-like
+        Latitude and Longitude
+    values : array-like or numeric or str
+        Values at each pair of latitude and longitude entries if list like. A single numeric value will be cast to all
+        geometries. If `df` is set a string can be passed to values which will be interpreted as the name of the column
+        holding the values (the default string if None is set is "values).
+    s : array-like, optional
+        Size values for each pair of latitude and longitude entries if list like. A single numeric value will be cast
+        to all geometries. If `df` is set a string will be interpreted as the name of the column holding the sizes. If
+        None is set no sizes will be set.
+    df : GeoDataFrame, optional
+        Optional GeoDataframe which can be used to plot different shapes than points.
+    bins : list, optional
+        list of either bins as used in np.digitize or unique values corresponding to `colors` and `labels`. By default
+        this parameter is not necessary, the unique values are taken from the input map
+    colors : list, optional
+        List of colors in a format understandable by matplotlib. By default random colors are taken
+    cmap : matplotlib cmap or str
+        Can be used to set a colormap when no colors are provided.
+    labels : list, optional
+        list of labels for the different classes. By default the unique values are taken as labels
+    legend : {'legend', 'colorbar', False}, optional
+        Presence and type of legend. 'Legend' wil insert patches, 'colorbar' wil insert a colorbar and False will
+        prevent any legend to be printed.
+    clip_legend : bool, optional
+        remove the items from the legend that don't occur on the map but are passed in
+    ax : axes, optional
+        matplotlib axes to plot the map on. If not given it is created on the fly. A cartopty GeoAxis can be provided.
+    suppress_warnings : bool, optional
+        By default 15 classes is the maximum that can be plotted. If set to True this maximum is removed
+    mode : {'classes', 'index'}
+        'Classes' is used for individual values that can not directly be used as indices
+        'Index' for raters that already contain the exact index for colors and labels lists
+    legend_kwargs : dict, optional
+        kwargs passed into either the legend or colorbar function.
+        A special `legend_title_pad` can be set to create a padding between the colorbar and the title of colorbar,
+        which can be set in these kwargs as `title`. The default `legend_title_pad` is 10.
+    aspect : float, optional
+        aspact ratio of the colorbar
+    pad_fraction : float, optional
+        pad_fraction between the Axes and the colorbar if generated
+    linewidth : numeric, optional
+        width of the line around the shapes
+    force_equal_figsize : bool, optional
+        when plotting with a colorbar the figure is going be slightly smaller than when you are using `legend` or non
+        at all. This parameter can be used to force equal sizes, meaning that the version with a `legend` is going to
+        be slightly reduced.
+    nan_color : matplotlib color, optional
+        Color used for shapes with NaN value. The default is 'white'
+    **kwargs : dict, optional
+        kwargs for the plt.imshow command
+
+    Notes
+    -----
+    When providing a GeoAxes in the 'ax' parameter it needs to be noted that the 'extent' of the data should be provided
+    if there is not a perfect overlap. If provided to this function it will be handled by **kwargs. The same goes for
+    'transform' if the plotting projection is different from the data projection.
+
+    Returns
+    -------
+    Axes
+    """
+    if isinstance(ax, type(None)):
+        f, ax = plt.subplots(figsize=(10, 10))
+    elif isinstance(ax, cartopy.mpl.geoaxes.GeoAxes):
+        if "transform" not in kwargs:
+            kwargs["transform"] = ccrs.PlateCarree()
+
+    if mode not in ('classes', 'index'):
+        raise ValueError("mode not recognized")
+
+    geometry, values, markersize = _create_geometry_values_and_sizes(lat=lat, lon=lon, values=values, s=s, df=df)
+
+    if isinstance(bins, type(None)):
+        data = values[~np.isnan(values)]
+        bins = np.unique(data)
+        mode = 'classes'
+    else:
+        bins = np.array(bins)
+        bins.sort()
+
+    if len(bins) > 15 and not suppress_warnings:
+        raise ValueError("Number of bins above 15, this creates issues with visibility")
+
+    if not isinstance(colors, type(None)):
+        if len(bins) != len(colors):
+            raise IndexError(f"length of bins and colors don't match\nbins: {len(bins)}\ncolors: {len(colors)}")
+    else:
+        colors = cmap_random(len(bins), return_type="list", color_type="pastel")
+
+    if not isinstance(labels, type(None)):
+        if len(bins) != len(labels):
+            raise IndexError("length of bins and labels don't match")
+    else:
+        labels = list(bins)
+
+    colors = np.array(colors)
+    labels = np.array(labels)
+
+    if mode == 'index':
+        m_binned = values
+    elif mode == 'classes':
+        m_binned = nandigitize(values, bins=bins, right=True)
+
+    m_binned_unique = nanunique(m_binned).astype(int)
+    if (~np.all(m_binned_unique == np.linspace(0, m_binned_unique.max(), num=m_binned_unique.size)) or \
+        len(m_binned_unique) != len(colors)) and clip_legend:
+        colors = colors[m_binned_unique]
+        labels = labels[m_binned_unique]
+
+    cmap = ListedColormap(colors)
+    norm = BoundaryNorm(np.r_[bins, bins[-1] + 1], len(bins))
+    sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
+    legend_patches = lp(colors=colors, labels=labels, edgecolor='lightgrey')
+
+    plotting_colors = pd.Series(cmap(norm(values)).tolist())
+    plotting_colors[pd.isna(values)] = nan_color
+    _plot_geometries(ax, geometry, plotting_colors, linewidth, markersize, **kwargs)
+
+    # Legend
+    if legend == "legend":
+        if isinstance(legend_kwargs, type(None)):
+            legend_kwargs = {"facecolor": "white", "edgecolor": "lightgrey", 'loc': 0}
+        ax.legend(handles=legend_patches, **legend_kwargs)
+    elif legend == "colorbar":
+        if isinstance(legend_kwargs, type(None)):
+            legend_kwargs = {}
+        title = legend_kwargs.pop("title", "")
+        legend_title_pad = legend_kwargs.pop("legend_title_pad", 10)
+
+        cbar = add_colorbar(im=sm, ax=ax, **legend_kwargs)
+
+        boundaries = cbar._boundaries
+        tick_locations = [(boundaries[i]-boundaries[i-1])/2+boundaries[i-1]
+                          for i in range(1, len(boundaries))]
+
+        cbar.set_ticks(tick_locations)
+        cbar.ax.set_yticklabels(labels)
+        cbar.ax.set_title(title, pad=legend_title_pad)
+
+    if force_equal_figsize and legend != 'colorbar':
+        divider = axes_grid1.make_axes_locatable(ax)
+        width = axes_grid1.axes_size.AxesY(ax, aspect=1. / aspect)
+        pad = axes_grid1.axes_size.Fraction(pad_fraction, width)
+        current_ax = plt.gca()
+        position = legend_kwargs.get('position', 'vertical')
+        divider.append_axes(position=position, size=width, pad=pad, axes_class=plt.Axes)
+        plt.sca(current_ax)
+
+    return ax

@@ -1,7 +1,10 @@
 import numpy as np
+import pandas as pd
+import geopandas as gpd
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.patches import Patch
 from .colors import legend_patches as lp
+from shapely.geometry import Point
 
 
 def _determine_cmap_boundaries(m, bins, cmap, clip_legend=False):
@@ -50,7 +53,7 @@ def _determine_cmap_boundaries(m, bins, cmap, clip_legend=False):
         extend_min = False
         labels = [f"{bins[0]} - {bins[1]}"]
 
-    labels = labels + [f"{bins[i - 1]} - {bins[i]}" for i in range(2, len(bins))]
+    labels = labels + [f"{bins[i - 1]} - {bins[i]}" for i in range(1 + (not extend_min), len(bins))]
 
     if vmax > bins[-1]:
         boundaries = np.hstack([boundaries, vmax])
@@ -77,6 +80,83 @@ def _determine_cmap_boundaries(m, bins, cmap, clip_legend=False):
     cmap_cbar = ListedColormap(colors[int(extend_min):end, :])
     cmap_cbar.set_under(cmap(0))
     cmap_cbar.set_over(cmap(cmap.N))
+    cmap_cbar.set_bad("White")
     norm = BoundaryNorm(bins, len(bins) - 1)
 
     return cmap_cbar, norm, legend_patches, extend
+
+
+def _create_geometry_values_and_sizes(lat=None, lon=None, values=None, s=None, df=None):
+    """
+    Function that manages values from either lists or a geodataframe. It is used for `plot_shapes` and
+    `plot_classified_shapes`.
+
+    Parameters
+    ----------
+    lat, lon : array-like
+        Latitude and Longitude
+    values : array-like or numeric or str
+        Values at each pair of latitude and longitude entries if list like. A single numeric value will be cast to all
+        geometries. If `df` is set a string can be passed to values which will be interpreted as the name of the column
+        holding the values (the default string if None is set is "values).
+    s : array-like, optional
+        Size values for each pair of latitude and longitude entries if list like. A single numeric value will be cast
+        to all geometries. If `df` is set a string will be interpreted as the name of the column holding the sizes. If
+        None is set no sizes will be set.
+    df : GeoDataFrame, optional
+        Optional GeoDataframe which can be used to plot different shapes than points.
+
+    Returns
+    -------
+    geometry, values, markersize
+    markersize can be None if None is passed in as `s`
+    """
+    if isinstance(df, type(None)):
+        lon = np.array(lon).flatten()
+        lat = np.array(lat).flatten()
+        values = np.array(values).flatten()
+        if lon.size != lat.size:
+            raise IndexError("Mismatch in length of `lat` and `lon`")
+
+        if isinstance(s, type(None)):
+            markersize = None
+        else:
+            markersize = np.array(s).flatten()
+        geometry = np.array([Point(lon[i], lat[i]) for i in range(len(lon))])
+
+    else:
+        geometry = df.loc[:, 'geometry']
+        if isinstance(values, type(None)):
+            values = "values"
+        if isinstance(values, str):
+            if values in df.columns:
+                values = df.loc[:, values].values
+            else:
+                values = np.array([None])
+        else:
+            values = np.array(values).flatten()
+
+        if isinstance(s, type(None)):
+            s = "s"
+        if isinstance(s, str):
+            if s in df.columns:
+                markersize = df.loc[:, s]
+            else:
+                markersize = None
+        else:
+            markersize = np.array(s).flatten()
+
+    if values.size == 1:
+        if isinstance(values[0], type(None)):
+            values = np.array(1)
+        values = values.repeat(geometry.size)
+    elif values.size != geometry.size:
+        raise IndexError("Mismatch length sizes and geometries")
+
+    if not isinstance(markersize, type(None)):
+        if markersize.size == 1:
+            markersize = markersize.repeat(geometry.size)
+        elif markersize.size != geometry.size:
+            raise IndexError("Mismatch length of `s` and coordindates")
+
+    return gpd.GeoDataFrame(geometry=geometry), values, markersize
