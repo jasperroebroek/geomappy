@@ -331,6 +331,9 @@ class MapRead(MapBase):
             if not isinstance(compress, type(None)):
                 profile.update({'compress': compress})
 
+            if reduce:
+                profile = resample_profile(self.profile, 1 / window_size)
+
             with rio.open(output_file, mode="w", **profile) as dst:
                 dst.write(focal_statistics(self[ind, layers], func=func, window_size=self.window_size, verbose=verbose,
                                            reduce=reduce, majority_mode=majority_mode, **kwargs))
@@ -470,6 +473,9 @@ class MapRead(MapBase):
                             'count': 1})
             if not isinstance(compress, type(None)):
                 profile.update({'compress': compress})
+
+            if reduce:
+                profile = resample_profile(self.profile, 1 / window_size)
 
             with rio.open(output_file, mode="w", **profile) as dst:
                 dst.write(correlate_maps(self[ind, self_layers], other[ind, other_layers], window_size=self.window_size,

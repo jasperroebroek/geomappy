@@ -108,7 +108,7 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
             if isinstance(legend_kwargs, type(None)):
                 legend_kwargs = {}
             if legend == "colorbar":
-                add_colorbar(im=im, cax=legend_ax, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
+                add_colorbar(im=im, ax=ax, cax=legend_ax, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
 
         else:
             cmap, norm, legend_patches, extend = _determine_cmap_boundaries(m=m, bins=bins, cmap=cmap,
@@ -127,8 +127,8 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
                 if isinstance(legend_kwargs, type(None)):
                     legend_kwargs = {}
 
-                cbar = add_colorbar(im=im, cax=legend_ax, extend=extend, aspect=aspect, pad_fraction=pad_fraction,
-                                    **legend_kwargs)
+                cbar = add_colorbar(im=im, ax=ax, cax=legend_ax, extend=extend, aspect=aspect, 
+                                    pad_fraction=pad_fraction, **legend_kwargs)
                 if isinstance(bin_labels, type(None)):
                     bin_labels = bins
                 cbar.set_ticks(bins)
@@ -145,7 +145,7 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
 
     if force_equal_figsize and legend != 'colorbar':
         create_colorbar_axes(ax=ax, aspect=aspect, pad_fraction=pad_fraction,
-                             position=legend_kwargs.get("position", "right"))
+                             position=legend_kwargs.get("position", "right")).axis("off")
 
     return ax
 

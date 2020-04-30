@@ -332,8 +332,8 @@ def create_colorbar_axes(ax, aspect=30, pad_fraction=0.6, position="right"):
     divider = axes_grid1.make_axes_locatable(ax)
     width = axes_grid1.axes_size.AxesY(ax, aspect=1. / aspect)
     pad = axes_grid1.axes_size.Fraction(pad_fraction, width)
-    return divider.append_axes(position=position, size=width, pad=pad, axes_class=plt.Axes)
-
+    ax = divider.append_axes(position=position, size=width, pad=pad, axes_class=plt.Axes)
+    return ax
 
 def add_colorbar(im=None, ax=None, cax=None, aspect=30, pad_fraction=0.6, position="right", shrink=1, **kwargs):
     """
@@ -377,9 +377,10 @@ def add_colorbar(im=None, ax=None, cax=None, aspect=30, pad_fraction=0.6, positi
     orientation = "vertical" if position in ("right", "left") else "horizontal"
     if isinstance(cax, type(None)):
         cax = create_colorbar_axes(ax=ax, aspect=aspect, pad_fraction=pad_fraction, position=position)
+
         if shrink < 1:
-            length = 1 / aspect
-            pad = pad_fraction / aspect
+            length = 1 / (aspect / shrink)
+            pad = pad_fraction * length
             create_colorbar_axes(ax=ax, aspect=aspect/2, pad_fraction=pad_fraction, position=position).axis("off")
             if position == "left":
                 ip = InsetPosition(ax, [-pad - length, (1 - shrink)/2,
@@ -401,6 +402,7 @@ def add_colorbar(im=None, ax=None, cax=None, aspect=30, pad_fraction=0.6, positi
 
     elif shrink < 1:
         raise ValueError("Shrink can only be set if no colorbar axes is provided")
+
     return ax.figure.colorbar(im, orientation=orientation, cax=cax, **kwargs)
 
 
