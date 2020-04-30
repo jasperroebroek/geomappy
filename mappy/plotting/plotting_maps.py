@@ -9,13 +9,15 @@ from matplotlib.colors import ListedColormap, Colormap
 from mpl_toolkits import axes_grid1
 from shapely.geometry import Point, Polygon
 from mappy.plotting.misc import _determine_cmap_boundaries
+from .colors import create_colorbar_axes
 from ..ndarray_functions.nan_functions import nanunique, nandigitize
 from ..plotting import add_colorbar, cmap_2d, cmap_random
 from ..plotting import legend_patches as lp
 
 
-def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", clip_legend=False, ax=None,
-             figsize=(10, 10), legend_kwargs=None, aspect=30, pad_fraction=0.6, **kwargs):
+def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, legend="colorbar", clip_legend=False,
+             ax=None, legend_ax=None, figsize=(10, 10), legend_kwargs=None, aspect=30, pad_fraction=0.6,
+             force_equal_figsize=False, nan_color="White", **kwargs):
     """
     Plot rasters in a continuous fashion
 
@@ -25,9 +27,10 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
         Input array. Needs to be either 2D or 3D if the third axis contains RGB(A) information
     bins : array-like, optional
         List of bins that will be used to create a BoundaryNorm instance to discretise the plotting. This does not work
-        in conjunction with vmin and vmax. Bins in that case `bins` will take the upper hand.  Alternatively a 'norm'
-        parameter can be passed on in the have outside control on the behaviour. Note that at least two bins need to be
-        specified.
+        in conjunction with vmin and vmax. Bins in that case will take the upper hand.  Alternatively a 'norm'
+        parameter can be passed on in the have outside control on the behaviour.
+    bin_labels : array-like, optional
+        This parameter can be used to override the labels on the colorbar. Should have the same length as bins.
     cmap : matplotlib.cmap or str, optional
         Matplotlib cmap instance or string the will be recognized by matplotlib
     vmin, vmax : float, optional
@@ -40,14 +43,22 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
         for several plots.
     ax : `matplotlib.Axes`, optional
         Axes object. If not provided it will be created on the fly.
+    legend_ax : `matplotlib.Axes`, optional
+        Axes object that the legend will be drawn on
     figsize : tuple, optional
         Matplotlib figsize parameter. Default is (10, 10)
     legend_kwargs : dict, optional
         Extra parameters for the colorbar call
     aspect : float, optional
-        aspact ratio of the colorbar
+        aspect ratio of the colorbar
     pad_fraction : float, optional
         pad_fraction between the Axes and the colorbar if generated
+    force_equal_figsize : bool, optional
+        when plotting with a colorbar the figure is going be slightly smaller than when you are using `legend` or non
+        at all. This parameter can be used to force equal sizes, meaning that the version with a `legend` is going to
+        be slightly reduced.
+    nan_color : matplotlib color, optional
+        Color used for shapes with NaN value. The default is 'white'
     **kwargs
         Keyword arguments for plt.imshow()
 
@@ -82,43 +93,58 @@ def plot_map(m, bins=None, cmap=None, vmin=None, vmax=None, legend="colorbar", c
         raise TypeError("cmap not recognized")
 
     if not isinstance(bins, type(None)) and len(bins) == 1:
-        m = (m > bins[0])
-        plot_classified_map(m.astype(int), colors=['lightgrey', 'red'], labels=[f'< {bins[0]}', f'> {bins[1]}'], ax=ax,
-                            legend=legend, legend_kwargs=legend_kwargs, **kwargs)
+        nan_mask = np.isnan(m)
+        m = (m > bins[0]).astype(float)
+        m[nan_mask] = np.nan
+        plot_classified_map(m, colors=['lightgrey', 'red'], labels=[f'< {bins[0]}', f'> {bins[0]}'], ax=ax,
+                            legend_ax=legend_ax, legend=legend, legend_kwargs=legend_kwargs, aspect=aspect,
+                            pad_fraction=pad_fraction, force_equal_figsize=False, nan_color=nan_color,
+                            **kwargs)
+
     elif m.dtype != "bool_" and m.ndim == 2:
         if isinstance(bins, type(None)):
+            cmap.set_bad(nan_color)
             im = ax.imshow(m, vmin=vmin, vmax=vmax, origin='upper', cmap=cmap, **kwargs)
             if isinstance(legend_kwargs, type(None)):
                 legend_kwargs = {}
             if legend == "colorbar":
-                add_colorbar(im, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
+                add_colorbar(im=im, cax=legend_ax, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
+
         else:
             cmap, norm, legend_patches, extend = _determine_cmap_boundaries(m=m, bins=bins, cmap=cmap,
                                                                             clip_legend=clip_legend)
-
+            cmap.set_bad(nan_color)
             im = ax.imshow(m, norm=norm, cmap=cmap, origin='upper', **kwargs)
 
             if legend == "legend":
                 if isinstance(legend_kwargs, type(None)):
                     legend_kwargs = {"facecolor": "white", "edgecolor": "lightgrey", 'loc': 0}
-                ax.legend(handles=legend_patches, **legend_kwargs)
+                if isinstance(legend_ax, type(None)):
+                    legend_ax = ax
+                legend_ax.legend(handles=legend_patches, **legend_kwargs)
+
             elif legend == "colorbar":
                 if isinstance(legend_kwargs, type(None)):
                     legend_kwargs = {}
-                cbar = add_colorbar(im=im, ax=ax, extend=extend, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
+
+                cbar = add_colorbar(im=im, cax=legend_ax, extend=extend, aspect=aspect, pad_fraction=pad_fraction,
+                                    **legend_kwargs)
+                if isinstance(bin_labels, type(None)):
+                    bin_labels = bins
+                cbar.set_ticks(bins)
+                cbar.set_ticklabels(bin_labels)
 
     elif m.ndim == 3:
         ax.imshow(m, origin='upper', **kwargs)
+
     else:
-        if len(np.unique(m)) == 2:
-            plot_classified_map(m.astype(int), colors=['lightgrey', 'red'], labels=['False', 'True'], ax=ax,
-                                legend=legend, legend_kwargs=legend_kwargs, **kwargs)
-        elif np.isin(True, m):
-            plot_classified_map(m.astype(int), colors=['lightgrey'], labels=['True'], ax=ax, legend=legend,
-                                legend_kwargs=legend_kwargs, **kwargs)
-        else:
-            plot_classified_map(m.astype(int), colors=['lightgrey'], labels=['False'], ax=ax, legend=legend,
-                                legend_kwargs=legend_kwargs, **kwargs)
+        plot_classified_map(m.astype(int), bins=[0, 1], colors=['lightgrey', 'red'], labels=['False', 'True'], ax=ax,
+                            legend_ax=legend_ax, legend=legend, legend_kwargs=legend_kwargs, aspect=aspect,
+                            pad_fraction=pad_fraction, force_equal_figsize=False, **kwargs)
+
+    if force_equal_figsize and legend != 'colorbar':
+        create_colorbar_axes(ax=ax, aspect=aspect, pad_fraction=pad_fraction,
+                             position=legend_kwargs.get("position", "right"))
 
     return ax
 
@@ -128,7 +154,7 @@ def plot_world(points=None, box_bounds=False, figsize=(10, 10)):
     Plotting the world. Points to plot should be given in a pandas dataframe with Lat and Lon column. Bounds object of
     a rasterio file can be plotted with box_bounds parameter.
 
-    # todo; deprecate
+    # todo; depreciate
 
     Parameters
     ----------
@@ -189,8 +215,8 @@ def plot_world(points=None, box_bounds=False, figsize=(10, 10)):
 
 
 def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legend="legend", clip_legend=False, ax=None,
-                        suppress_warnings=False, mode="classes", legend_kwargs=None, aspect=30, pad_fraction=0.6,
-                        force_equal_figsize=False, **kwargs):
+                        legend_ax=None, figsize=(10, 10), suppress_warnings=False, mode="classes", legend_kwargs=None,
+                        aspect=30, pad_fraction=0.6, force_equal_figsize=False, nan_color="White", **kwargs):
     """
     Plot a map with discrete classes or index
 
@@ -215,6 +241,8 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
         remove the items from the legend that don't occur on the map but are passed in
     ax : axes, optional
         matplotlib axes to plot the map on. If not given it is created on the fly. A cartopty GeoAxis can be provided.
+    figsize : tuple, optional
+        Matplotlib figsize parameter. Default is (10, 10)
     suppress_warnings : bool, optional
         By default 15 classes is the maximum that can be plotted. If set to True this maximum is removed
     mode : {'classes', 'index'}
@@ -246,7 +274,7 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
     Axes
     """
     if isinstance(ax, type(None)):
-        f, ax = plt.subplots(figsize=(10, 10))
+        f, ax = plt.subplots(figsize=figsize)
     elif isinstance(ax, cartopy.mpl.geoaxes.GeoAxes):
         if "extent" not in kwargs:
             kwargs["extent"] = ax.get_extent()

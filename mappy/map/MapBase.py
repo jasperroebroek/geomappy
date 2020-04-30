@@ -288,10 +288,6 @@ class MapBase:
         Parameters
         ----------
         ind :
-            [tuple : {int : len(2)}]
-                Position in the grid. first integer in range(0,self._v_tiles).
-                second integer in range(0,self._h_tiles). It is convered to a 
-                single integer; the corresponding index in self._tiles
             [bounds] -> [left,bottom,right,top]
                 Rasterio bounds object or list of four numbers, the bounds of the
                 new window. A tile is created based on these bounds like by passing
@@ -354,16 +350,7 @@ class MapBase:
         2: use numpy -> s_[1:2]
         
         """
-        if isinstance(ind, (tuple, list)) and len(ind) == 2:
-            if not isinstance(ind[0], int) or not isinstance(ind[1], int):
-                raise TypeError("Tuple of length two indexes on a grid, it needs two integers")
-            if ind[0] not in list(range(self._v_tiles)):
-                raise IndexError("Vertical index out of range")
-            if ind[1] not in list(range(self._h_tiles)):
-                raise IndexError("Horizontal index out of range")
-            ind = self._iter.index((ind[0] + 1, ind[1] + 1))
-
-        elif isinstance(ind, (tuple, list, rio.coords.BoundingBox)):
+        if isinstance(ind, (tuple, list, rio.coords.BoundingBox)):
             if isinstance(ind, (tuple, list)):
                 if ind[0] < -180 or ind[0] > 180:
                     raise ValueError("BoundingBox left coordinate of the globe")

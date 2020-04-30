@@ -78,7 +78,7 @@ class MapRead(MapBase):
         else:
             self._epsg = self._file.crs.to_epsg()
 
-    def get_data(self, ind=-1):
+    def get_data(self, ind=-1, layers=None):
         """
         Returns the data associated with the index of the tile. Layers are set on the third axis.
         
@@ -86,6 +86,9 @@ class MapRead(MapBase):
         ----------
         ind : .
             see MapBase.get_pointer()
+        layers : int or list
+            The number of the layer required or a list of layers (which might contain duplicates if needed).
+            The default is None, which will load all layers.
         
         Returns
         -------
@@ -95,7 +98,7 @@ class MapRead(MapBase):
         # type and bound checking happens in self.get_pointer()
         ind = self.get_pointer(ind)
 
-        data = self._file.read(window=self._tiles[ind], boundless=True, fill_value=self._fill_value)
+        data = self._file.read(indexes=layers, window=self._tiles[ind], boundless=True, fill_value=self._fill_value)
 
         # if only a single layer is present compress the data to a 2D array
         if data.shape[0] == 1:
@@ -107,7 +110,7 @@ class MapRead(MapBase):
 
         return data
 
-    def get_file_data(self):
+    def get_file_data(self, layers=None):
         """
         Reads all data from the file without a fringe
         
@@ -115,7 +118,7 @@ class MapRead(MapBase):
         -------
         np.array with all data of the file
         """
-        data = self._file.read(fill_value=self._fill_value)
+        data = self._file.read(indexes=layers, fill_value=self._fill_value)
 
         # if only a single layer is present compress the data to a 2D array
         if data.shape[0] == 1:
@@ -126,7 +129,7 @@ class MapRead(MapBase):
 
         return data
 
-    def sample_raster(self, points, *, plotting=False, figsize=(10, 10)):
+    def sample_raster(self, points):
         """
         Function to sample the raster at a list of given points
 
@@ -137,11 +140,6 @@ class MapRead(MapBase):
                 list of tuples with longitude and latitude
             2: [DataFrame]
                 must contain a Lon and Lat column
-        plotting : bool, optional
-            plotting the world with bounding box of the file and points
-            in the points parameter
-        figsize : tuple, optional
-            matplotlib figsize parameter
             
         Returns
         -------
@@ -159,9 +157,8 @@ class MapRead(MapBase):
         """
         # todo; evaluate this function
         # todo; integrate with geopandas
-
-        if type(plotting) != bool:
-            raise TypeError("plotting is a boolean parameter")
+        # todo; 3D
+        # todo; outside bounds
 
         # Create a Polygon of the area that can be sampled
         bounds = self.get_file_bounds()
@@ -201,13 +198,9 @@ class MapRead(MapBase):
                 # add NaN to store
                 sampled_values.append(np.nan)
 
-        if plotting:
-            plot_world(points=points_geometry, figsize=figsize,
-                       box_bounds=self.get_file_bounds())
-
         return sampled_values
 
-    def cross_profile(self, c1, c2, n=100, *, plotting=False, figsize=(10, 10)):
+    def cross_profile(self, c1, c2, n=100):
         """
         Routine to create a cross profile, based on self.sample_raster
 
@@ -217,23 +210,9 @@ class MapRead(MapBase):
             Location of the start and end of the cross profile (Lat, Lon)
         n : int, optional
             Number of sampling points
-        plotting : bool, optional
-            Plot the resulting cross_profile
-        figsize : tuple of ints
-            Matplotlib figsize parameter if 'plotting' is set to True
         """
-
-        points = [None for i in range(n)]
-        points[0] = c1
-        points[-1] = c2
-
-        dx = (c2[0] - c1[0]) / (n - 1)
-        dy = (c2[1] - c1[1]) / (n - 1)
-
-        for i in range(1, n - 1):
-            points[i] = (c1[0] + i * dx, c1[1] + i * dy)
-
-        return np.array(self.sample_raster(points=points, plotting=plotting, figsize=figsize))
+        points = np.linspace(c1, c2, num=n).tolist()
+        return np.array(self.sample_raster(points=points))
 
     def _focal_stat_iter(self, output_file=None, *, func=None, overwrite=False, compress=False, p_bar=True,
                          verbose=False, reduce=False, window_size=None, dtype=None, majority_mode="nan", **kwargs):
@@ -629,4 +608,8 @@ class MapRead(MapBase):
         """
         pointer to internal function get_data().
         """
-        return self.get_data(ind)
+        if isinstance(ind, tuple) and len(ind) == 2:
+            ind, layers = ind
+        else:
+            layers = None
+        return self.get_data(ind, layers=layers)

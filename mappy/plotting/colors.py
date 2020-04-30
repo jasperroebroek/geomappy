@@ -12,6 +12,8 @@ from matplotlib import colors, colorbar
 from matplotlib.colors import LinearSegmentedColormap, to_rgba_array
 from matplotlib.patches import Patch
 import numpy as np
+from mpl_toolkits.axes_grid1.inset_locator import InsetPosition
+
 from mappy.ndarray_functions.misc import grid_from_corners
 import colorsys
 from matplotlib.colorbar import ColorbarBase
@@ -308,7 +310,32 @@ def legend_patches(colors, labels, type='patch', **kwargs):
                 for color, label in zip(colors, labels)]
 
 
-def add_colorbar(im=None, ax=None, aspect=30, pad_fraction=0.6, position="right", **kwargs):
+def create_colorbar_axes(ax, aspect=30, pad_fraction=0.6, position="right"):
+    """
+    Create an axes for the colorbar to be drawn on that has the same size as the figure
+
+    Parameters
+    ----------
+    ax : Axes, optional
+        The Axes that the colorbar will added to.
+    aspect : float, optional
+        The aspect ratio of the colorbar
+    pad_fraction : float, optional
+        The fraction of the height of the colorbar that the colorbar is removed from the image
+    position : {"left", "right", "top", "bottom"}
+        The position of the colorbar in respect to the image
+
+    Returns
+    -------
+    Axes
+    """
+    divider = axes_grid1.make_axes_locatable(ax)
+    width = axes_grid1.axes_size.AxesY(ax, aspect=1. / aspect)
+    pad = axes_grid1.axes_size.Fraction(pad_fraction, width)
+    return divider.append_axes(position=position, size=width, pad=pad, axes_class=plt.Axes)
+
+
+def add_colorbar(im=None, ax=None, cax=None, aspect=30, pad_fraction=0.6, position="right", shrink=1, **kwargs):
     """
     Add colorbar to a plot
 
@@ -317,14 +344,18 @@ def add_colorbar(im=None, ax=None, aspect=30, pad_fraction=0.6, position="right"
     im : ScalarMappable, optional
         The source ScalarMappable. If not provided it will use the last image on the Axes
     ax : Axes, optional
-        The Axes that the colorbar will be placed in. If not provided it will be assumed to be the last Axes that was
+        The Axes that the colorbar will added to. If not provided it will be assumed to be the last Axes that was
         used (plt.gca())
+    cax : Axes, optional
+        The Axes instance that the colorbar will be drawn on. If not given it will be added internally.
     aspect : float, optional
         The aspect ratio of the colorbar
-    pad_fraction : float, otional
+    pad_fraction : float, optional
         The fraction of the height of the colorbar that the colorbar is removed from the image
     position : {"left", "right", "top", "bottom"}
         The position of the colorbar in respect to the image
+    shrink : float, optional
+        float between 0 and 1, which is the fraction of the space it will cover. Does not work if `cax` is provided.
     **kwargs : dict, optional
         Keyword arguments for the colorbar call
 
@@ -344,13 +375,32 @@ def add_colorbar(im=None, ax=None, aspect=30, pad_fraction=0.6, position="right"
                 ax = im.axes
 
     orientation = "vertical" if position in ("right", "left") else "horizontal"
+    if isinstance(cax, type(None)):
+        cax = create_colorbar_axes(ax=ax, aspect=aspect, pad_fraction=pad_fraction, position=position)
+        if shrink < 1:
+            length = 1 / aspect
+            pad = pad_fraction / aspect
+            create_colorbar_axes(ax=ax, aspect=aspect/2, pad_fraction=pad_fraction, position=position).axis("off")
+            if position == "left":
+                ip = InsetPosition(ax, [-pad - length, (1 - shrink)/2,
+                                        length, shrink])
 
-    divider = axes_grid1.make_axes_locatable(ax)
-    width = axes_grid1.axes_size.AxesY(ax, aspect=1. / aspect)
-    pad = axes_grid1.axes_size.Fraction(pad_fraction, width)
-    current_ax = plt.gca()
-    cax = divider.append_axes(position=position, size=width, pad=pad, axes_class=plt.Axes)
-    plt.sca(current_ax)
+            if position == "right":
+                ip = InsetPosition(ax, [1 + pad, (1 - shrink)/2,
+                                        length, shrink])
+
+            if position == "bottom":
+                ip = InsetPosition(ax, [(1 - shrink)/2, -pad - length,
+                                        shrink, length])
+
+            if position == "top":
+                ip = InsetPosition(ax, [(1 - shrink) / 2, 1 + pad,
+                                        shrink, length])
+
+            cax.set_axes_locator(ip)
+
+    elif shrink < 1:
+        raise ValueError("Shrink can only be set if no colorbar axes is provided")
     return ax.figure.colorbar(im, orientation=orientation, cax=cax, **kwargs)
 
 

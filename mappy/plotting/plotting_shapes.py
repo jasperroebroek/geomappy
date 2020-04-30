@@ -109,8 +109,7 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
     nan_color : matplotlib color, optional
         Color used for shapes with NaN value. The default is 'white'
     **kwargs
-        Keyword arguments for the geopandas plotting functions: plot_point_collection, plot_polygon_collection and
-        plot_linestring_collection
+        kwargs for the _plot_geometries function
 
     Notes
     -----
@@ -195,9 +194,9 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
 
 
 def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, colors=None, cmap=None,
-                           labels=None, legend="legend", clip_legend=False, ax=None, mode="classes",
-                           suppress_warnings=False, legend_kwargs=None, aspect=30, pad_fraction=0.6, linewidth=0,
-                           force_equal_figsize=False, nan_color="White", **kwargs):
+                           labels=None, legend="legend", clip_legend=False, ax=None, figsize=(10, 10),
+                           suppress_warnings=False, mode="classes", legend_kwargs=None, aspect=30, pad_fraction=0.6,
+                           linewidth=0, force_equal_figsize=False, nan_color="White", **kwargs):
     """
     Plot shapes with discrete classes or index
 
@@ -231,6 +230,8 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
         remove the items from the legend that don't occur on the map but are passed in
     ax : axes, optional
         matplotlib axes to plot the map on. If not given it is created on the fly. A cartopty GeoAxis can be provided.
+    figsize : tuple, optional
+        Matplotlib figsize parameter. Default is (10,10)
     suppress_warnings : bool, optional
         By default 15 classes is the maximum that can be plotted. If set to True this maximum is removed
     mode : {'classes', 'index'}
@@ -253,7 +254,7 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
     nan_color : matplotlib color, optional
         Color used for shapes with NaN value. The default is 'white'
     **kwargs : dict, optional
-        kwargs for the plt.imshow command
+        kwargs for the _plot_geometries function
 
     Notes
     -----
