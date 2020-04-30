@@ -36,9 +36,6 @@ class MapRead(MapBase):
         Location not a string
     IOError
         Location of file not found
-
-    todo; Create option for multiple layers. Some functions already support it,
-     like plot and get_data but others don't yet.
     """
     def __init__(self, location, *, tiles=1, window_size=1, fill_value=None):
         if type(location) != str:
@@ -53,7 +50,6 @@ class MapRead(MapBase):
         self._file = rio.open(location)
         self._profile = self._file.profile
 
-        # todo; change fill value into a property
         if isinstance(fill_value, type(None)):
             if 'float' in self._profile['dtype']:
                 self._fill_value = np.nan
@@ -86,7 +82,7 @@ class MapRead(MapBase):
         ----------
         ind : .
             see MapBase.get_pointer()
-        layers : int or list
+        layers : int or list, optional
             The number of the layer required or a list of layers (which might contain duplicates if needed).
             The default is None, which will load all layers.
         
@@ -112,22 +108,19 @@ class MapRead(MapBase):
 
     def get_file_data(self, layers=None):
         """
-        Reads all data from the file without a fringe
+        Read the whole file
+
+        Parameters
+        ----------
+        layers : int or list, optional
+            The number of the layer required or a list of layers (which might contain duplicates if needed).
+            The default is None, which will load all layers.
         
         Returns
         -------
         np.array with all data of the file
         """
-        data = self._file.read(indexes=layers, fill_value=self._fill_value)
-
-        # if only a single layer is present compress the data to a 2D array
-        if data.shape[0] == 1:
-            data = np.squeeze(data)
-
-        if data.ndim == 3:
-            data = np.moveaxis(data, 0, -1)
-
-        return data
+        return self.get_data(self.get_file_bounds(), layers=layers)
 
     def sample_raster(self, points):
         """
@@ -214,11 +207,12 @@ class MapRead(MapBase):
         points = np.linspace(c1, c2, num=n).tolist()
         return np.array(self.sample_raster(points=points))
 
-    def _focal_stat_iter(self, output_file=None, *, func=None, overwrite=False, compress=False, p_bar=True,
-                         verbose=False, reduce=False, window_size=None, dtype=None, majority_mode="nan", **kwargs):
+    def _focal_stat_iter(self, output_file=None, ind=None, layers=1, *, func=None, overwrite=False, compress=False,
+                         p_bar=True, verbose=False, reduce=False, window_size=None, dtype=None, majority_mode="nan",
+                         **kwargs):
         """
-        Function that calculates focal statistics, in tiled fashion if c_tiles is bigger than 1. The result is outputted
-        to 'output_file'
+        Function that calculates focal statistics, in tiled fashion if self.c_tiles is bigger than 1. The result is
+        outputted to `output_file`
         
         Parameters
         ----------
@@ -228,6 +222,10 @@ class MapRead(MapBase):
         output_file : str
             location of output file.
             todo; should have a default behaviour that is slightly more functional
+        ind : . , optional
+            see self.get_pointer(). If set, no tiled behaviour occurs.
+        layers : int, optional
+            the layer that will be used to do the calculations
         overwrite : bool, optional
             If allowed to overwrite the output_file. The default is False.
         compress : bool, optional
@@ -240,17 +238,23 @@ class MapRead(MapBase):
             If True, the dimensions of the output map are divided by `window_size`. If False the resulting file has the
             same shape as the input, which is the default.
         window_size : int, optional
-            If `reduce` is False window_size of the whole object is set temporarily. If `reduce` is True, the
-            window_size of the whole object is set to 1. The default is None, in which case it will be taken from the
-            object: self.window_size.
+            `window_size` parameter of the focal_statistics function. The default is None, in which case it will be
+            taken from the object: self.window_size.
         majority_mode : {"nan", "ascending", "descending"}, optional
             nan: when more than one class has the same score NaN will be assigned ascending: the first occurrence of the
             maximum count will be assigned descending: the last occurence of the maximum count will be assigned.
             Parameter only used when the `func` is majority.
         **kwargs
             passed to focal_statistics()
+
+        Notes
+        -----
+        the following parameter will be passed on directly to the focal_statistics calculation through **kwargs
+
+        fraction_accepted : float, optional
+            Fraction of the window that has to contain not-nans for the function to calculate the correlation.
+            The default is 0.7.
         """
-        # todo; make it accept ind
         if isinstance(func, type(None)):
             raise TypeError("No function given")
         if not isinstance(output_file, str):
@@ -264,7 +268,8 @@ class MapRead(MapBase):
         if not isinstance(reduce, bool):
             raise TypeError("reduce parameter needs to be a boolean")
 
-        window_size_old = self.window_size
+        self_old_window_size = self.window_size
+
         if not reduce:
             if isinstance(window_size, type(None)):
                 if self.window_size < 3:
@@ -290,27 +295,47 @@ class MapRead(MapBase):
 
         old_settings = np.seterr(all='ignore')  # silence all numpy warnings
 
-        with MapWrite(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
-                      overwrite=overwrite, compress=compress, profile=profile) as f:
-            for i in self:
-                if verbose:
-                    print(f"\nTILE: {i + 1}/{self._c_tiles}")
-                elif p_bar:
-                    progress_bar((i + 1) / self._c_tiles)
+        if isinstance(ind, type(None)):
+            with MapWrite(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
+                          overwrite=overwrite, compress=compress, profile=profile) as f:
+                for i in self:
+                    if verbose:
+                        print(f"\nTILE: {i + 1}/{self._c_tiles}")
+                    elif p_bar:
+                        progress_bar((i + 1) / self._c_tiles)
 
-                data = self[i]
-                # if data is empty, write directly
-                if ~np.isnan(self[i]).sum() == 0:
-                    # todo; check if this is already done in the focal statistics wrapper
-                    f[i] = np.full(f.get_shape(), np.nan)
-                else:
-                    f[i] = focal_statistics(data, func=func, window_size=window_size, verbose=verbose, reduce=reduce,
-                                            majority_mode=majority_mode, **kwargs)
+                    data = self[i, layers]
+                    # if data is empty, write directly
+                    if ~np.isnan(self[i]).sum() == 0:
+                        # todo; check if this is already done in the focal statistics wrapper
+                        f[i] = np.full(f.get_shape(), np.nan)
+                    else:
+                        f[i] = focal_statistics(data, func=func, window_size=self.window_size, verbose=verbose,
+                                                reduce=reduce, majority_mode=majority_mode, **kwargs)
 
-            if p_bar:
-                print()
+                if p_bar:
+                    print()
+        else:
+            height, width = self.get_shape(ind)
+            left, bottom, right, top = self.get_bounds(ind)
+            transform = rio.transform.from_bounds(west=left,
+                                                  south=bottom,
+                                                  east=right,
+                                                  north=top,
+                                                  width=width,
+                                                  height=height)
 
-        self.window_size = window_size_old
+            profile = self.profile
+            profile.update({'height': height, 'width': width, 'transform': transform, 'driver': "GTiff",
+                            'count': 1})
+            if not isinstance(compress, type(None)):
+                profile.update({'compress': compress})
+
+            with rio.open(output_file, mode="w", **profile) as dst:
+                dst.write(focal_statistics(self[ind, layers], func=func, window_size=self.window_size, verbose=verbose,
+                                           reduce=reduce, majority_mode=majority_mode, **kwargs))
+
+        self.window_size = self_old_window_size
         np.seterr(**old_settings)  # reset to default
 
     def focal_mean(self, **kwargs):
@@ -348,8 +373,8 @@ class MapRead(MapBase):
         """
         return self._focal_stat_iter(func="majority", **kwargs)
 
-    def correlate(self, other=None, *, output_file=None, window_size=None, fraction_accepted=0.7, verbose=False,
-                  overwrite=False, compress=False, p_bar=True, parallel=False):
+    def correlate(self, other=None, ind=None, self_layers=1, other_layers=1, *, output_file=None, window_size=None,
+                  fraction_accepted=0.7, verbose=False, overwrite=False, compress=False, p_bar=True, parallel=False):
         """
         Correlate self and other and output the result to output_file.
         
@@ -357,12 +382,18 @@ class MapRead(MapBase):
         ----------
         other : MapRead
             map to correlate with
+        ind : . , optional
+            see self.get_pointer(). If set, no tiled behaviour occurs.
+        self_layers, other_layers : int, optional
+            the layer that will be used to calculate the correlations
         output_file : str
             Location of output file
-        window_size
-            todo; create window_size parameter
-        fraction_accepted
-
+        window_size : int, optional
+            Size of the window used for the correlation calculations. It should be bigger than 1, the default is the
+            window_size set on self (`MapRead`).
+        fraction_accepted : float, optional
+            Fraction of the window that has to contain not-nans for the function to calculate the correlation.
+            The default is 0.7.
         verbose : bool, optional
             Verbosity, default is False
         overwrite : bool, optional
@@ -375,27 +406,32 @@ class MapRead(MapBase):
         Raises
         ------
         TypeError
-            1: Other is not of type MapRead
-        ValueError
-            1: v_tiles don't match
-            2: h_tiles don't match
-            3: shapes don't match
-            4: bounds don't match
-            5: window_size too small
+            Other is not of type MapRead
         """
-        # todo; make it accept ind
-        if type(other) != MapRead:
+        if not isinstance(other, MapRead):
             raise TypeError("Other not correctly passed")
+
         if self._v_tiles != other._v_tiles:
             raise ValueError("v_tiles don't match")
         if self._h_tiles != other._h_tiles:
             raise ValueError("h_tiles don't match")
-        if self.window_size != other.window_size:
-            raise ValueError("window sizes don't match")
+
+        if not isinstance(self_layers, int) or not isinstance(other_layers, int):
+            raise TypeError("Layers can only be an integer for correlation calculations")
+
         if self.get_file_shape() != other.get_file_shape():
             raise ValueError("Shapes  of the files don't match")
         if not np.allclose(self.get_file_bounds(), other.get_file_bounds()):
             raise ValueError(f"Bounds don't match:\n{self.get_file_bounds()}\n{other.get_file_bounds()}")
+
+        self_old_window_size = self.window_size
+        other_old_window_size = other.window_size
+        if not isinstance(window_size, type(None)):
+            self.window_size = window_size
+            other.window_size = window_size
+
+        if self.window_size != other.window_size:
+            raise ValueError("window sizes don't match")
         if self.window_size < 3:
             raise ValueError("Can't run correlation with a window size of 1")
 
@@ -405,26 +441,44 @@ class MapRead(MapBase):
                       f"'overwrite' parameter. \n{output_file}\nContinuing without performing operation ...\n")
                 return None
 
-        # todo; if updating to new version of correlate_maps this is not necessary anymore
-        old_settings = np.seterr(all='ignore')  # silence all numpy warnings
+        if isinstance(ind, type(None)):
+            with MapWrite(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
+                          ref_map=self._location, overwrite=overwrite, compress=compress, dtype=np.float64) as f:
+                for i in self:
+                    if verbose:
+                        print(f"\nTILE: {i + 1}/{self._c_tiles}")
+                    elif p_bar:
+                        progress_bar((i + 1) / self._c_tiles)
 
-        with MapWrite(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
-                      ref_map=self._location, overwrite=overwrite, compress=compress, dtype=np.float64) as f:
-            for i in self:
-                if verbose:
-                    print(f"\nTILE: {i + 1}/{self._c_tiles}")
-                elif p_bar:
-                    progress_bar((i + 1) / self._c_tiles)
+                    f[i] = correlate_maps(self[i, self_layers], other[i, other_layers], window_size=self.window_size,
+                                          fraction_accepted=fraction_accepted, verbose=verbose)
 
-                f[i] = correlate_maps(self[i], other[i], window_size=self.window_size,
-                                      fraction_accepted=fraction_accepted, verbose=verbose)
+                if p_bar:
+                    print()
+        else:
+            height, width = self.get_shape(ind)
+            left, bottom, right, top = self.get_bounds(ind)
+            transform = rio.transform.from_bounds(west=left,
+                                                  south=bottom,
+                                                  east=right,
+                                                  north=top,
+                                                  width=width,
+                                                  height=height)
 
-            if p_bar:
-                print()
+            profile = self.profile
+            profile.update({'height': height, 'width': width, 'transform': transform, 'driver': "GTiff",
+                            'count': 1})
+            if not isinstance(compress, type(None)):
+                profile.update({'compress': compress})
 
-        np.seterr(**old_settings)  # reset to default
+            with rio.open(output_file, mode="w", **profile) as dst:
+                dst.write(correlate_maps(self[ind, self_layers], other[ind, other_layers], window_size=self.window_size,
+                                          fraction_accepted=fraction_accepted, verbose=verbose))
 
-    def export_tile(self, ind=-1, output_file=None):
+        self.window_size = self_old_window_size
+        other.window_size = other_old_window_size
+
+    def export_tile(self, ind, output_file, layers=None, compress=None):
         """
         exports a tile of the currently opened map.
         
@@ -437,9 +491,12 @@ class MapRead(MapBase):
             see self.get_pointer()
         output_file : str
             path to the location where the data will be written to
-
+        layers : int or tuple, optional
+            the layer that is exported. If a tuple is provided several layers are exported, None means all layers by
+            default.
+        compress : str, optional
+            rasterio compression parameter
         """
-        # todo; this function only works with one layer
         height, width = self.get_shape(ind)
         left, bottom, right, top = self.get_bounds(ind)
         transform = rio.transform.from_bounds(west=left,
@@ -449,14 +506,17 @@ class MapRead(MapBase):
                                               width=width,
                                               height=height)
 
-        data = self[ind]
+        data = self.get_data(ind, layers=layers)
         profile = self.profile
-        profile.update({'height': height, 'width': width, 'transform': transform, 'driver': "GTiff"})
+        profile.update({'height': height, 'width': width, 'transform': transform, 'driver': "GTiff",
+                        'count': data.shape[-1]})
+        if not isinstance(compress, type(None)):
+            profile.update({'compress': compress})
 
         with rio.open(output_file, mode="w", **profile) as dst:
-            dst.write_band(1, data)
+            dst.write(np.moveaxis(data, -1, 0))
 
-    def plot(self, ind=None, *, mode="ind", basemap=False, figsize=(10, 10), ax=None, log=False, epsg=4326,
+    def plot(self, ind=None, layers=1, *, mode="ind", basemap=False, figsize=(10, 10), ax=None, log=False, epsg=4326,
              basemap_kwargs=None, **kwargs):
         """
         plot data at given index (ind)
@@ -465,6 +525,8 @@ class MapRead(MapBase):
         ----------
         ind : .
             check self.get_pointer(). The default is None which will set `mode` to "all"
+        layers : int or tuple, optional
+            the layer that is plotted. If a tuple is given it will read either RGB or RGBA layers.
         mode : {"ind", "all"}
             if ind is passed, only the data at the given index is plotted. If all is given, it will plot the whole file.
         basemap : bool, optional
@@ -493,10 +555,10 @@ class MapRead(MapBase):
 
         if mode == "ind":
             ind = self.get_pointer(ind)
-            data = self.get_data(ind)
+            data = self.get_data(ind, layers=layers)
             bounds = self._file.window_bounds(self._tiles[ind])
         elif mode == "all":
-            data = self.get_file_data()
+            data = self.get_file_data(layers=layers)
             bounds = self._file.bounds
         else:
             raise ValueError("Mode not recognised")
@@ -505,7 +567,6 @@ class MapRead(MapBase):
             print(f"Can't plot this data. Dimensions : {data.ndim}")
             return None
         elif data.ndim == 3 and data.shape[-1] not in (3, 4):
-            # todo; create the posibility to select a layer
             print(f"Can't plot this data; only RGB(A) accepted on the third axis.")
             return None
 
@@ -533,7 +594,7 @@ class MapRead(MapBase):
 
         return ax
 
-    def plot_classified(self, ind=None, *, mode="ind", basemap=False, figsize=(10, 10), ax=None, epsg=4326,
+    def plot_classified(self, ind=None, layers=1, *, mode="ind", basemap=False, figsize=(10, 10), ax=None, epsg=4326,
                         basemap_kwargs=None, **kwargs):
         """
         Plots data in a classified way. Look at plot_classified_map for the implementation.
@@ -542,6 +603,8 @@ class MapRead(MapBase):
         ----------
         ind : .
             check self.get_pointer(). The default is None which will set `mode` to "all"
+        layers : int, optional
+            the layer that is plotted. Only an integer value is possible, the default is 1.
         mode : {"ind", "all"}
             if ind is passed, only the data at the given index is plotted. If all is given, it will plot the whole file.
         basemap : bool, optional
@@ -566,19 +629,16 @@ class MapRead(MapBase):
 
         if mode == "ind":
             ind = self.get_pointer(ind)
-            data = self.get_data(ind)
+            data = self.get_data(ind, layers=layers)
             bounds = self._file.window_bounds(self._tiles[ind])
         elif mode == "all":
-            data = self.get_file_data()
+            data = self.get_file_data(layers=layers)
             bounds = self._file.bounds
         else:
             raise ValueError("Mode not recognised")
 
-        # todo, rebuild it to accept taking a layer
-        data = np.squeeze(data)
         if data.ndim > 2:
-            raise ValueError(f"This function is only applicable for 2D data. This file contains stacked layers. "
-                             f"{data.shape}")
+            raise ValueError(f"This function is only applicable for 2D data. Can only select one layer")
 
         title = kwargs.pop('title', '')
         legend_kwargs = kwargs.pop('legend_kwargs', {})

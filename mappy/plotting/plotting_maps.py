@@ -138,6 +138,7 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
         ax.imshow(m, origin='upper', **kwargs)
 
     else:
+        # Case of boolean data
         plot_classified_map(m.astype(int), bins=[0, 1], colors=['lightgrey', 'red'], labels=['False', 'True'], ax=ax,
                             legend_ax=legend_ax, legend=legend, legend_kwargs=legend_kwargs, aspect=aspect,
                             pad_fraction=pad_fraction, force_equal_figsize=False, **kwargs)
