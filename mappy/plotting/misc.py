@@ -1,13 +1,13 @@
 import numpy as np
 import pandas as pd
 import geopandas as gpd
-from matplotlib.colors import ListedColormap, BoundaryNorm
+from matplotlib.colors import ListedColormap, BoundaryNorm, Normalize
 from matplotlib.patches import Patch
 from .colors import legend_patches as lp
 from shapely.geometry import Point
 
 
-def _determine_cmap_boundaries(m, bins, cmap, clip_legend=False):
+def _determine_cmap_boundaries_discrete(m, bins, cmap, clip_legend=False):
     """
     Function that creates the BoundaryNorm instance and an adjusted Colormap to segregate the data that will be plotted
     in bins. It is called from `plot_maps` and `plot_shapes`.
@@ -86,6 +86,48 @@ def _determine_cmap_boundaries(m, bins, cmap, clip_legend=False):
     return cmap_cbar, norm, legend_patches, extend
 
 
+def _determine_cmap_boundaries_continuous(m, vmin, vmax):
+    """
+    Function that creates the BoundaryNorm instance and an adjusted Colormap to segregate the data that will be plotted
+    in bins. It is called from `plot_maps` and `plot_shapes`.
+
+    Parameters
+    ----------
+    m : array_like
+        Data
+    vmin, vmax : float, optional
+        vmin and vmax parameters for plt.imshow().
+
+    Returns
+    -------
+    norm, extend
+    """
+    if m.dtype == np.float:
+        data = m[~np.isnan(m)]
+    else:
+        data = m
+    minimum = data.min()
+    maximum = data.max()
+
+    if isinstance(vmin, type(None)):
+        vmin = minimum
+    if isinstance(vmax, type(None)):
+        vmax = maximum
+
+    if minimum < vmin and maximum > vmax:
+        extend = 'both'
+    elif minimum < vmin and not maximum > vmax:
+        extend = 'min'
+    elif not minimum < vmin and maximum > vmax:
+        extend = 'max'
+    elif not minimum < vmin and not maximum > vmax:
+        extend = 'neither'
+
+    norm = Normalize(vmin, vmax)
+
+    return norm, extend
+
+
 def _create_geometry_values_and_sizes(lat=None, lon=None, values=None, s=None, df=None):
     """
     Function that manages values from either lists or a geodataframe. It is used for `plot_shapes` and
@@ -160,3 +202,19 @@ def _create_geometry_values_and_sizes(lat=None, lon=None, values=None, s=None, d
             raise IndexError("Mismatch length of `s` and coordindates")
 
     return gpd.GeoDataFrame(geometry=geometry), values, markersize
+
+
+def cbar_decorator(cbar, ticks, ticklabels, title="", label="", tick_params=None, title_font=None, label_font=None):
+    cbar.set_ticks(ticks)
+    cbar.set_ticklabels(ticklabels)
+
+    if isinstance(tick_params, type(None)):
+        tick_params = {}
+    if isinstance(title_font, type(None)):
+        title_font = {}
+    if isinstance(label_font, type(None)):
+        label_font = {}
+
+    cbar.ax.set_title(title, **title_font)
+    cbar.ax.tick_params(**tick_params)
+    cbar.set_label(label, **label_font)

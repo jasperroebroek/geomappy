@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import cartopy
-import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-from matplotlib.colors import ListedColormap, Colormap
-from mpl_toolkits import axes_grid1
-from shapely.geometry import Point, Polygon
-from mappy.plotting.misc import _determine_cmap_boundaries
-from .colors import create_colorbar_axes
+from matplotlib.colors import ListedColormap, Colormap, BoundaryNorm, Normalize
+
+from mappy.plotting.misc import _determine_cmap_boundaries_continuous, _determine_cmap_boundaries_discrete, \
+    cbar_decorator
+from .colors import create_colorbar_axes, cmap_discrete
 from ..ndarray_functions.nan_functions import nanunique, nandigitize
-from ..plotting import add_colorbar, cmap_2d, cmap_random
+from ..plotting import add_colorbar, cmap_2d
 from ..plotting import legend_patches as lp
 
 
 def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, legend="colorbar", clip_legend=False,
-             ax=None, legend_ax=None, figsize=(10, 10), legend_kwargs=None, aspect=30, pad_fraction=0.6,
+             ax=None, figsize=(10, 10), legend_ax=None, legend_kwargs=None, aspect=30, pad_fraction=0.6,
              force_equal_figsize=False, nan_color="White", **kwargs):
     """
     Plot rasters in a continuous fashion
@@ -43,10 +41,10 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
         for several plots.
     ax : `matplotlib.Axes`, optional
         Axes object. If not provided it will be created on the fly.
-    legend_ax : `matplotlib.Axes`, optional
-        Axes object that the legend will be drawn on
     figsize : tuple, optional
         Matplotlib figsize parameter. Default is (10, 10)
+    legend_ax : `matplotlib.Axes`, optional
+        Axes object that the legend will be drawn on
     legend_kwargs : dict, optional
         Extra parameters for the colorbar call
     aspect : float, optional
@@ -103,16 +101,18 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
 
     elif m.dtype != "bool_" and m.ndim == 2:
         if isinstance(bins, type(None)):
+            norm, extend = _determine_cmap_boundaries_continuous(m=m, vmin=vmin, vmax=vmax)
             cmap.set_bad(nan_color)
-            im = ax.imshow(m, vmin=vmin, vmax=vmax, origin='upper', cmap=cmap, **kwargs)
+            im = ax.imshow(m, norm=norm, origin='upper', cmap=cmap, **kwargs)
             if isinstance(legend_kwargs, type(None)):
                 legend_kwargs = {}
             if legend == "colorbar":
-                add_colorbar(im=im, ax=ax, cax=legend_ax, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
+                add_colorbar(im=im, ax=ax, cax=legend_ax, aspect=aspect, pad_fraction=pad_fraction, extend=extend,
+                             **legend_kwargs)
 
         else:
-            cmap, norm, legend_patches, extend = _determine_cmap_boundaries(m=m, bins=bins, cmap=cmap,
-                                                                            clip_legend=clip_legend)
+            cmap, norm, legend_patches, extend = _determine_cmap_boundaries_discrete(m=m, bins=bins, cmap=cmap,
+                                                                                     clip_legend=clip_legend)
             cmap.set_bad(nan_color)
             im = ax.imshow(m, norm=norm, cmap=cmap, origin='upper', **kwargs)
 
@@ -150,73 +150,8 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
     return ax
 
 
-def plot_world(points=None, box_bounds=False, figsize=(10, 10)):
-    """
-    Plotting the world. Points to plot should be given in a pandas dataframe with Lat and Lon column. Bounds object of
-    a rasterio file can be plotted with box_bounds parameter.
-
-    # todo; depreciate
-
-    Parameters
-    ----------
-    points
-        1: [DataFrame]
-            Need to contain the columns "Lat" and "Lon"
-        2: [GeoDataFrame]
-            Contains column with shapely Point geometry
-        3: [list : Point]
-            Contains shapely Points
-    box_bounds : rasterio.bounds
-        bounds from rasterio profile
-    figsize : [tuple : ints]
-        Two ints, passed to the plotting functions based on matplotlib
-    """
-    # read a small background world map
-    world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
-    # plot the background map
-    t = world.plot(figsize=figsize, color="white", edgecolor='black')
-
-    # plot the points if any
-    # !! would be nice to implement a possibility of passing a list/dict
-    if type(points) != type(None):
-        if type(points) == pd.DataFrame:
-            # add shapely geometry column (Point)
-            points['geometry'] = points.apply(lambda z: Point(z.Lon, z.Lat), axis=1)
-            # convert to geopandas
-            points = gpd.GeoDataFrame(points)
-
-        if type(points) == gpd.GeoDataFrame:
-            pass
-        if type(points) == list:
-            assert type(points[0]) == Point, "List doesn't contain points"
-            points = gpd.GeoDataFrame(data={"geometry": points})
-
-        # plot the points on top of the background map
-        points.plot(ax=t, color="red")
-
-    # plot a box on the map
-    if np.any(box_bounds != False):
-        # create a list with the x coordinates of the corners
-        box_x = [box_bounds[0], box_bounds[2], box_bounds[2], box_bounds[0]]
-        # create a list with the y coordinates of the corners
-        box_y = [box_bounds[3], box_bounds[3], box_bounds[1], box_bounds[1]]
-        # create a shapely Polygon from those lists
-        bounding_box = Polygon(zip(box_x, box_y))
-        # create a geopandas dataframe with one entry
-        # !! check if this step can be skipped
-        gdf = gpd.GeoDataFrame(index=[0], geometry=[bounding_box])
-        # plot the box on top of the background map
-        gdf.plot(ax=t, edgecolor="blue", facecolor="none")
-
-    t.set_ylim([-91, 91])
-    t.set_xlim([-181, 181])
-    t.set_axis_off()
-
-    plt.show()
-
-
-def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legend="legend", clip_legend=False, ax=None,
-                        legend_ax=None, figsize=(10, 10), suppress_warnings=False, mode="classes", legend_kwargs=None,
+def plot_classified_map(m, bins=None, colors=None, cmap="tab10", labels=None, legend="legend", clip_legend=False,
+                        ax=None, figsize=(10, 10), suppress_warnings=False, legend_ax=None,  legend_kwargs=None,
                         aspect=30, pad_fraction=0.6, force_equal_figsize=False, nan_color="White", **kwargs):
     """
     Plot a map with discrete classes or index
@@ -232,7 +167,6 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
         List of colors in a format understandable by matplotlib. By default random colors are taken
     cmap : matplotlib cmap or str
         Can be used to set a colormap when no colors are provided.
-        todo; implement
     labels : list, optional
         list of labels for the different classes. By default the unique values are taken as labels
     legend : {'legend', 'colorbar', False}, optional
@@ -245,14 +179,12 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
     figsize : tuple, optional
         Matplotlib figsize parameter. Default is (10, 10)
     suppress_warnings : bool, optional
-        By default 15 classes is the maximum that can be plotted. If set to True this maximum is removed
-    mode : {'classes', 'index'}
-        'Classes' is used for individual values that can not directly be used as indices
-        'Index' for raters that already contain the exact index for colors and labels lists
+        By default 10 classes is the maximum that can be plotted. If set to True this maximum is removed
+    legend_ax : `matplotlib.Axes`, optional
+        Axes object that the legend will be drawn on
     legend_kwargs : dict, optional
-        kwargs passed into either the legend or colorbar function.
-        A special `legend_title_pad` can be set to create a padding between the colorbar and the title of colorbar,
-        which can be set in these kwargs as `title`. The default `legend_title_pad` is 10.
+        kwargs passed into either the `plt.legend` or `cbar_decorator` function. A `shrink` parameter for the colorbar
+        can be set here as well.
     aspect : float, optional
         aspact ratio of the colorbar
     pad_fraction : float, optional
@@ -261,6 +193,8 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
         when plotting with a colorbar the figure is going be slightly smaller than when you are using `legend` or non
         at all. This parameter can be used to force equal sizes, meaning that the version with a `legend` is going to
         be slightly reduced.
+    nan_color : matplotlib color, optional
+        Color used for shapes with NaN value. The default is 'white'
     **kwargs : dict, optional
         kwargs for the plt.imshow command
 
@@ -282,25 +216,21 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
         if "transform" not in kwargs:
             kwargs["transform"] = ax.projection
 
-    if mode not in ('classes', 'index'):
-        raise ValueError("mode not recognized")
-
     if isinstance(bins, type(None)):
         data = m[~np.isnan(m)]
         bins = np.unique(data)
-        mode = 'classes'
     else:
         bins = np.array(bins)
         bins.sort()
 
-    if len(bins) > 15 and not suppress_warnings:
+    if len(bins) > 10 and not suppress_warnings:
         raise ValueError("Number of bins above 15, this creates issues with visibility")
 
     if not isinstance(colors, type(None)):
         if len(bins) != len(colors):
             raise IndexError(f"length of bins and colors don't match\nbins: {len(bins)}\ncolors: {len(colors)}")
     else:
-        colors = cmap_random(len(bins), return_type="list", color_type="pastel")
+        colors = cmap_discrete(cmap=cmap, n=len(list), return_type="list")
 
     if not isinstance(labels, type(None)):
         if len(bins) != len(labels):
@@ -311,10 +241,7 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
     colors = np.array(colors)
     labels = np.array(labels)
 
-    if mode == 'index':
-        m_binned = m
-    elif mode == 'classes':
-        m_binned = nandigitize(m, bins=bins, right=True)
+    m_binned = nandigitize(m, bins=bins, right=True)
 
     m_binned_unique = nanunique(m_binned).astype(int)
     if (~np.all(m_binned_unique == np.linspace(0, m_binned_unique.max(), num=m_binned_unique.size)) or \
@@ -322,20 +249,16 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
         colors = colors[m_binned_unique]
         labels = labels[m_binned_unique]
         m_binned = nandigitize(m_binned, m_binned_unique)
+        norm = Normalize(vmin=None, vmax=None)
+    else:
+        norm = Normalize(vmin=0, vmax=bins.size - 1)
 
     cmap = ListedColormap(colors)
+    cmap.set_bad(nan_color)
 
     legend_patches = lp(colors=colors, labels=labels, edgecolor='lightgrey')
 
-    # Plotting
-    if clip_legend:
-        vmin = None
-        vmax = None
-    else:
-        vmin = 0
-        vmax = bins.size - 1
-
-    im = ax.imshow(m_binned, cmap=cmap, origin='upper', vmin=vmin, vmax=vmax, **kwargs)
+    im = ax.imshow(m_binned, cmap=cmap, origin='upper', norm=norm, **kwargs)
 
     # Legend
     if legend == "legend":
@@ -346,27 +269,19 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
     elif legend == "colorbar":
         if isinstance(legend_kwargs, type(None)):
             legend_kwargs = {}
-        title = legend_kwargs.pop("title", "")
-        legend_title_pad = legend_kwargs.pop("legend_title_pad", 10)
+        shrink = legend_kwargs.get("shrink", 1)
 
-        cbar = add_colorbar(im=im, ax=ax, **legend_kwargs)
+        cbar = add_colorbar(im=im, ax=ax, cax=legend_ax, shrink=shrink)
 
-        N = colors.shape[0]
-        step = (cbar.vmax - cbar.vmin) / N
-        margin = step / 2
+        boundaries = cbar._boundaries
+        tick_locations = [(boundaries[i] - boundaries[i - 1]) / 2 + boundaries[i - 1]
+                          for i in range(1, len(boundaries))]
 
-        cbar.set_ticks(np.linspace(cbar.vmin + margin, cbar.vmax - margin, num=N))
-        cbar.ax.set_yticklabels(labels)
-        cbar.ax.set_title(title, pad=legend_title_pad)
+        cbar_decorator(cbar, ticks=tick_locations, ticklabels=labels, **legend_kwargs)
 
     if force_equal_figsize and legend != 'colorbar':
-        divider = axes_grid1.make_axes_locatable(ax)
-        width = axes_grid1.axes_size.AxesY(ax, aspect=1. / aspect)
-        pad = axes_grid1.axes_size.Fraction(pad_fraction, width)
-        current_ax = plt.gca()
-        position = legend_kwargs.get('position', 'vertical')
-        divider.append_axes(position=position, size=width, pad=pad, axes_class=plt.Axes)
-        plt.sca(current_ax)
+        create_colorbar_axes(ax=ax, aspect=aspect, pad_fraction=pad_fraction,
+                             position=legend_kwargs.get("position", "right")).axis("off")
 
     return ax
 

@@ -382,22 +382,17 @@ def add_colorbar(im=None, ax=None, cax=None, aspect=30, pad_fraction=0.6, positi
             length = 1 / (aspect / shrink)
             pad = pad_fraction * length
             create_colorbar_axes(ax=ax, aspect=aspect/2, pad_fraction=pad_fraction, position=position).axis("off")
+
             if position == "left":
-                ip = InsetPosition(ax, [-pad - length, (1 - shrink)/2,
-                                        length, shrink])
+                bbox = [-pad - length, (1 - shrink)/2, length, shrink]
+            elif position == "right":
+                bbox = [1 + pad, (1 - shrink)/2, length, shrink]
+            elif position == "bottom":
+                bbox = [(1 - shrink)/2, -pad - length, shrink, length]
+            elif position == "top":
+                bbox = [(1 - shrink) / 2, 1 + pad, shrink, length]
 
-            if position == "right":
-                ip = InsetPosition(ax, [1 + pad, (1 - shrink)/2,
-                                        length, shrink])
-
-            if position == "bottom":
-                ip = InsetPosition(ax, [(1 - shrink)/2, -pad - length,
-                                        shrink, length])
-
-            if position == "top":
-                ip = InsetPosition(ax, [(1 - shrink) / 2, 1 + pad,
-                                        shrink, length])
-
+            ip = ip = InsetPosition(ax, bbox)
             cax.set_axes_locator(ip)
 
     elif shrink < 1:

@@ -2,13 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import os
+
 import cartopy.crs as ccrs
 import numpy as np
 import pandas as pd
 import rasterio as rio
 from shapely.geometry import Point, Polygon
+
 from mappy.plotting import basemap as basemap_function
-from mappy.plotting import plot_world, plot_map, plot_classified_map
+from mappy.plotting import plot_map, plot_classified_map
 from .MapBase import MapBase
 from .MapWrite import MapWrite
 from ..progress_bar.progress_bar import progress_bar
@@ -646,10 +648,6 @@ class MapRead(MapBase):
         if data.ndim > 2:
             raise ValueError(f"This function is only applicable for 2D data. Can only select one layer")
 
-        title = kwargs.pop('title', '')
-        legend_kwargs = kwargs.pop('legend_kwargs', {})
-        legend_kwargs.update({'title': title})
-
         if basemap:
             if isinstance(basemap_kwargs, type(None)):
                 basemap_kwargs = {}
@@ -663,10 +661,10 @@ class MapRead(MapBase):
             else:
                 transform = ccrs.epsg(self.epsg)
 
-            ax = plot_classified_map(data, ax=ax, legend_kwargs=legend_kwargs, transform=transform,
+            ax = plot_classified_map(data, ax=ax, transform=transform,
                                      extent=(bounds[0], bounds[2], bounds[1], bounds[3]), **kwargs)
         else:
-            ax = plot_classified_map(data, ax=ax, figsize=figsize, legend_kwargs=legend_kwargs, **kwargs)
+            ax = plot_classified_map(data, ax=ax, figsize=figsize, **kwargs)
 
         return ax
 

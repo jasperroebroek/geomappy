@@ -5,11 +5,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from geopandas.plotting import plot_polygon_collection, plot_linestring_collection, plot_point_collection
-from matplotlib.colors import Colormap, Normalize, ListedColormap, BoundaryNorm
+from matplotlib.colors import Colormap, ListedColormap, BoundaryNorm
 from mpl_toolkits import axes_grid1
 
-from .colors import add_colorbar, cmap_random
-from .misc import _determine_cmap_boundaries, _create_geometry_values_and_sizes
+from .colors import add_colorbar, cmap_random, create_colorbar_axes
+from .misc import _determine_cmap_boundaries_discrete, _create_geometry_values_and_sizes, \
+    _determine_cmap_boundaries_continuous
 from ..ndarray_functions import nanunique, nandigitize
 from ..plotting import legend_patches as lp
 
@@ -57,10 +58,10 @@ def _plot_geometries(ax, df, colors, linewidth, markersize, **kwargs):
         plot_point_collection(ax, points, color=colors[point_idx], markersize=markersize, linewidth=linewidth, **kwargs)
 
 
-
 def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin_labels=None, cmap=None, vmin=None,
-                vmax=None, legend="colorbar", clip_legend=False, ax=None, figsize=(10, 10), legend_kwargs=None,
-                aspect=30, pad_fraction=0.6, linewidth=0, nan_color="White", **kwargs):
+                vmax=None, legend="colorbar", clip_legend=False, ax=None, figsize=(10, 10), legend_ax=None,
+                legend_kwargs=None, aspect=30, pad_fraction=0.6, linewidth=0, force_equal_figsize=None,
+                nan_color="White", **kwargs):
     """
     Plot shapes in a continuous fashion
 
@@ -98,6 +99,8 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         Axes object. If not provided it will be created on the fly.
     figsize : tuple, optional
         Matplotlib figsize parameter. Default is (10,10)
+    legend_ax : `matplotlib.Axes`, optional
+        Axes object that the legend will be drawn on
     legend_kwargs : dict, optional
         Extra parameters for the colorbar call
     aspect : float, optional
@@ -106,6 +109,10 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         pad_fraction between the Axes and the colorbar if generated
     linewidth : numeric, optional
         width of the line around the shapes
+    force_equal_figsize : bool, optional
+        when plotting with a colorbar the figure is going be slightly smaller than when you are using `legend` or non
+        at all. This parameter can be used to force equal sizes, meaning that the version with a `legend` is going to
+        be slightly reduced.
     nan_color : matplotlib color, optional
         Color used for shapes with NaN value. The default is 'white'
     **kwargs
@@ -138,33 +145,12 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
     geometry, values, markersize = _create_geometry_values_and_sizes(lat=lat, lon=lon, values=values, s=s, df=df)
 
     if isinstance(bins, type(None)):
-        if values.dtype == np.float:
-            data = values[~np.isnan(values)]
-        else:
-            data = values
-        minimum = data.min()
-        maximum = data.max()
-
-        if isinstance(vmin, type(None)):
-            vmin = minimum
-        if isinstance(vmax, type(None)):
-            vmax = maximum
-
-        if minimum < vmin and maximum > vmax:
-            extend = 'both'
-        elif minimum < vmin and not maximum > vmax:
-            extend = 'min'
-        elif not minimum < vmin and maximum > vmax:
-            extend = 'max'
-        elif not minimum < vmin and not maximum > vmax:
-            extend = 'neither'
-
-        norm = Normalize(vmin, vmax)
+        norm, extend = _determine_cmap_boundaries_continuous(m=values, vmin=vmin, vmax=vmax)
         sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
 
     else:
-        cmap, norm, legend_patches, extend = _determine_cmap_boundaries(m=values, bins=bins, cmap=cmap,
-                                                                        clip_legend=clip_legend)
+        cmap, norm, legend_patches, extend = _determine_cmap_boundaries_discrete(m=values, bins=bins, cmap=cmap,
+                                                                                 clip_legend=clip_legend)
         sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
 
         if legend == "legend":
@@ -184,19 +170,24 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         legend_kwargs.update({'extend': extend})
 
     if legend == "colorbar":
-        cbar = add_colorbar(im=sm, ax=ax, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
+        cbar = add_colorbar(im=sm, ax=ax, cax=legend_ax, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
         if not isinstance(bins, type(None)):
             if isinstance(bin_labels, type(None)):
                 bin_labels = bins
             cbar.set_ticks(bins)
             cbar.set_ticklabels(bin_labels)
+
+    if force_equal_figsize and legend != 'colorbar':
+        create_colorbar_axes(ax=ax, aspect=aspect, pad_fraction=pad_fraction,
+                             position=legend_kwargs.get("position", "right")).axis("off")
+
     return ax
 
 
 def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, colors=None, cmap=None,
                            labels=None, legend="legend", clip_legend=False, ax=None, figsize=(10, 10),
-                           suppress_warnings=False, mode="classes", legend_kwargs=None, aspect=30, pad_fraction=0.6,
-                           linewidth=0, force_equal_figsize=False, nan_color="White", **kwargs):
+                           suppress_warnings=False, mode="classes", legend_ax=None, legend_kwargs=None, aspect=30,
+                           pad_fraction=0.6, linewidth=0, force_equal_figsize=False, nan_color="White", **kwargs):
     """
     Plot shapes with discrete classes or index
 
@@ -233,10 +224,12 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
     figsize : tuple, optional
         Matplotlib figsize parameter. Default is (10,10)
     suppress_warnings : bool, optional
-        By default 15 classes is the maximum that can be plotted. If set to True this maximum is removed
+        By default 10 classes is the maximum that can be plotted. If set to True this maximum is removed
     mode : {'classes', 'index'}
         'Classes' is used for individual values that can not directly be used as indices
         'Index' for raters that already contain the exact index for colors and labels lists
+    legend_ax : `matplotlib.Axes`, optional
+        Axes object that the legend will be drawn on
     legend_kwargs : dict, optional
         kwargs passed into either the legend or colorbar function.
         A special `legend_title_pad` can be set to create a padding between the colorbar and the title of colorbar,
@@ -285,7 +278,7 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
         bins = np.array(bins)
         bins.sort()
 
-    if len(bins) > 15 and not suppress_warnings:
+    if len(bins) > 10 and not suppress_warnings:
         raise ValueError("Number of bins above 15, this creates issues with visibility")
 
     if not isinstance(colors, type(None)):
