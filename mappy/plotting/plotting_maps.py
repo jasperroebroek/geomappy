@@ -90,6 +90,12 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
     elif not isinstance(cmap, Colormap):
         raise TypeError("cmap not recognized")
 
+    if isinstance(legend_kwargs, type(None)):
+        if legend == "colorbar":
+            legend_kwargs = {}
+        elif legend == "legend":
+            legend_kwargs = {"facecolor": "white", "edgecolor": "lightgrey", 'loc': 0}
+
     if not isinstance(bins, type(None)) and len(bins) == 1:
         nan_mask = np.isnan(m)
         m = (m > bins[0]).astype(float)
@@ -104,11 +110,11 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
             norm, extend = _determine_cmap_boundaries_continuous(m=m, vmin=vmin, vmax=vmax)
             cmap.set_bad(nan_color)
             im = ax.imshow(m, norm=norm, origin='upper', cmap=cmap, **kwargs)
-            if isinstance(legend_kwargs, type(None)):
-                legend_kwargs = {}
+
             if legend == "colorbar":
-                add_colorbar(im=im, ax=ax, cax=legend_ax, aspect=aspect, pad_fraction=pad_fraction, extend=extend,
-                             **legend_kwargs)
+                cbar = add_colorbar(im=im, ax=ax, cax=legend_ax, aspect=aspect, pad_fraction=pad_fraction,
+                                    extend=legend_kwargs.pop('extend', extend), shrink=legend_kwargs.pop('shrink', 1))
+                cbar_decorator(cbar, **legend_kwargs)
 
         else:
             cmap, norm, legend_patches, extend = _determine_cmap_boundaries_discrete(m=m, bins=bins, cmap=cmap,
@@ -117,22 +123,14 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
             im = ax.imshow(m, norm=norm, cmap=cmap, origin='upper', **kwargs)
 
             if legend == "legend":
-                if isinstance(legend_kwargs, type(None)):
-                    legend_kwargs = {"facecolor": "white", "edgecolor": "lightgrey", 'loc': 0}
                 if isinstance(legend_ax, type(None)):
                     legend_ax = ax
                 legend_ax.legend(handles=legend_patches, **legend_kwargs)
 
             elif legend == "colorbar":
-                if isinstance(legend_kwargs, type(None)):
-                    legend_kwargs = {}
-
-                cbar = add_colorbar(im=im, ax=ax, cax=legend_ax, extend=extend, aspect=aspect, 
-                                    pad_fraction=pad_fraction, **legend_kwargs)
-                if isinstance(bin_labels, type(None)):
-                    bin_labels = bins
-                cbar.set_ticks(bins)
-                cbar.set_ticklabels(bin_labels)
+                cbar = add_colorbar(im=im, ax=ax, cax=legend_ax, aspect=aspect, pad_fraction=pad_fraction,
+                                    extend=legend_kwargs.pop('extend', extend), shrink=legend_kwargs.pop('shrink', 1))
+                cbar_decorator(cbar, **legend_kwargs)
 
     elif m.ndim == 3:
         ax.imshow(m, origin='upper', **kwargs)
@@ -264,7 +262,9 @@ def plot_classified_map(m, bins=None, colors=None, cmap="tab10", labels=None, le
     if legend == "legend":
         if isinstance(legend_kwargs, type(None)):
             legend_kwargs = {"facecolor": "white", "edgecolor": "lightgrey", 'loc': 0}
-        ax.legend(handles=legend_patches, **legend_kwargs)
+        if isinstance(legend_ax, type(None)):
+            legend_ax = ax
+        legend_ax.legend(handles=legend_patches, **legend_kwargs)
 
     elif legend == "colorbar":
         if isinstance(legend_kwargs, type(None)):
