@@ -204,9 +204,12 @@ def _create_geometry_values_and_sizes(lat=None, lon=None, values=None, s=None, d
     return gpd.GeoDataFrame(geometry=geometry), values, markersize
 
 
-def cbar_decorator(cbar, ticks, ticklabels, title="", label="", tick_params=None, title_font=None, label_font=None):
-    cbar.set_ticks(ticks)
-    cbar.set_ticklabels(ticklabels)
+def cbar_decorator(cbar, ticks=None, ticklabels=None, title="", label="", tick_params=None, title_font=None,
+                   label_font=None, fontsize=None):
+    if not isinstance(ticks, type(None)):
+        cbar.set_ticks(ticks)
+        if not isinstance(ticklabels, type(None)):
+            cbar.set_ticklabels(ticklabels)
 
     if isinstance(tick_params, type(None)):
         tick_params = {}
@@ -214,6 +217,11 @@ def cbar_decorator(cbar, ticks, ticklabels, title="", label="", tick_params=None
         title_font = {}
     if isinstance(label_font, type(None)):
         label_font = {}
+
+    if not isinstance(fontsize, type(None)):
+        tick_params.update({'labelsize': fontsize})
+        title_font.update({"fontsize": fontsize})
+        label_font.update({"fontsize": fontsize})
 
     cbar.ax.set_title(title, **title_font)
     cbar.ax.tick_params(**tick_params)

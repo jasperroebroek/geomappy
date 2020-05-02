@@ -5,12 +5,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from geopandas.plotting import plot_polygon_collection, plot_linestring_collection, plot_point_collection
-from matplotlib.colors import Colormap, ListedColormap, BoundaryNorm
+from matplotlib.colors import Colormap, ListedColormap, Normalize
 from mpl_toolkits import axes_grid1
 
-from .colors import add_colorbar, cmap_random, create_colorbar_axes
+from .colors import add_colorbar, cmap_random, create_colorbar_axes, cmap_discrete
 from .misc import _determine_cmap_boundaries_discrete, _create_geometry_values_and_sizes, \
-    _determine_cmap_boundaries_continuous
+    _determine_cmap_boundaries_continuous, cbar_decorator
 from ..ndarray_functions import nanunique, nandigitize
 from ..plotting import legend_patches as lp
 
@@ -60,7 +60,7 @@ def _plot_geometries(ax, df, colors, linewidth, markersize, **kwargs):
 
 def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin_labels=None, cmap=None, vmin=None,
                 vmax=None, legend="colorbar", clip_legend=False, ax=None, figsize=(10, 10), legend_ax=None,
-                legend_kwargs=None, aspect=30, pad_fraction=0.6, linewidth=0, force_equal_figsize=None,
+                legend_kwargs=None, fontsize=None, aspect=30, pad_fraction=0.6, linewidth=0, force_equal_figsize=None,
                 nan_color="White", **kwargs):
     """
     Plot shapes in a continuous fashion
@@ -103,6 +103,8 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         Axes object that the legend will be drawn on
     legend_kwargs : dict, optional
         Extra parameters for the colorbar call
+    fontsize : float, optional
+        Fontsize of the legend
     aspect : float, optional
         aspact ratio of the colorbar
     pad_fraction : float, optional
@@ -144,6 +146,15 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
 
     geometry, values, markersize = _create_geometry_values_and_sizes(lat=lat, lon=lon, values=values, s=s, df=df)
 
+    if isinstance(legend_kwargs, type(None)):
+        if legend == "colorbar" or not legend:
+            legend_kwargs = {}
+        elif legend == "legend":
+            legend_kwargs = {"facecolor": "white", "edgecolor": "lightgrey", 'loc': 0}
+
+    if 'fontsize' not in legend_kwargs and not isinstance(fontsize, type(None)):
+        legend_kwargs['fontsize'] = fontsize
+
     if isinstance(bins, type(None)):
         norm, extend = _determine_cmap_boundaries_continuous(m=values, vmin=vmin, vmax=vmax)
         sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
@@ -154,28 +165,20 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
 
         if legend == "legend":
-            if isinstance(legend_kwargs, type(None)):
-                legend_kwargs = {"facecolor": "white", "edgecolor": "lightgrey", 'loc': 0}
-            ax.legend(handles=legend_patches, **legend_kwargs)
+            if isinstance(legend_ax, type(None)):
+                legend_ax = ax
+            legend_ax.legend(handles=legend_patches, **legend_kwargs)
 
     colors = pd.Series(cmap(norm(values)).tolist())
     colors[pd.isna(values)] = nan_color
 
     _plot_geometries(ax, geometry, colors, linewidth, markersize, **kwargs)
 
-    if isinstance(legend_kwargs, type(None)):
-        legend_kwargs = {}
-
-    if 'extend' not in legend_kwargs:
-        legend_kwargs.update({'extend': extend})
-
     if legend == "colorbar":
-        cbar = add_colorbar(im=sm, ax=ax, cax=legend_ax, aspect=aspect, pad_fraction=pad_fraction, **legend_kwargs)
-        if not isinstance(bins, type(None)):
-            if isinstance(bin_labels, type(None)):
-                bin_labels = bins
-            cbar.set_ticks(bins)
-            cbar.set_ticklabels(bin_labels)
+        cbar = add_colorbar(im=sm, ax=ax, cax=legend_ax, aspect=aspect, pad_fraction=pad_fraction,
+                            shrink=legend_kwargs.pop("shrink", 1), extend=legend_kwargs.pop("extend", extend),
+                            position=legend_kwargs.pop("position", "right"))
+        cbar_decorator(cbar, ticks=bins, ticklabels=bin_labels, **legend_kwargs)
 
     if force_equal_figsize and legend != 'colorbar':
         create_colorbar_axes(ax=ax, aspect=aspect, pad_fraction=pad_fraction,
@@ -184,9 +187,9 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
     return ax
 
 
-def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, colors=None, cmap=None,
+def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, colors=None, cmap="tab10",
                            labels=None, legend="legend", clip_legend=False, ax=None, figsize=(10, 10),
-                           suppress_warnings=False, mode="classes", legend_ax=None, legend_kwargs=None, aspect=30,
+                           suppress_warnings=False, legend_ax=None, legend_kwargs=None, fontsize=None, aspect=30,
                            pad_fraction=0.6, linewidth=0, force_equal_figsize=False, nan_color="White", **kwargs):
     """
     Plot shapes with discrete classes or index
@@ -225,15 +228,14 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
         Matplotlib figsize parameter. Default is (10,10)
     suppress_warnings : bool, optional
         By default 10 classes is the maximum that can be plotted. If set to True this maximum is removed
-    mode : {'classes', 'index'}
-        'Classes' is used for individual values that can not directly be used as indices
-        'Index' for raters that already contain the exact index for colors and labels lists
     legend_ax : `matplotlib.Axes`, optional
         Axes object that the legend will be drawn on
     legend_kwargs : dict, optional
         kwargs passed into either the legend or colorbar function.
         A special `legend_title_pad` can be set to create a padding between the colorbar and the title of colorbar,
         which can be set in these kwargs as `title`. The default `legend_title_pad` is 10.
+    fontsize : float, optional
+        Fontsize of the legend
     aspect : float, optional
         aspact ratio of the colorbar
     pad_fraction : float, optional
@@ -260,32 +262,28 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
     Axes
     """
     if isinstance(ax, type(None)):
-        f, ax = plt.subplots(figsize=(10, 10))
+        f, ax = plt.subplots(figsize=figsize)
     elif isinstance(ax, cartopy.mpl.geoaxes.GeoAxes):
         if "transform" not in kwargs:
             kwargs["transform"] = ccrs.PlateCarree()
-
-    if mode not in ('classes', 'index'):
-        raise ValueError("mode not recognized")
 
     geometry, values, markersize = _create_geometry_values_and_sizes(lat=lat, lon=lon, values=values, s=s, df=df)
 
     if isinstance(bins, type(None)):
         data = values[~np.isnan(values)]
         bins = np.unique(data)
-        mode = 'classes'
     else:
         bins = np.array(bins)
         bins.sort()
 
     if len(bins) > 10 and not suppress_warnings:
-        raise ValueError("Number of bins above 15, this creates issues with visibility")
+        raise ValueError("Number of bins above 10, this creates issues with visibility")
 
     if not isinstance(colors, type(None)):
         if len(bins) != len(colors):
             raise IndexError(f"length of bins and colors don't match\nbins: {len(bins)}\ncolors: {len(colors)}")
     else:
-        colors = cmap_random(len(bins), return_type="list", color_type="pastel")
+        colors = cmap_discrete(cmap=cmap, n=len(list), return_type="list")
 
     if not isinstance(labels, type(None)):
         if len(bins) != len(labels):
@@ -296,19 +294,18 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
     colors = np.array(colors)
     labels = np.array(labels)
 
-    if mode == 'index':
-        m_binned = values
-    elif mode == 'classes':
-        m_binned = nandigitize(values, bins=bins, right=True)
+    m_binned = nandigitize(values, bins=bins, right=True)
 
     m_binned_unique = nanunique(m_binned).astype(int)
     if (~np.all(m_binned_unique == np.linspace(0, m_binned_unique.max(), num=m_binned_unique.size)) or \
         len(m_binned_unique) != len(colors)) and clip_legend:
         colors = colors[m_binned_unique]
         labels = labels[m_binned_unique]
+        norm = Normalize(vmin=None, vmax=None)
+    else:
+        norm = Normalize(vmin=0, vmax=bins.size - 1)
 
     cmap = ListedColormap(colors)
-    norm = BoundaryNorm(np.r_[bins, bins[-1] + 1], len(bins))
     sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
     legend_patches = lp(colors=colors, labels=labels, edgecolor='lightgrey')
 
@@ -317,33 +314,31 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
     _plot_geometries(ax, geometry, plotting_colors, linewidth, markersize, **kwargs)
 
     # Legend
-    if legend == "legend":
-        if isinstance(legend_kwargs, type(None)):
-            legend_kwargs = {"facecolor": "white", "edgecolor": "lightgrey", 'loc': 0}
-        ax.legend(handles=legend_patches, **legend_kwargs)
-    elif legend == "colorbar":
-        if isinstance(legend_kwargs, type(None)):
+    if isinstance(legend_kwargs, type(None)):
+        if legend == "colorbar" or not legend:
             legend_kwargs = {}
-        title = legend_kwargs.pop("title", "")
-        legend_title_pad = legend_kwargs.pop("legend_title_pad", 10)
+        elif legend == "legend":
+            legend_kwargs = {"facecolor": "white", "edgecolor": "lightgrey", 'loc': 0}
 
-        cbar = add_colorbar(im=sm, ax=ax, **legend_kwargs)
+    if 'fontsize' not in legend_kwargs and not isinstance(fontsize, type(None)):
+        legend_kwargs['fontsize'] = fontsize
+
+    if legend == "legend":
+        if isinstance(legend_ax, type(None)):
+            legend_ax = ax
+        legend_ax.legend(handles=legend_patches, **legend_kwargs)
+    elif legend == "colorbar":
+        cbar = add_colorbar(im=sm, ax=ax, cax=legend_ax, shrink=legend_kwargs.pop("shrink", 1),
+                            position=legend_kwargs.pop("position", "right"))
 
         boundaries = cbar._boundaries
         tick_locations = [(boundaries[i]-boundaries[i-1])/2+boundaries[i-1]
                           for i in range(1, len(boundaries))]
 
-        cbar.set_ticks(tick_locations)
-        cbar.ax.set_yticklabels(labels)
-        cbar.ax.set_title(title, pad=legend_title_pad)
+        cbar_decorator(cbar, ticks=tick_locations, ticklabels=labels, **legend_kwargs)
 
     if force_equal_figsize and legend != 'colorbar':
-        divider = axes_grid1.make_axes_locatable(ax)
-        width = axes_grid1.axes_size.AxesY(ax, aspect=1. / aspect)
-        pad = axes_grid1.axes_size.Fraction(pad_fraction, width)
-        current_ax = plt.gca()
-        position = legend_kwargs.get('position', 'vertical')
-        divider.append_axes(position=position, size=width, pad=pad, axes_class=plt.Axes)
-        plt.sca(current_ax)
+        create_colorbar_axes(ax=ax, aspect=aspect, pad_fraction=pad_fraction,
+                             position=legend_kwargs.get("position", "right")).axis("off")
 
     return ax

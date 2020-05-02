@@ -245,7 +245,7 @@ class ProjectCustomExtent(ccrs.Projection):
 
 
 def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None, figsize=(10, 10), resolution="110m",
-            coastlines=True, earth_image=False, land=False, ocean=False, yticks=30, xticks=30, grid=True, precision=0,
+            coastlines=True, earth_image=False, land=False, ocean=False, xticks=30, yticks=30, grid=True, precision=0,
             n_steps=300, linewidth=1, grid_linewidth=None, border_linewidth=None, coastline_linewidth=None,
             grid_alpha=0.5, fontsize=10):
     """
@@ -278,11 +278,11 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
         switch to color the landmass lightgrey
     ocean : bool, optional
         switch to color the ocean lightblue
-    yticks : float or list, optional
+    xticks : float or list, optional
         parameter that describes the distance between two gridlines in PlateCarree coordinate terms. The default 30
         means that every 30 degrees a gridline gets drawn. If a list is passed, the procedure is skipped and the
         coordinates in the list are used.
-    xticks : float or list, optional
+    yticks : float or list, optional
         parameter that describes the distance between two gridlines in PlateCarree coordinate terms. The default 30
         means that every 30 degrees a gridline gets drawn. If a list is passed, the procedure is skipped and the
         coordinates in the list are used.

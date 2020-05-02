@@ -294,12 +294,15 @@ class MapRead(MapBase):
             profile['dtype'] = dtype
         if func == "majority" and majority_mode == "nan":
             profile['dtype'] = np.float64
+        if not isinstance(compress, type(None)):
+            profile.update({'compress': compress})
+        profile.update({'count': 1, 'driver': "GTiff"})
 
         old_settings = np.seterr(all='ignore')  # silence all numpy warnings
 
         if isinstance(ind, type(None)):
             with MapWrite(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
-                          overwrite=overwrite, compress=compress, profile=profile) as f:
+                          overwrite=overwrite, profile=profile) as f:
                 for i in self:
                     if verbose:
                         print(f"\nTILE: {i + 1}/{self._c_tiles}")
@@ -309,7 +312,6 @@ class MapRead(MapBase):
                     data = self[i, layers]
                     # if data is empty, write directly
                     if ~np.isnan(self[i]).sum() == 0:
-                        # todo; check if this is already done in the focal statistics wrapper
                         f[i] = np.full(f.get_shape(), np.nan)
                     else:
                         f[i] = focal_statistics(data, func=func, window_size=self.window_size, verbose=verbose,
@@ -327,14 +329,10 @@ class MapRead(MapBase):
                                                   width=width,
                                                   height=height)
 
-            profile = self.profile
-            profile.update({'height': height, 'width': width, 'transform': transform, 'driver': "GTiff",
-                            'count': 1})
-            if not isinstance(compress, type(None)):
-                profile.update({'compress': compress})
+            profile.update({'height': height, 'width': width, 'transform': transform})
 
             if reduce:
-                profile = resample_profile(self.profile, 1 / window_size)
+                profile = resample_profile(profile, 1 / window_size)
 
             with rio.open(output_file, mode="w", **profile) as dst:
                 dst.write(focal_statistics(self[ind, layers], func=func, window_size=self.window_size, verbose=verbose,
@@ -413,6 +411,7 @@ class MapRead(MapBase):
         TypeError
             Other is not of type MapRead
         """
+        # todo; implement reduce
         if not isinstance(other, MapRead):
             raise TypeError("Other not correctly passed")
 
@@ -471,13 +470,10 @@ class MapRead(MapBase):
                                                   height=height)
 
             profile = self.profile
-            profile.update({'height': height, 'width': width, 'transform': transform, 'driver': "GTiff",
-                            'count': 1})
+            profile.update({'height': height, 'width': width, 'transform': transform, 'driver': "GTiff", 'count': 1,
+                            'dtype': 'float'})
             if not isinstance(compress, type(None)):
                 profile.update({'compress': compress})
-
-            if reduce:
-                profile = resample_profile(self.profile, 1 / window_size)
 
             with rio.open(output_file, mode="w", **profile) as dst:
                 dst.write(correlate_maps(self[ind, self_layers], other[ind, other_layers], window_size=self.window_size,
@@ -524,8 +520,8 @@ class MapRead(MapBase):
         with rio.open(output_file, mode="w", **profile) as dst:
             dst.write(np.moveaxis(data, -1, 0))
 
-    def plot(self, ind=None, layers=1, *, mode="ind", basemap=False, figsize=(10, 10), ax=None, log=False, epsg=4326,
-             basemap_kwargs=None, **kwargs):
+    def plot(self, ind=None, layers=1, *, mode="ind", basemap=False, figsize=(10, 10), ax=None, log=False, epsg=None,
+             xticks=30, yticks=30, resolution="110m", fontsize=10, basemap_kwargs=None, **kwargs):
         """
         plot data at given index (ind)
         
@@ -546,13 +542,24 @@ class MapRead(MapBase):
         log : bool, optional
             plot the colors on a log scale
         epsg : int, optional
-            todo; add a possibility to take the native one
-            EPSG code that will be used to render the plot, the default is 4326
+            EPSG code that will be used to render the plot, the default is the projection of the data itself.
+        xticks : float or list, optional
+            parameter that describes the distance between two gridlines in PlateCarree coordinate terms. The default 30
+            means that every 30 degrees a gridline gets drawn. If a list is passed, the procedure is skipped and the
+            coordinates in the list are used.
+        yticks : float or list, optional
+            parameter that describes the distance between two gridlines in PlateCarree coordinate terms. The default 30
+            means that every 30 degrees a gridline gets drawn. If a list is passed, the procedure is skipped and the
+            coordinates in the list are used.
+        resolution : {"110m", "50m", "10m"} , optional
+            coastline resolution
+        fontsize : float/tuple, optional
+            fontsize for both the lon/lat ticks and the ticks on the colorbar if one number, if a list of is passed it
+            represents the basemap fontsize and the colorbar fontsize.
         basemap_kwargs
             kwargs going to the basemap command
         **kwargs
             kwargs going to the plot_map() command
-        # todo; at least add resolution, xticks and yticks as parameters here
 
         Returns
         -------
@@ -581,29 +588,42 @@ class MapRead(MapBase):
         if log:
             data = np.log(data)
 
+        if not isinstance(fontsize, (tuple, list)):
+            fontsize = (fontsize, fontsize)
+        kwargs.update({'fontsize': fontsize[1]})
+
         if basemap:
             if isinstance(basemap_kwargs, type(None)):
                 basemap_kwargs = {}
 
-            ax = basemap_function(*bounds, ax=ax, epsg=epsg, figsize=figsize, **basemap_kwargs)
+            if 'xticks' not in basemap_kwargs:
+                basemap_kwargs.update({'xticks': xticks})
+            if 'yticks' not in basemap_kwargs:
+                basemap_kwargs.update({'yticks': yticks})
+            if 'fontsize' not in basemap_kwargs:
+                basemap_kwargs.update({'fontsize': fontsize[0]})
+            if 'resolution' not in basemap_kwargs:
+                basemap_kwargs.update({'resolution': resolution})
 
             if isinstance(self.epsg, type(None)):
-                raise RuntimeError("This object does not contain a EPSG code. It can be set through set_epsg()")
+                raise RuntimeError("This object does not contain a EPSG code. It can be set through self.set_epsg()")
             elif self.epsg == 4326:
                 transform = ccrs.PlateCarree()
             else:
                 transform = ccrs.epsg(self.epsg)
+            plot_epsg = self.epsg if isinstance(epsg, type(None)) else epsg
 
-            ax = plot_map(data, transform=transform, extent=(bounds[0], bounds[2], bounds[1], bounds[3]),
-                          ax=ax, **kwargs)
+            ax = basemap_function(*bounds, ax=ax, epsg=plot_epsg, figsize=figsize, **basemap_kwargs)
+            plot_map(data, transform=transform, extent=(bounds[0], bounds[2], bounds[1], bounds[3]),
+                     ax=ax, **kwargs)
 
         else:
             ax = plot_map(data, ax=ax, figsize=figsize, **kwargs)
 
         return ax
 
-    def plot_classified(self, ind=None, layers=1, *, mode="ind", basemap=False, figsize=(10, 10), ax=None, epsg=4326,
-                        basemap_kwargs=None, **kwargs):
+    def plot_classified(self, ind=None, layers=1, *, mode="ind", basemap=False, figsize=(10, 10), ax=None, epsg=None,
+                        xticks=30, yticks=30, resolution="110m", fontsize=10, basemap_kwargs=None, **kwargs):
         """
         Plots data in a classified way. Look at plot_classified_map for the implementation.
 
@@ -623,6 +643,19 @@ class MapRead(MapBase):
             matplotlib axes where plot is drawn on
         epsg : int, optional
             EPSG code that will be used to render the plot, the default is 4326
+        xticks : float or list, optional
+            parameter that describes the distance between two gridlines in PlateCarree coordinate terms. The default 30
+            means that every 30 degrees a gridline gets drawn. If a list is passed, the procedure is skipped and the
+            coordinates in the list are used.
+        yticks : float or list, optional
+            parameter that describes the distance between two gridlines in PlateCarree coordinate terms. The default 30
+            means that every 30 degrees a gridline gets drawn. If a list is passed, the procedure is skipped and the
+            coordinates in the list are used.
+        resolution : {"110m", "50m", "10m"} , optional
+            coastline resolution
+        fontsize : float/tuple, optional
+            fontsize for both the lon/lat ticks and the ticks on the colorbar if one number, if a list of is passed it
+            represents the basemap fontsize and the colorbar fontsize.
         basemap_kwargs : dict, optional
             kwargs for basemap
         **kwargs
@@ -648,11 +681,22 @@ class MapRead(MapBase):
         if data.ndim > 2:
             raise ValueError(f"This function is only applicable for 2D data. Can only select one layer")
 
+        if not isinstance(fontsize, (tuple, list)):
+            fontsize = (fontsize, fontsize)
+        kwargs.update({'fontsize': fontsize[1]})
+
         if basemap:
             if isinstance(basemap_kwargs, type(None)):
                 basemap_kwargs = {}
 
-            ax = basemap_function(*bounds, ax=ax, epsg=epsg, figsize=figsize, **basemap_kwargs)
+            if 'xticks' not in basemap_kwargs:
+                basemap_kwargs.update({'xticks': xticks})
+            if 'yticks' not in basemap_kwargs:
+                basemap_kwargs.update({'yticks': yticks})
+            if 'fontsize' not in basemap_kwargs:
+                basemap_kwargs.update({'fontsize': fontsize[0]})
+            if 'resolution' not in basemap_kwargs:
+                basemap_kwargs.update({'resolution': resolution})
 
             if isinstance(self.epsg, type(None)):
                 raise RuntimeError("This object does not contain a EPSG code. It can be set through set_epsg()")
@@ -660,9 +704,12 @@ class MapRead(MapBase):
                 transform = ccrs.PlateCarree()
             else:
                 transform = ccrs.epsg(self.epsg)
+            plot_epsg = self.epsg if isinstance(epsg, type(None)) else epsg
 
+            ax = basemap_function(*bounds, ax=ax, epsg=plot_epsg, figsize=figsize, **basemap_kwargs)
             ax = plot_classified_map(data, ax=ax, transform=transform,
                                      extent=(bounds[0], bounds[2], bounds[1], bounds[3]), **kwargs)
+
         else:
             ax = plot_classified_map(data, ax=ax, figsize=figsize, **kwargs)
 

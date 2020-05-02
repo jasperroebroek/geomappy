@@ -578,8 +578,6 @@ class MapBase:
         -------
         GeoAxis
         """
-        # todo; this function needs to store the boxes once calculated use a flag
-
         if type(numbers) != bool:
             raise TypeError("numbers needs to a boolean variable")
         if type(tiles) != bool:
