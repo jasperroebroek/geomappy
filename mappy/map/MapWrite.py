@@ -37,7 +37,7 @@ class MapWrite(MapBase):
         nodata value that is used for the rasterio profile. The default is np.nan. This parameter doesn't work in
         combination with passing a rasterio profile to the 'profile' parameter.
     count : int, optional
-        Count of layers of the file. If -1 it will be taken from the reference file. The default is 1.
+        Count of layers of the file. If -1 it will be taken from the reference file. The default is -1.
     profile : dict, optional
         custom rasterio profile can be passed which will be used directly to create the file with. All the other
         parameters are neglected.

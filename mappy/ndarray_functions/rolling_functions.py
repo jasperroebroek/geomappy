@@ -143,12 +143,8 @@ def rolling_sum(a, window_size, reduce=False):
         to buffer the window size on the edges:
             shape : [s - window_size + 1 for s in a.shape]
     """
-    # TODO; implement reduce
     if window_size < 2:
         raise ValueError("window_size should be bigger than 2")
-
-    if window_size % 2 == 0:
-        raise ValueError("window_size should be uneven")
 
     if ~np.all(np.array(a.shape) >= window_size):
         raise ValueError("Window bigger than input array")

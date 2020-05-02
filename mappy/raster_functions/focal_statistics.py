@@ -136,11 +136,10 @@ def focal_statistics(a, window_size, *, func=None, fraction_accepted=0.7, verbos
         0: all window are calculated if at least 1 value is present
         1: only windows completely filled with values are calculated
         0-1: fraction of acceptability
-        Note that this parameter has no effect yet when calculating with 'nanmax' and 'nanmin'
     verbose : bool, optional
         Verbosity with timing. False by default
     std_df : {1,0}, optional
-        Only for nanstd and std calculations. Degrees of freedom; meaning if the function is devided by the count of
+        Only for nanstd and std calculations. Degrees of freedom; meaning if the function is divided by the count of
         observations or the count of observations minus one. Should be 0 or 1.
     reduce : bool, optional
         The way in which the windowed array is created. If true, all values are used exactly once. If False (which is
@@ -293,4 +292,3 @@ def focal_std(a, window_size, **kwargs):
 
 def focal_majority(a, window_size, **kwargs):
     return focal_statistics(a, window_size, func="majority", **kwargs)
-

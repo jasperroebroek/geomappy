@@ -298,8 +298,6 @@ class MapRead(MapBase):
             profile.update({'compress': compress})
         profile.update({'count': 1, 'driver': "GTiff"})
 
-        old_settings = np.seterr(all='ignore')  # silence all numpy warnings
-
         if isinstance(ind, type(None)):
             with MapWrite(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
                           overwrite=overwrite, profile=profile) as f:
@@ -314,7 +312,7 @@ class MapRead(MapBase):
                     if ~np.isnan(self[i]).sum() == 0:
                         f[i] = np.full(f.get_shape(), np.nan)
                     else:
-                        f[i] = focal_statistics(data, func=func, window_size=self.window_size, verbose=verbose,
+                        f[i] = focal_statistics(data, func=func, window_size=window_size, verbose=verbose,
                                                 reduce=reduce, majority_mode=majority_mode, **kwargs)
 
                 if p_bar:
@@ -334,31 +332,30 @@ class MapRead(MapBase):
             if reduce:
                 profile = resample_profile(profile, 1 / window_size)
 
-            with rio.open(output_file, mode="w", **profile) as dst:
-                dst.write(focal_statistics(self[ind, layers], func=func, window_size=self.window_size, verbose=verbose,
-                                           reduce=reduce, majority_mode=majority_mode, **kwargs))
+            with MapWrite(output_file, overwrite=overwrite, profile=profile) as f:
+                f[0] = focal_statistics(self[ind, layers], func=func, window_size=window_size, verbose=verbose,
+                                        reduce=reduce, majority_mode=majority_mode, **kwargs)
 
         self.window_size = self_old_window_size
-        np.seterr(**old_settings)  # reset to default
 
     def focal_mean(self, **kwargs):
         """
         Function passes call to MapRead._focal_stat_iter with func = "nanmean". Function forces float64 dtype.
         """
         kwargs['dtype'] = np.float64
-        return self._focal_stat_iter(func="nanmean", **kwargs)
+        return self._focal_stat_iter(func="mean", **kwargs)
 
     def focal_min(self, **kwargs):
         """
         Function passes call to MapRead._focal_stat_iter with func = "nanmin"
         """
-        return self._focal_stat_iter(func="nanmin", **kwargs)
+        return self._focal_stat_iter(func="min", **kwargs)
 
     def focal_max(self, **kwargs):
         """
         Function passes call to MapRead._focal_stat_iter with func = "nanmax"
         """
-        return self._focal_stat_iter(func="nanmax", **kwargs)
+        return self._focal_stat_iter(func="max", **kwargs)
 
     def focal_std(self, **kwargs):
         """
@@ -367,7 +364,7 @@ class MapRead(MapBase):
         Function forces float dtype.
         """
         kwargs['dtype'] = np.float64
-        return self._focal_stat_iter(func="nanstd", **kwargs)
+        return self._focal_stat_iter(func="std", **kwargs)
 
     def focal_majority(self, **kwargs):
         """
@@ -412,6 +409,8 @@ class MapRead(MapBase):
             Other is not of type MapRead
         """
         # todo; implement reduce
+        # todo; implement parallel
+
         if not isinstance(other, MapRead):
             raise TypeError("Other not correctly passed")
 
@@ -447,7 +446,8 @@ class MapRead(MapBase):
 
         if isinstance(ind, type(None)):
             with MapWrite(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
-                          ref_map=self._location, overwrite=overwrite, compress=compress, dtype=np.float64) as f:
+                          ref_map=self._location, overwrite=overwrite, compress=compress, dtype=np.float64,
+                          count=1) as f:
                 for i in self:
                     if verbose:
                         print(f"\nTILE: {i + 1}/{self._c_tiles}")
@@ -471,13 +471,13 @@ class MapRead(MapBase):
 
             profile = self.profile
             profile.update({'height': height, 'width': width, 'transform': transform, 'driver': "GTiff", 'count': 1,
-                            'dtype': 'float'})
+                            'dtype': 'float64'})
             if not isinstance(compress, type(None)):
                 profile.update({'compress': compress})
 
-            with rio.open(output_file, mode="w", **profile) as dst:
-                dst.write(correlate_maps(self[ind, self_layers], other[ind, other_layers], window_size=self.window_size,
-                                          fraction_accepted=fraction_accepted, verbose=verbose))
+            with MapWrite(output_file, overwrite=overwrite, profile=profile) as f:
+                f[0] = correlate_maps(self[ind, self_layers], other[ind, other_layers], window_size=self.window_size,
+                                      fraction_accepted=fraction_accepted, verbose=verbose)
 
         self.window_size = self_old_window_size
         other.window_size = other_old_window_size
