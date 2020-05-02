@@ -102,7 +102,9 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
     legend_ax : `matplotlib.Axes`, optional
         Axes object that the legend will be drawn on
     legend_kwargs : dict, optional
-        Extra parameters for the colorbar call
+        Extra parameters to create and decorate the colorbar or the call to `plt.legend` if `legend` == "legend"
+        For the colorbar creation: shrink, position and extend (which would override the internal behaviour)
+        For the colorbar decorator see `cbar_decorate`.
     fontsize : float, optional
         Fontsize of the legend
     aspect : float, optional
@@ -231,9 +233,9 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
     legend_ax : `matplotlib.Axes`, optional
         Axes object that the legend will be drawn on
     legend_kwargs : dict, optional
-        kwargs passed into either the legend or colorbar function.
-        A special `legend_title_pad` can be set to create a padding between the colorbar and the title of colorbar,
-        which can be set in these kwargs as `title`. The default `legend_title_pad` is 10.
+        Extra parameters to create and decorate the colorbar or the call to `plt.legend` if `legend` == "legend"
+        For the colorbar creation: shrink, position and extend (which would override the internal behaviour)
+        For the colorbar decorator see `cbar_decorate`.
     fontsize : float, optional
         Fontsize of the legend
     aspect : float, optional
@@ -301,15 +303,16 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
         len(m_binned_unique) != len(colors)) and clip_legend:
         colors = colors[m_binned_unique]
         labels = labels[m_binned_unique]
-        norm = Normalize(vmin=None, vmax=None)
-    else:
-        norm = Normalize(vmin=0, vmax=bins.size - 1)
+        m_binned = nandigitize(m_binned, bins=m_binned_unique, right=True)
+        bins = m_binned_unique
 
     cmap = ListedColormap(colors)
+    norm = Normalize(vmin=0, vmax=bins.size - 1)
+
     sm = matplotlib.cm.ScalarMappable(cmap=cmap, norm=norm)
     legend_patches = lp(colors=colors, labels=labels, edgecolor='lightgrey')
 
-    plotting_colors = pd.Series(cmap(norm(values)).tolist())
+    plotting_colors = pd.Series(cmap(norm(m_binned)).tolist())
     plotting_colors[pd.isna(values)] = nan_color
     _plot_geometries(ax, geometry, plotting_colors, linewidth, markersize, **kwargs)
 

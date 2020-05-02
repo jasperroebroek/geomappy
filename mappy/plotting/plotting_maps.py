@@ -46,7 +46,9 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
     legend_ax : `matplotlib.Axes`, optional
         Axes object that the legend will be drawn on
     legend_kwargs : dict, optional
-        Extra parameters for the colorbar call
+        Extra parameters to create and decorate the colorbar or the call to `plt.legend` if `legend` == "legend"
+        For the colorbar creation: shrink, position and extend (which would override the internal behaviour)
+        For the colorbar decorator see `cbar_decorate`.
     fontsize : float, optional
         Fontsize of the legend
     aspect : float, optional
@@ -64,8 +66,8 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
 
     Notes
     -----
-    When providing a GeoAxes in the 'ax' parameter it needs to be noted that the 'extent' of the data should be provided
-    if there is not a perfect overlap. If provided to this function it will be handled by **kwargs. The same goes for
+    When providing a GeoAxes in the 'ax' parameter it needs to be noted that the `extent` of the data should be provided
+    if there is not a perfect overlap. If provided to this parameter it will be handled by **kwargs. The same goes for
     'transform' if the plotting projection is different than the data projection.
 
     Returns
@@ -167,11 +169,11 @@ def plot_classified_map(m, bins=None, colors=None, cmap="tab10", labels=None, le
     m : array
         input map
     bins : list, optional
-        list of either bins as used in np.digitize or unique values corresponding to `colors` and `labels`. By default
-        this parameter is not necessary, the unique values are taken from the input map
+        list of either bins as used in np.digitize . By default this parameter is not necessary, the unique values are
+        taken from the input map
     colors : list, optional
-        List of colors in a format understandable by matplotlib. By default random colors are taken
-    cmap : matplotlib cmap or str
+        List of colors in a format understandable by matplotlib. By default colors will be obtained from `cmap`
+    cmap : matplotlib cmap or str, optional
         Can be used to set a colormap when no colors are provided.
     labels : list, optional
         list of labels for the different classes. By default the unique values are taken as labels
@@ -189,8 +191,9 @@ def plot_classified_map(m, bins=None, colors=None, cmap="tab10", labels=None, le
     legend_ax : `matplotlib.Axes`, optional
         Axes object that the legend will be drawn on
     legend_kwargs : dict, optional
-        kwargs passed into either the `plt.legend` or `cbar_decorator` function. A `shrink` parameter for the colorbar
-        can be set here as well.
+        Extra parameters to create and decorate the colorbar or the call to `plt.legend` if `legend` == "legend"
+        For the colorbar creation: shrink, position and extend (which would override the internal behaviour)
+        For the colorbar decorator see `cbar_decorate`.
     fontsize : float, optional
         Fontsize of the legend
     aspect : float, optional
@@ -256,13 +259,12 @@ def plot_classified_map(m, bins=None, colors=None, cmap="tab10", labels=None, le
         len(m_binned_unique) != len(colors)) and clip_legend:
         colors = colors[m_binned_unique]
         labels = labels[m_binned_unique]
-        m_binned = nandigitize(m_binned, m_binned_unique)
-        norm = Normalize(vmin=None, vmax=None)
-    else:
-        norm = Normalize(vmin=0, vmax=bins.size - 1)
+        m_binned = nandigitize(m_binned, bins=m_binned_unique, right=True)
+        bins = m_binned_unique
 
     cmap = ListedColormap(colors)
     cmap.set_bad(nan_color)
+    norm = Normalize(vmin=0, vmax=bins.size - 1)
 
     legend_patches = lp(colors=colors, labels=labels, edgecolor='lightgrey')
 
