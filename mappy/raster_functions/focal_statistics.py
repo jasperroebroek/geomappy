@@ -3,10 +3,121 @@
 import numpy as np
 from numpy.lib.index_tricks import s_
 import time
-from ..ndarray_functions.rolling_functions import rolling_window
+from ..ndarray_functions.rolling_functions import rolling_window, rolling_sum, rolling_mean
 
 
-def focal_statistics(a, *, window_size=None, func=None, fraction_accepted=0.7, verbose=False, std_df=1, reduce=False,
+def _focal_majority(a, window_size, fraction_accepted, reduce, r, ind_inner, majority_mode):
+    if a.dtype not in ('float32', 'float64'):
+        a = a.astype(np.float64)
+
+    values = np.unique(a)
+    values = values[~np.isnan(values)]
+    if values.size == 0:
+        return r
+
+    count_values = rolling_sum(values, window_size, reduce=reduce)
+    if not reduce:
+        count_values[~values[ind_inner]] = 0
+    count_values[count_values < fraction_accepted * (window_size ** 2)] = 0
+
+    # highest digit corresponds to nan
+    digitized_a = np.digitize(a, values, right=True)
+
+    digitized_a_view = rolling_window(digitized_a, window_size=window_size, flatten=True, reduce=reduce)
+
+    value_count = np.apply_along_axis(lambda p: np.bincount(p, minlength=len(values)+1), axis=2, arr=digitized_a_view)
+
+    if majority_mode == "ascending":
+        t = values[value_count[:, :, :-1].argmax(axis=2)]
+    elif majority_mode == "descending":
+        t = values[::-1][value_count[:, :, :-1][:, :, ::-1].argmax(axis=2)]
+    elif majority_mode == "nan":
+        t = values[value_count[:, :, :-1].argmax(axis=2)]
+        occurrence_maximum = value_count[:, :, :-1].max(axis=2)
+        mask_two_maxima = (value_count[:, :, :-1] == occurrence_maximum[:, :, np.newaxis]).sum(axis=2) > 1
+        t[mask_two_maxima] = np.nan
+
+    t[count_values == 0] = np.nan
+    r[ind_inner] = t
+    return r
+
+
+def _focal_mean(a, window_size, fraction_accepted, reduce, r, ind_inner, values):
+    count_values = rolling_sum(values, window_size, reduce=reduce)
+    if not reduce:
+        count_values[~values[ind_inner]] = 0
+    count_values[count_values < fraction_accepted * (window_size ** 2)] = 0
+
+    a[~values] = 0
+    a_sum = rolling_sum(a, window_size, reduce=reduce)
+    a_mean = np.divide(a_sum, count_values, out=r[ind_inner], where=(count_values > 0))
+
+    return r
+
+
+def _focal_nanmax(a, window_size, fraction_accepted, reduce, r, ind_inner, values):
+    count_values = rolling_sum(values, window_size, reduce=reduce)
+    if not reduce:
+        count_values[~values[ind_inner]] = 0
+    count_values[count_values < fraction_accepted * (window_size ** 2)] = 0
+
+    a[np.isnan(a)] = -np.inf
+    a_view = rolling_window(a, window_size, reduce=reduce)
+    r[ind_inner] = np.max(a_view, axis=(2, 3), out=r[ind_inner])
+
+    r[np.isinf(r)] = np.nan
+    r[ind_inner][count_values == 0] = np.nan
+    return r
+
+
+def _focal_nanmin(a, window_size, fraction_accepted, reduce, r, ind_inner, values):
+    count_values = rolling_sum(values, window_size, reduce=reduce)
+    if not reduce:
+        count_values[~values[ind_inner]] = 0
+    count_values[count_values < fraction_accepted * (window_size ** 2)] = 0
+
+    a[np.isnan(a)] = np.inf
+    a_view = rolling_window(a, window_size, reduce=reduce)
+    r[ind_inner] = np.min(a_view, axis=(2, 3), out=r[ind_inner])
+
+    r[np.isinf(r)] = np.nan
+    r[ind_inner][count_values == 0] = np.nan
+    return r
+
+
+def _focal_std(a, window_size, fraction_accepted, reduce, std_df, r, ind_inner, values):
+    count_values = rolling_sum(values, window_size, reduce=reduce)
+    if not reduce:
+        count_values[~values[ind_inner]] = 0
+    count_values[count_values < fraction_accepted * (window_size ** 2)] = 0
+    valid_cells = count_values > 0
+
+    a_mean = focal_statistics(a, window_size=window_size, func="mean", fraction_accepted=fraction_accepted,
+                              reduce=reduce)[ind_inner]
+
+    # add empty dimensions to make it possible to broadcast
+    a_mean = a_mean[:, :, np.newaxis, np.newaxis]
+
+    # subtract all values from the mean map, with a sampling mask to prevent
+    # nan operations. map1_dist will therefore not contain any NaNs
+    sampling_mask = np.logical_and(valid_cells[:, :, np.newaxis, np.newaxis],
+                                   rolling_window(values, window_size, reduce=reduce))
+    shape = (*count_values.shape, window_size, window_size)
+    a_view = rolling_window(a, window_size, reduce=reduce)
+    a_dist = np.subtract(a_view, a_mean, where=sampling_mask,
+                         out=np.full(shape, 0, dtype="float64"))
+
+    if std_df == 1:
+        # denominator (count_values - 1), but no negative values allowed
+        count_values = np.maximum(count_values - 1, [[0]])
+
+    r[ind_inner] = np.sqrt(np.divide(np.sum(a_dist ** 2, axis=(2, 3)), count_values, where=valid_cells),
+                           where=valid_cells, out=r[ind_inner])
+
+    return r
+
+
+def focal_statistics(a, window_size, *, func=None, fraction_accepted=0.7, verbose=False, std_df=1, reduce=False,
                      majority_mode="nan"):
     """
     Focal statistics wrapper.
@@ -18,7 +129,7 @@ def focal_statistics(a, *, window_size=None, func=None, fraction_accepted=0.7, v
         in which case the input array's dtype is preserved.
     window_size : int
         Window size for focal statistics. Should be bigger than 1.
-    func : {"mean","min","max","std","nanmean","nanmin","nanmax","nanstd","majority"}
+    func : {"mean","min","max","std","majority"}
         Function to be applied on the windows
     fraction_accepted : float, optional
         Fraction of valid cells per window that is deemed acceptable
@@ -70,44 +181,45 @@ def focal_statistics(a, *, window_size=None, func=None, fraction_accepted=0.7, v
     ValueError
         If data is not a 2D array
     """
-    # todo; use rolling_sum and rolling_mean for speadup of calculations. Be sure to check for consistency
-    # todo; split this function up in several functions, this function may remain as a wrapper
-    # todo; 3D
-
-    list_of_functions = ["mean", "min", "max", "std", "nanmean", "nanmin", "nanmax", "nanstd", "majority",
-                         "majority_old"]
-
+    list_of_functions = ["mean", "majority", "min", "max", "std"]
     if func not in list_of_functions:
         raise KeyError("Function not available")
-
-    if isinstance(a, type(None)):
-        raise ValueError("No input array given")
-    if isinstance(window_size, type(None)):
-        raise ValueError("No window size given")
-
-    if not isinstance(a, np.ndarray):
-        a = np.array(a)
 
     if a.dtype != np.float64 and func != "majority":
         # print("input array converted to float")
         a = a.astype(np.float64)
 
-    if not isinstance(window_size, int):
-        window_size = int(window_size)
-
-    if window_size % 2 == 0 and not reduce:
-        raise ValueError("Window_size should be uneven")
-    if window_size < 2:
-        raise ValueError(f"Window_size too small. {window_size}")
-
-    if a.ndim != 2:
-        raise ValueError("This function only supports 2D data at the moment")
-
     if std_df not in (0, 1):
         raise ValueError("STD_DF wrongly defined")
 
-    if ~np.all(np.array(a.shape) >= window_size):
-        raise ValueError("Window bigger than input array")
+    if not isinstance(verbose, bool):
+        raise TypeError("verbose is a boolean variable")
+    if not isinstance(reduce, bool):
+        raise TypeError("reduce is a boolean variable")
+
+    if a.ndim != 2:
+        raise ValueError("Only 2D data is supported")
+
+    if not isinstance(window_size, int):
+        raise TypeError("window_size should be an integer")
+    elif window_size < 2:
+        raise ValueError("window_size should be uneven and bigger than or equal to 2")
+
+    if np.any(np.array(a.shape) < window_size):
+        raise IndexError("window is bigger than the input array on at least one of the dimensions")
+
+    if reduce:
+        if ~np.all(np.array(a.shape) % window_size == 0):
+            raise ValueError("The reduce parameter only works when providing a window_size that divides the input "
+                             "exactly.")
+    else:
+        if window_size % 2 == 0:
+            raise ValueError("window_size should be uneven if reduce is set to False")
+
+    if not isinstance(fraction_accepted, (int, float)):
+        raise TypeError("fraction_accepted should be numeric")
+    elif fraction_accepted < 0 or fraction_accepted > 1:
+        raise ValueError("fraction_accepted should be between 0 and 1")
 
     fringe = window_size // 2
 
@@ -116,237 +228,69 @@ def focal_statistics(a, *, window_size=None, func=None, fraction_accepted=0.7, v
         r = np.full(a.shape, np.nan)
         ind_inner = s_[fringe:-fringe, fringe:-fringe]
     else:
-        shape = []
-        for dim in a.shape:
-            if dim // window_size == dim / window_size:
-                shape.append(dim // window_size)
-            else:
-                raise ValueError(
-                    f"Can't reduce with current window_size; not all dimensions diviseble by {window_size}")
+        shape = list(np.array(a.shape) // window_size)
         r = np.full(shape, np.nan)
         ind_inner = s_[:, :]
 
-    start = time.time()
-
-    if func[:3] == "nan":
-        a = a.copy()
-
-        # find pixels with values
-        values = ~np.isnan(a)
-
-        if np.sum(values) == 0:
-            if verbose:
-                print("- Empty array")
-            return r
-
-        # Find the amount of true values in each window
-        count_values = rolling_window(values, window_size, reduce=reduce).sum(axis=(2, 3))
-
-        # Remove windows that have too many NaN values
-        if not reduce:
-            count_values[~values[ind_inner]] = 0
-
-        count_values[count_values < fraction_accepted * (window_size ** 2)] = 0
-
-    # FOCAL STATISTICS FUNCTIONS    
-    a_view = rolling_window(a, window_size=window_size, reduce=reduce)
-
-    if func == "mean":
-        # return the mean, nan values not accepted and leading to weird behaviour
-        r[ind_inner] = a_view.mean(axis=(2, 3))
-
-    if func == "max":
-        # return the max, nan values not accepted and leading to weird behaviour
-        r[ind_inner] = a_view.max(axis=(2, 3))
-
-    if func == "min":
-        # return the min, nan values not accepted and leading to weird behaviour
-        r[ind_inner] = a_view.min(axis=(2, 3))
-
-    if func == "std":
-        # return the min, nan values not accepted and leading to weird behaviour
-        r[ind_inner] = a_view.std(axis=(2, 3), ddof=std_df)
-
-    if func == "nanmean":
-        # Return the mean. NaN values are filtered with the fraction_accepted parameter
-        # remove the nans
-        a[~values] = 0
-
+    nans = np.isnan(a)
+    values = ~nans
+    if values.sum() == 0:
         if verbose:
-            print(f"- preparation: {time.time() - start}")
-
-        # calculate the rolling sum
-        a_sum = a_view.sum(axis=(2, 3))
-
-        if verbose:
-            print(f"- sum: {time.time() - start}")
-
-        # devide by the amount of values to get the mean
-        a_mean = np.divide(a_sum, count_values, out=r[ind_inner], where=(count_values > 0))
-
-        if verbose:
-            print(f"- mean: {time.time() - start}")
-
-    if func == "nanstd":
-        # create boolean array to mask the valid cells
-        valid_cells = count_values > 0
-
-        if verbose:
-            print(f"- preparation: {time.time() - start}")
-
-        a_mean = focal_statistics(a, window_size=window_size, func="nanmean",
-                                  fraction_accepted=fraction_accepted,
-                                  reduce=reduce)[ind_inner]
-
-        # add empty dimensions to make it possible to broadcast
-        a_mean = a_mean[:, :, np.newaxis, np.newaxis]
-
-        if verbose:
-            print(f"- mean: {time.time() - start}")
-
-        # subtract all values from the mean map, with a sampling mask to prevent
-        # nan operations. map1_dist will therefore not contain any NaNs
-        sampling_mask = np.logical_and(valid_cells[:, :, np.newaxis, np.newaxis],
-                                       rolling_window(values, window_size, reduce=reduce))
-        shape = (*count_values.shape, window_size, window_size)
-        a_dist = np.subtract(a_view, a_mean, where=sampling_mask,
-                             out=np.full(shape, 0, dtype="float64"))
-
-        if verbose:
-            print(f"- distance: {time.time() - start}")
-
-        if std_df == 1:
-            # denominator (count_values - 1), but no negative values allowed
-            count_values = np.maximum(count_values - 1, [[0]])
-
-        # calculate the standard deviation with valid_cells as mask inserting 0 in the divide array and not writing to
-        # the output_array in the np.sqrt function
-        r[ind_inner] = np.sqrt(np.divide(np.sum(a_dist ** 2, axis=(2, 3)), count_values, where=valid_cells),
-                               where=valid_cells, out=r[ind_inner])
-
-        if verbose:
-            print(f"- standard deviation: {time.time() - start}")
-
-    if func == "nanmax":
-        # TODO; implement accepted_fraction
-        # mask the valid cells
-        valid_cells = count_values > 0
-
-        # replace the cells with nans to -inf, so this value will never
-        # be chosen as the maximum value if there is any other value present
-        a[np.isnan(a)] = -np.inf
-
-        # insert the maximum value of each window in the output map
-        r[ind_inner] = np.max(a_view, axis=(2, 3), out=r[ind_inner])
-
-        # replace the np.inf values placed in the output map
-        r[np.isinf(r)] = np.nan
-
-        # remove values that have a lower amount data than acceptible 
-        # calculated with the fraction_accepted parameter
-        r[ind_inner][~valid_cells] = np.nan
-
-        if verbose:
-            print(f"- calculation: {time.time() - start}")
-
-    if func == "nanmin":
-        # TODO; implement accepted_fraction
-        # mask the valid cells
-        valid_cells = count_values > 0
-
-        # replace the cells with nans to inf, so this value will never
-        # be chosen as the minimum value if there is any other value present
-        a[np.isnan(a)] = np.inf
-
-        # insert the minimum value of each window in the output map
-        r[ind_inner] = np.min(a_view, axis=(2, 3), out=r[ind_inner])
-
-        # replace the np.inf values placed in the output map
-        r[np.isinf(r)] = np.nan
-
-        # remove values that have a lower amount data than acceptible 
-        # calculated with the fraction_accepted parameter
-        r[ind_inner][~valid_cells] = np.nan
-
-        if verbose:
-            print(f"- calculation: {time.time() - start}")
-
-    if func == "majority":
-        return focal_majority(a=a, window_size=window_size, fraction_accepted=fraction_accepted, reduce=reduce,
-                              majority_mode=majority_mode)
-    return r
-
-
-def focal_majority(a, *, window_size=None, fraction_accepted=0.7, reduce=False, majority_mode="nan"):
-    if a.dtype not in ('float32', 'float64'):
-        a = a.astype(np.float64)
-
-    if isinstance(window_size, type(None)):
-        raise ValueError("No window size given")
-
-    if not isinstance(a, np.ndarray):
-        a = np.array(a)
-
-    if not isinstance(window_size, int):
-        window_size = int(window_size)
-
-    if window_size % 2 == 0 and not reduce:
-        raise ValueError("Window_size should be uneven")
-    if window_size < 2:
-        raise ValueError(f"Window_size too small. {window_size}")
-
-    if a.ndim != 2:
-        raise ValueError("This function only supports 2D data at the moment")
-
-    if ~np.all(np.array(a.shape) >= window_size):
-        raise ValueError("Window bigger than input array")
-
-    # return array
-    if not reduce:
-        r = np.full(a.shape, np.nan)
-        fringe = window_size // 2
-        ind_inner = np.s_[fringe:-fringe, fringe:-fringe]
-    else:
-        shape = []
-        for dim in a.shape:
-            if dim // window_size == dim / window_size:
-                shape.append(dim // window_size)
-            else:
-                raise ValueError(
-                    f"Can't reduce with current window_size; not all dimensions divisible by {window_size}")
-        r = np.full(shape, np.nan)
-        ind_inner = np.s_[:, :]
-
-    values = np.unique(a)
-    values = values[~np.isnan(values)]
-    if values.size == 0:
+            print("- Empty array")
         return r
 
-    # todo; convert to rolling sum (when reduce option is available)
-    count_values = rolling_window(~np.isnan(a), window_size=window_size, reduce=reduce).sum(axis=(2, 3))
-    if not reduce:
-        count_values[np.isnan(a[ind_inner])] = 0
-    count_values[count_values < window_size ** 2 * fraction_accepted] = 0
+    start = time.time()
 
-    # highest digit corresponds to nan
-    digitized_a = np.digitize(a, values, right=True)
+    if nans.sum() == 0:
+        nan_flag = False
+    else:
+        nan_flag = True
+        # todo; remove for numba
+        a = a.copy()
 
-    digitized_a_view = rolling_window(digitized_a, window_size=window_size, flatten=True, reduce=reduce)
+    if func == "majority":
+        r = _focal_majority(a, window_size, fraction_accepted, reduce, r, ind_inner, majority_mode)
 
-    value_count = np.apply_along_axis(lambda p: np.bincount(p, minlength=len(values)+1), axis=2, arr=digitized_a_view)
+    elif func == "mean":
+        r = _focal_mean(a, window_size, fraction_accepted, reduce, r, ind_inner, values)
 
-    if majority_mode == "ascending":
-        t = values[value_count[:, :, :-1].argmax(axis=2)]
-    elif majority_mode == "descending":
-        t = values[::-1][value_count[:, :, :-1][:, :, ::-1].argmax(axis=2)]
-    elif majority_mode == "nan":
-        t = values[value_count[:, :, :-1].argmax(axis=2)]
-        occurrence_maximum = value_count[:, :, :-1].max(axis=2)
-        mask_two_maxima = (value_count[:, :, :-1] == occurrence_maximum[:, :, np.newaxis]).sum(axis=2) > 1
-        t[mask_two_maxima] = np.nan
+    elif func == "max":
+        if nan_flag:
+            r = _focal_nanmax(a, window_size, fraction_accepted, reduce, r, ind_inner, values)
+        else:
+            r[ind_inner] = rolling_window(a, window_size, reduce=reduce).max(axis=(2, 3))
 
-    t[count_values == 0] = np.nan
+    elif func == "min":
+        if nan_flag:
+            r = _focal_nanmin(a, window_size, fraction_accepted, reduce, r, ind_inner, values)
+        else:
+            r[ind_inner] = rolling_window(a, window_size, reduce=reduce).min(axis=(2, 3))
 
-    r[ind_inner] = t
+    elif func == "std":
+        r = _focal_std(a, window_size, fraction_accepted, reduce, std_df, r, ind_inner, values)
+
+    if verbose:
+        print(f"- mean: {time.time() - start}")
+
     return r
+
+
+def focal_min(a, window_size, **kwargs):
+    return focal_statistics(a, window_size, func="min", **kwargs)
+
+
+def focal_max(a, window_size, **kwargs):
+    return focal_statistics(a, window_size, func="max", **kwargs)
+
+
+def focal_mean(a, window_size, **kwargs):
+    return focal_statistics(a, window_size, func="mean", **kwargs)
+
+
+def focal_std(a, window_size, **kwargs):
+    return focal_statistics(a, window_size, func="std", **kwargs)
+
+
+def focal_majority(a, window_size, **kwargs):
+    return focal_statistics(a, window_size, func="majority", **kwargs)
 

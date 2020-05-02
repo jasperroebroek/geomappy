@@ -39,7 +39,6 @@ def nandigitize(m, bins, **kwargs):
     :obj:`~numpy.ndarray`
         array has dtype np.float64, shape is the same as the input array.
     """
-    # todo; optimise. Think about masked arrays.
     mask = np.isnan(m)
     m_digitized = np.digitize(m.copy(), bins=bins, **kwargs).astype(np.float64)
     m_digitized[mask] = np.nan

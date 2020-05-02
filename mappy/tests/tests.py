@@ -84,6 +84,10 @@ class TestRollingSum(unittest.TestCase):
         a = np.random.rand(10, 10, 10, 10, 10)
         self.assertTrue(np.allclose(rolling_sum(a, 3), rolling_window(a, 3).sum(axis=(5, 6, 7, 8, 9))))
 
+    def test_reduce(self):
+        a = np.random.rand(5, 5)
+        self.assertTrue(rolling_sum(a, window_size=5, reduce=True), a.sum())
+
     def test_assumptions(self):
         with self.assertRaises(ValueError):
             # uneven window_size should raise a ValueError
@@ -221,58 +225,123 @@ class TestCorrelateMapsNumpy(unittest.TestCase):
             correlate_maps_base(self.map1, self.map2, window_size=5, reduce=True)
 
 
+class TestRollingWindow(unittest.TestCase):
+    def test_rolling_window(self):
+        a = (np.random.rand(5, 5) > 0.5).astype(int)
+        self.assertTrue(np.array_equal(rolling_window(a, window_size=4)[0, 0], a[:-1, :-1]))
+
+    def test_reduce(self):
+        a = (np.random.rand(6, 6) > 0.5).astype(int)
+        self.assertTrue(np.array_equal(rolling_window(a, window_size=3)[0, 0], a[:3, :3]))
+
+    def test_flatten(self):
+        a = (np.random.rand(5, 5) > 0.5).astype(int)
+        self.assertTrue(np.array_equal(rolling_window(a, window_size=4, flatten=True)[0, 0], a[:-1, :-1].flatten()))
+
+    def test_5D(self):
+        a = (np.random.rand(5, 5, 5, 5, 5) > 0.5).astype(int)
+        self.assertTrue(rolling_window(a, window_size=4).ndim == 10)
+
+    def test_errors_window_size_too_big(self):
+        a = np.random.rand(5, 5)
+        with self.assertRaises(ValueError):
+            rolling_window(a, window_size=6)
+
+    def test_errors_reduce_cant_divide(self):
+        a = np.random.rand(5, 5)
+        with self.assertRaises(ValueError):
+            rolling_window(a, window_size=3, reduce=True)
+
+
 class TestFocalStatistics(unittest.TestCase):
     def test_focalmean(self):
         a = np.random.rand(100, 100)
         self.assertTrue(np.allclose(rolling_window(a, 3).mean(axis=(2, 3)),
-                                    focal_statistics(a, window_size=3, func="nanmean")[1:-1, 1:-1]))
+                                    focal_statistics(a, window_size=3, func="mean")[1:-1, 1:-1]))
 
     def test_focalmean_reduce(self):
         a = np.random.rand(100, 100)
         self.assertTrue(np.allclose(rolling_window(a, 5, reduce=True).mean(axis=(2, 3)),
-                                    focal_statistics(a, window_size=5, func="nanmean", reduce=True)))
+                                    focal_statistics(a, window_size=5, func="mean", reduce=True)))
 
     def test_focalmean_reduce_fraction_accepted_0(self):
         a = np.full((5, 5), np.nan)
         # return nan when nothing is present
-        self.assertTrue(np.allclose(focal_statistics(a, window_size=5, func="nanmean", reduce=True, fraction_accepted=0)
+        self.assertTrue(np.allclose(focal_statistics(a, window_size=5, func="mean", reduce=True, fraction_accepted=0)
                                     , np.array([[np.nan]]), equal_nan=True))
 
         # return value if only one value is present
         a[3, 3] = 10
-        self.assertTrue(np.allclose(focal_statistics(a, window_size=5, func="nanmean", reduce=True, fraction_accepted=0)
+        self.assertTrue(np.allclose(focal_statistics(a, window_size=5, func="mean", reduce=True, fraction_accepted=0)
                                     , np.nanmean(rolling_window(a, 5, reduce=True))))
 
     def test_focalmean_reduce_fraction_accepted_1(self):
         a = np.random.rand(5, 5)
         # return value when all values are present
-        self.assertTrue(np.allclose(focal_statistics(a, window_size=5, func="nanmean", reduce=True, fraction_accepted=1)
+        self.assertTrue(np.allclose(focal_statistics(a, window_size=5, func="mean", reduce=True, fraction_accepted=1)
                                     , np.mean(rolling_window(a, 5).mean(axis=(2, 3)))))
 
         a[3, 3] = np.nan
         # return nan when only one value is missing
-        self.assertTrue(np.allclose(focal_statistics(a, window_size=5, func="nanmean", reduce=True, fraction_accepted=1)
+        self.assertTrue(np.allclose(focal_statistics(a, window_size=5, func="mean", reduce=True, fraction_accepted=1)
                                     , np.array([[np.nan]]), equal_nan=True))
 
     def test_focalstd_df_0(self):
         a = np.random.rand(100, 100)
         self.assertTrue(np.allclose(rolling_window(a, 3).std(axis=(2, 3)),
-                                    focal_statistics(a, window_size=3, func="nanstd", std_df=0)[1:-1, 1:-1]))
+                                    focal_statistics(a, window_size=3, func="std", std_df=0)[1:-1, 1:-1]))
 
     def test_focalstd_df_1(self):
         a = np.random.rand(100, 100)
         self.assertTrue(np.allclose(rolling_window(a, 3).std(axis=(2, 3), ddof=1),
-                                    focal_statistics(a, window_size=3, func="nanstd", std_df=1)[1:-1, 1:-1]))
+                                    focal_statistics(a, window_size=3, func="std", std_df=1)[1:-1, 1:-1]))
 
     def test_focalmin(self):
         a = np.random.rand(100, 100)
         self.assertTrue(np.allclose(rolling_window(a, 3).min(axis=(2, 3)),
-                                    focal_statistics(a, window_size=3, func="nanmin")[1:-1, 1:-1]))
+                                    focal_statistics(a, window_size=3, func="min")[1:-1, 1:-1]))
+
+    def test_focalnanmin(self):
+        a = np.random.rand(5, 5)
+        min = a.min()
+        a[1, 1] = np.nan
+        self.assertTrue(focal_statistics(a, window_size=5, func="min")[2, 2] == min)
+
+    def test_focalnanmin_reduce(self):
+        a = np.random.rand(5, 5)
+        min = a.min()
+        a[1, 1] = np.nan
+        self.assertTrue(focal_statistics(a, window_size=5, func="min", reduce=True) == min)
 
     def test_focalmax(self):
         a = np.random.rand(100, 100)
         self.assertTrue(np.allclose(rolling_window(a, 3).max(axis=(2, 3)),
-                                    focal_statistics(a, window_size=3, func="nanmax")[1:-1, 1:-1]))
+                                    focal_statistics(a, window_size=3, func="max")[1:-1, 1:-1]))
+
+    def test_focalnanmax(self):
+        a = np.random.rand(5, 5)
+        max = a.max()
+        a[1, 1] = np.nan
+        self.assertTrue(focal_statistics(a, window_size=5, func="max")[2, 2] == max)
+
+    def test_focalnanmax_reduce(self):
+        a = np.random.rand(5, 5)
+        max = a.max()
+        a[1, 1] = np.nan
+        self.assertTrue(focal_statistics(a, window_size=5, func="max", reduce=True) == max)
+
+    def test_errors(self):
+        a = np.random.rand(100, 100)
+        with self.assertRaises(IndexError):
+            focal_statistics(a, window_size=101, func="max")
+        with self.assertRaises(ValueError):
+            focal_statistics(a, window_size=3, fraction_accepted=1.1, func="max")
+        with self.assertRaises(TypeError):
+            focal_statistics(a, window_size="a", func="max")
+        with self.assertRaises(ValueError):
+            focal_statistics(np.random.rand(100, 100, 100), window_size=3, func="max")
+        with self.assertRaises(ValueError):
+            focal_statistics(a, window_size=9, reduce=True, func="max")
 
     # todo; test majority with its different modes
 

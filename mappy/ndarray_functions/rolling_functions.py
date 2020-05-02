@@ -54,7 +54,7 @@ def rolling_window(a, window_size, *, flatten=False, reduce=False):
     #   different shapes of windows
     # todo; create possibility of passing a ndarray to window_size with booleans to select a specific region
     # todo; even numbers
-    # todo; replace reduce with a step parameter
+    # todo; optionally, replace reduce with a step parameter
 
     if type(a) not in (np.ndarray, np.ma.array):
         a = np.array(a)
@@ -67,39 +67,35 @@ def rolling_window(a, window_size, *, flatten=False, reduce=False):
     if ~np.all(np.array(a.shape) >= window_size):
         raise ValueError("Window bigger than input array")
 
-    if type(flatten) != bool:
+    if not isinstance(flatten, bool):
         raise TypeError("flatten needs to be a boolean variable")
-
-    if type(reduce) != bool:
+    if not isinstance(reduce, bool):
         raise TypeError("'reduce' needs to be a boolean variable")
-    
+
+    shape = np.array(a.shape)
+    strides = np.array(a.strides)
+
     if reduce:
-        for length in a.shape:
-            if length/window_size != length//window_size:
-                raise ValueError("not all dimensions are divisible by window_size")
-        
-        # output shape
-        shape = [s // window_size for s in a.shape] + [window_size] * a.ndim
-        # output strides
-        strides = (*np.array(a.strides)*window_size, *a.strides)
+        if not np.array_equal(shape//window_size, shape/window_size):
+            raise ValueError("not all dimensions are divisible by window_size")
+
+        output_shape = np.r_[shape//window_size, [window_size] * a.ndim]
+        output_strides = np.r_[strides * window_size, strides]
 
     else:
-        # output shape
-        shape = [s - window_size + 1 for s in a.shape] + [window_size] * a.ndim
-        # output strides
-        strides = (*a.strides, *a.strides)
+        output_shape = np.r_[shape - window_size + 1, [window_size] * a.ndim]
+        output_strides = np.r_[strides, strides]
     
     # create view on the data with new shape and strides
-    strided_a = as_strided(a, shape=shape, strides=strides)
+    strided_a = as_strided(a, shape=output_shape, strides=output_strides)
     
     if flatten:
-        # reduce the added dimensions to 1
-        strided_a = strided_a.reshape((*shape[:-a.ndim], -1))
+        strided_a = strided_a.reshape((*output_shape[:-a.ndim], -1))
     
     return strided_a
 
 
-def rolling_mean(a, window_size):
+def rolling_mean(a, window_size, reduce=False):
     """
     Takes an ndarray and returns the rolling mean. Not suitable for arrays with NaN values.
     
@@ -109,7 +105,11 @@ def rolling_mean(a, window_size):
         input array
     window_size : int
         size of the window that is applied over a. Should be bigger than 1.
-    
+    reduce : bool, optional
+        Reuse data if set to False (which is the default) in which case an array will be returned with dimensions that
+        are close to the original; see *flatten*. If set to true, every entry is used exactly once. Creating  much
+        smaller dimensions.
+
     Returns
     -------
     :obj:`~numpy.ndarray`
@@ -117,10 +117,11 @@ def rolling_mean(a, window_size):
         to buffer the window size on the edges:
             shape : [s - window_size + 1 for s in a.shape]
     """
-    return rolling_sum(a, window_size)/np.power(window_size, a.ndim)
+    # TODO; implement reduce
+    return rolling_sum(a, window_size, reduce=reduce)/np.power(window_size, a.ndim)
 
 
-def rolling_sum(a, window_size):
+def rolling_sum(a, window_size, reduce=False):
     """
     Takes an ndarray and returns the rolling sum. Not suitable for arrays with NaN values.
 
@@ -130,6 +131,10 @@ def rolling_sum(a, window_size):
         input array
     window_size : int
         size of the window that is applied over a. Should be bigger than 1.
+    reduce : bool, optional
+        Reuse data if set to False (which is the default) in which case an array will be returned with dimensions that
+        are close to the original; see *flatten*. If set to true, every entry is used exactly once. Creating  much
+        smaller dimensions.
 
     Returns
     -------
@@ -148,11 +153,11 @@ def rolling_sum(a, window_size):
     if ~np.all(np.array(a.shape) >= window_size):
         raise ValueError("Window bigger than input array")
 
-    if a.ndim == 1:
+    if a.ndim == 1 and not reduce:
         cumsum = np.cumsum(np.hstack((0, a)))
         return cumsum[window_size:] - cumsum[:-window_size]
 
-    elif a.ndim == 2:
+    elif a.ndim == 2 and not reduce:
         if a.dtype == np.bool_:
             dtype = np.int
         else:
@@ -170,7 +175,7 @@ def rolling_sum(a, window_size):
 
         return r
 
-    elif a.ndim == 3:
+    elif a.ndim == 3 and not reduce:
         # todo; check if this is actually faster than the backup solution
         if a.dtype == np.bool_:
             dtype = np.int
@@ -204,5 +209,4 @@ def rolling_sum(a, window_size):
 
     else:
         # backup solution for ndarrays that are not covered in the logic above
-        return rolling_window(a, window_size).sum(axis=tuple([x for x in range(a.ndim, 2*a.ndim)]))
-
+        return rolling_window(a, window_size, reduce=reduce).sum(axis=tuple(range(a.ndim, 2*a.ndim)))
