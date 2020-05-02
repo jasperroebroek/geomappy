@@ -318,14 +318,10 @@ class MapRead(MapBase):
                 if p_bar:
                     print()
         else:
-            height, width = self.get_shape(ind)
-            left, bottom, right, top = self.get_bounds(ind)
-            transform = rio.transform.from_bounds(west=left,
-                                                  south=bottom,
-                                                  east=right,
-                                                  north=top,
-                                                  width=width,
-                                                  height=height)
+            index_profile = self.get_tile_profile(ind)
+            height = index_profile['height']
+            width = index_profile['width']
+            transform = index_profile['transform']
 
             profile.update({'height': height, 'width': width, 'transform': transform})
 
@@ -460,22 +456,12 @@ class MapRead(MapBase):
                 if p_bar:
                     print()
         else:
-            height, width = self.get_shape(ind)
-            left, bottom, right, top = self.get_bounds(ind)
-            transform = rio.transform.from_bounds(west=left,
-                                                  south=bottom,
-                                                  east=right,
-                                                  north=top,
-                                                  width=width,
-                                                  height=height)
-
-            profile = self.profile
-            profile.update({'height': height, 'width': width, 'transform': transform, 'driver': "GTiff", 'count': 1,
-                            'dtype': 'float64'})
+            profile = self.get_tile_profile(ind=ind)
+            profile.update({'driver': "GTiff", 'count': 1, 'dtype': 'float64'})
             if not isinstance(compress, type(None)):
                 profile.update({'compress': compress})
 
-            with MapWrite(output_file, overwrite=overwrite, profile=profile) as f:
+            with MapWrite(output_file, overwrite=overwrite, profile=profile, window_size=self.window_size) as f:
                 f[0] = correlate_maps(self[ind, self_layers], other[ind, other_layers], window_size=self.window_size,
                                       fraction_accepted=fraction_accepted, verbose=verbose)
 
@@ -501,19 +487,9 @@ class MapRead(MapBase):
         compress : str, optional
             rasterio compression parameter
         """
-        height, width = self.get_shape(ind)
-        left, bottom, right, top = self.get_bounds(ind)
-        transform = rio.transform.from_bounds(west=left,
-                                              south=bottom,
-                                              east=right,
-                                              north=top,
-                                              width=width,
-                                              height=height)
-
         data = self.get_data(ind, layers=layers)
-        profile = self.profile
-        profile.update({'height': height, 'width': width, 'transform': transform, 'driver': "GTiff",
-                        'count': data.shape[-1]})
+        profile = self.get_tile_profile(ind)
+        profile.update({'driver': "GTiff", 'count': data.shape[-1]})
         if not isinstance(compress, type(None)):
             profile.update({'compress': compress})
 

@@ -266,6 +266,33 @@ class MapBase:
         return {'tiles': self.tiles,
                 'window_size': self.window_size}
 
+    def get_tile_profile(self, ind=None):
+        """
+        Rasterio profile of a tile in the opened file
+
+        Parameters
+        ----------
+        ind : . , optional
+            See get_pointer(). If set it calculates width, height and transform for the given Index, while None, the
+            default will yield the rasterio profile from the file directly
+
+        Returns
+        -------
+        dict
+        """
+        profile = copy.deepcopy(self._profile)
+        if not isinstance(ind, type(None)):
+            height, width = self.get_shape(ind)
+            left, bottom, right, top = self.get_bounds(ind)
+            transform = rio.transform.from_bounds(west=left,
+                                                  south=bottom,
+                                                  east=right,
+                                                  north=top,
+                                                  width=width,
+                                                  height=height)
+            profile.update({'height': height, 'width': width, 'transform': transform})
+        return profile
+
     @property
     def profile(self):
         """

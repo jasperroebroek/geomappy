@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from numpy import s_
-from mappy import overlapping_arrays, rolling_mean, rolling_sum, rolling_window, focal_statistics, Map
+from mappy import overlapping_arrays, rolling_mean, rolling_sum, rolling_window, focal_statistics, Map, focal_mean
 from scipy.stats import pearsonr
 from mappy.raster_functions.correlate_maps import correlate_maps_njit
 from mappy.raster_functions.correlate_maps import correlate_maps_base
@@ -344,6 +344,57 @@ class TestFocalStatistics(unittest.TestCase):
             focal_statistics(a, window_size=9, reduce=True, func="max")
 
     # todo; test majority with its different modes
+
+
+class TestMap(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super(TestMap, self).__init__(*args, **kwargs)
+        self.map1 = Map("../../data/wtd.tif", tiles=(8, 8))
+        self.map2 = Map("../../data/tree_height.asc", tiles=(8, 8))
+
+    def test_tile_correlation(self):
+        loc = "test.tif"
+        self.map1.window_size = 5
+        self.map2.window_size = 5
+
+        self.map1.correlate(self.map2, output_file=loc, window_size=5, ind=32, overwrite=True)
+        t = Map(loc)
+        c1 = t[0]
+        t.close(verbose=False)
+        c2 = correlate_maps_njit(self.map1[32], self.map2[32], window_size=5)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
+    # This should be tested once in a while to make sure everything works okay, but it takes a couple of minutes
+    # def test_correlation(self):
+    #     loc = "test.tif"
+    #     self.map1.window_size = 5
+    #     self.map2.window_size = 5
+    #
+    #     self.map1.correlate(self.map2, output_file=loc, window_size=5, overwrite=True)
+    #     t = Map(loc)
+    #     c1 = t[0]
+    #     t.close(verbose=False)
+    #     c2 = correlate_maps_njit(self.map1.get_file_data(), self.map2.get_file_data(), window_size=5)
+    #     self.assertTrue(np.allclose(c1[self.map1.ind_inner], c2[self.map1.ind_inner], equal_nan=True))
+
+    def test_tile_focal_stats(self):
+        loc = "test.tif"
+        self.map1.focal_mean(ind=32, window_size=5, output_file=loc, overwrite=True, reduce=True)
+        t = Map(loc)
+        c1 = t[0]
+        t.close(verbose=False)
+        c2 = focal_mean(self.map1[32], window_size=5, reduce=True)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
+    def test_focal_stats(self):
+        loc = "test.tif"
+        self.map1.focal_mean(window_size=5, output_file=loc, overwrite=True, reduce=True)
+        t = Map(loc)
+        c1 = t[0]
+        t.close(verbose=False)
+        c2 = focal_mean(self.map1.get_file_data(), window_size=5, reduce=True)
+        self.assertTrue(np.allclose(c1[self.map1.ind_inner], c2[self.map1.ind_inner], equal_nan=True))
+
 
 
 if __name__ == '__main__':

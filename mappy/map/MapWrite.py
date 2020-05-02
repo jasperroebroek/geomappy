@@ -69,7 +69,6 @@ class MapWrite(MapBase):
                     self._profile = f.profile
 
             # todo; create folder if non - existent!!
-            # todo; adapt default nodata to data type
             self._profile['dtype'] = dtype
             nodata = np.array((nodata, )).astype(dtype)[0]
             self._profile['nodata'] = nodata
