@@ -614,13 +614,13 @@ class MapRead(MapBase):
             plot_epsg = self.epsg if isinstance(epsg, type(None)) else epsg
 
             ax = basemap_function(*bounds, ax=ax, epsg=plot_epsg, figsize=figsize, **basemap_kwargs)
-            plot_map(data, transform=transform, extent=(bounds[0], bounds[2], bounds[1], bounds[3]),
+            ax, legend_ = plot_map(data, transform=transform, extent=(bounds[0], bounds[2], bounds[1], bounds[3]),
                      ax=ax, **kwargs)
 
         else:
-            ax = plot_map(data, ax=ax, figsize=figsize, **kwargs)
+            ax, legend_ = plot_map(data, ax=ax, figsize=figsize, **kwargs)
 
-        return ax
+        return ax, legend_
 
     def plot_classified(self, ind=None, layers=1, *, mode="ind", basemap=False, figsize=(10, 10), ax=None, epsg=None,
                         xticks=30, yticks=30, resolution="110m", fontsize=10, basemap_kwargs=None, **kwargs):
@@ -663,7 +663,8 @@ class MapRead(MapBase):
 
         Returns
         -------
-        :obj:`~matplotlib.axes.Axes` or GeoAxis if basemap=True
+        (:obj:`~matplotlib.axes.Axes` or GeoAxis if basemap=True, legend)
+        legend depends on the `legend` parameter
         """
         if isinstance(ind, type(None)):
             mode = "all"
@@ -707,13 +708,13 @@ class MapRead(MapBase):
             plot_epsg = self.epsg if isinstance(epsg, type(None)) else epsg
 
             ax = basemap_function(*bounds, ax=ax, epsg=plot_epsg, figsize=figsize, **basemap_kwargs)
-            ax = plot_classified_map(data, ax=ax, transform=transform,
+            ax, legend_ = plot_classified_map(data, ax=ax, transform=transform,
                                      extent=(bounds[0], bounds[2], bounds[1], bounds[3]), **kwargs)
 
         else:
-            ax = plot_classified_map(data, ax=ax, figsize=figsize, **kwargs)
+            ax, legend_ = plot_classified_map(data, ax=ax, figsize=figsize, **kwargs)
 
-        return ax
+        return ax, legend_
 
     def __getitem__(self, ind):
         """
