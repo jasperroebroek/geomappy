@@ -31,7 +31,14 @@ class MapRead(MapBase):
         Window size to be set on the map. See property in MapBase
     fill_value : numeric
         Fill value used in rasterio.read call.
-    
+
+    Attributes
+    ----------
+    See Also MapBase
+
+    values : ndarray
+        all data of the file
+
     Raises
     ------
     TypeError
@@ -83,7 +90,7 @@ class MapRead(MapBase):
         Parameters
         ----------
         ind : .
-            see MapBase.get_pointer()
+            see MapBase.get_pointer(). If set to None it will read the whole file.
         layers : int or list, optional
             The number of the layer required or a list of layers (which might contain duplicates if needed).
             The default is None, which will load all layers.
@@ -93,16 +100,18 @@ class MapRead(MapBase):
         numpy array of shape self.get_shape()
         
         """
+        if isinstance(ind, type(None)):
+            ind = self.get_file_bounds()
+
         # type and bound checking happens in self.get_pointer()
         ind = self.get_pointer(ind)
 
         data = self._file.read(indexes=layers, window=self._tiles[ind], boundless=True, fill_value=self._fill_value)
 
         # if only a single layer is present compress the data to a 2D array
-        if data.shape[0] == 1:
-            data = np.squeeze(data)
+        data = np.squeeze(data)
 
-        # move layer information to ts axis
+        # move layer information to the last axis
         if data.ndim == 3:
             data = np.moveaxis(data, 0, -1)
 
@@ -122,7 +131,9 @@ class MapRead(MapBase):
         -------
         np.array with all data of the file
         """
-        return self.get_data(self.get_file_bounds(), layers=layers)
+        return self.get_data(ind=None, layers=layers)
+
+    values = property(get_file_data)
 
     def sample_raster(self, points):
         """
@@ -318,7 +329,7 @@ class MapRead(MapBase):
                 if p_bar:
                     print()
         else:
-            index_profile = self.get_tile_profile(ind)
+            index_profile = self.get_profile(ind)
             height = index_profile['height']
             width = index_profile['width']
             transform = index_profile['transform']
@@ -456,7 +467,7 @@ class MapRead(MapBase):
                 if p_bar:
                     print()
         else:
-            profile = self.get_tile_profile(ind=ind)
+            profile = self.get_profile(ind=ind)
             profile.update({'driver': "GTiff", 'count': 1, 'dtype': 'float64'})
             if not isinstance(compress, type(None)):
                 profile.update({'compress': compress})
@@ -488,7 +499,7 @@ class MapRead(MapBase):
             rasterio compression parameter
         """
         data = self.get_data(ind, layers=layers)
-        profile = self.get_tile_profile(ind)
+        profile = self.get_profile(ind)
         profile.update({'driver': "GTiff", 'count': data.shape[-1]})
         if not isinstance(compress, type(None)):
             profile.update({'compress': compress})

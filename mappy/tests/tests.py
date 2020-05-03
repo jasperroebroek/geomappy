@@ -396,6 +396,5 @@ class TestMap(unittest.TestCase):
         self.assertTrue(np.allclose(c1[self.map1.ind_inner], c2[self.map1.ind_inner], equal_nan=True))
 
 
-
 if __name__ == '__main__':
     unittest.main()

@@ -13,7 +13,7 @@ class MapBase:
     Main map object, based on rasterio functionality. The rasterio pointer is exposed through MapBase._file
     
     Attributes
-    ----------------
+    ----------
     collector : list
         Every new instance of MapBase, or its children, will be added to this list. This is convenient for closing of
         all file connections with the following loop:
@@ -61,6 +61,27 @@ class MapBase:
         same as horizontal_bins but in vertical direction
     _window_size : int
         window size to be considered when performing windowed operations on the raster
+
+    window_size
+        get and set _window_size
+    tiles
+        get and set _tiles
+    epsg
+        set epsg code if not present
+    ind_inner
+        get slice to remove fringes introduced by window_size
+    c_tiles
+        get number of tiles
+    signature
+        get MapBase signature
+    profile
+        get rasterio file profile
+    location
+        file location
+    bounds
+        get file bounds
+    shape
+        get file shape
     """
 
     collector = []
@@ -130,7 +151,7 @@ class MapBase:
         """
         return copy.deepcopy(self._v_tiles), copy.deepcopy(self._h_tiles)
 
-    def set_tiles(self, tiles=1):
+    def set_tiles(self, tiles=1, force_equal_tiles=False):
         """
         Function to set the tiles. 
         
@@ -146,7 +167,10 @@ class MapBase:
             Passing an integer will create 'roughly' that amount of tiles. A tuple is read as vertical and horizontal
             tile count. These are still not guaranteed to work exactly. Internally this function looks for the closest
             parameters that can achieve to split the data up in equal parts. This behaviour might change in the future.
-        
+        force_equal_tiles : bool, optional
+            If set to True the tiles will be adapted untill a perfect fit is created, which is the default. If set to
+            False the last tiles on both axes can be sligthly bigger than the rest.
+
         Raises
         ------
         ValueError
@@ -181,28 +205,36 @@ class MapBase:
         shape = self.get_file_shape()
 
         # routine to make sure the data is split up in equal parts
-        # todo; make this behaviour the default but create an option to
-        #  create exactly the amount of tiles asked, with the last
-        #  tile that is bigger than the rest
-        while True:
-            if shape[0] // self._v_tiles != shape[0] / self._v_tiles:
-                self._v_tiles += 1
-            elif shape[1] // self._h_tiles != shape[1] / self._h_tiles:
-                self._h_tiles += 1
-            else:
-                if type(tiles) in (tuple, list):
-                    if (tiles[0] != self._v_tiles and tiles[0] > 1) or \
-                            (tiles[1] != self._h_tiles and tiles[1] > 1):
-                        print(f"v_tiles set to {self._v_tiles}")
-                        print(f"h_tiles set to {self._h_tiles}")
-                break
+        if force_equal_tiles:
+            while True:
+                if shape[0] // self._v_tiles != shape[0] / self._v_tiles:
+                    self._v_tiles += 1
+                elif shape[1] // self._h_tiles != shape[1] / self._h_tiles:
+                    self._h_tiles += 1
+                else:
+                    if type(tiles) in (tuple, list):
+                        if (tiles[0] != self._v_tiles and tiles[0] > 1) or \
+                                (tiles[1] != self._h_tiles and tiles[1] > 1):
+                            print(f"v_tiles set to {self._v_tiles}")
+                            print(f"h_tiles set to {self._h_tiles}")
+                    break
+
+            # creating the actual tiles that will be used in the reading and writing of the rasters
+            self._vertical_bins = [ix for ix in range(0, shape[0] + 1, shape[0] // self._v_tiles)]
+            self._horizontal_bins = [ix for ix in range(0, shape[1] + 1, shape[1] // self._h_tiles)]
+
+        else:
+            vertical_step = shape[0] // self._v_tiles
+            horizontal_step = shape[1] // self._h_tiles
+
+            # creating the actual tiles that will be used in the reading and writing of the rasters
+            self._vertical_bins = [i * vertical_step for i in range(self._v_tiles)] + [shape[0]]
+            self._horizontal_bins = [i * horizontal_step for i in range(self._h_tiles)] + [shape[1]]
 
         # recalculation of c_tiles
         self._c_tiles = self._v_tiles * self._h_tiles
 
-        # creating the actual tiles that will be used in the reading and writing of the rasters
-        self._vertical_bins = [ix for ix in range(0, shape[0] + 1, shape[0] // self._v_tiles)]
-        self._horizontal_bins = [ix for ix in range(0, shape[1] + 1, shape[1] // self._h_tiles)]
+
 
         self._iter = [(i, j) for i in range(1, len(self._vertical_bins))
                       for j in range(1, len(self._horizontal_bins))]
@@ -247,7 +279,7 @@ class MapBase:
     def ind_inner(self):
         """
         2D slice to remove fringes from ndarrays in the following way:
-            m[0][m.ind_inner]
+            >>> m[0][m.ind_inner]
         """
         return self._ind_inner
 
@@ -266,7 +298,7 @@ class MapBase:
         return {'tiles': self.tiles,
                 'window_size': self.window_size}
 
-    def get_tile_profile(self, ind=None):
+    def get_profile(self, ind=-1):
         """
         Rasterio profile of a tile in the opened file
 
@@ -293,12 +325,14 @@ class MapBase:
             profile.update({'height': height, 'width': width, 'transform': transform})
         return profile
 
-    @property
-    def profile(self):
+
+    def get_file_profile(self):
         """
-        Rasterio profile of the opened file
+        Rasterio profile of the rasterio file
         """
-        return copy.deepcopy(self._profile)
+        return self.get_profile(ind=None)
+
+    profile = property(get_file_profile)
 
     @property
     def location(self):
@@ -307,7 +341,6 @@ class MapBase:
         """
         return copy.deepcopy(self._location)
 
-    # GETTER FUNCTIONS
     def get_pointer(self, ind):
         """
         Converts different types of pointer to the right index of the self._tiles list
@@ -365,17 +398,15 @@ class MapBase:
         --------
         self[4]
             get data at self._tiles[4]
-        self[(3,2)]
-            get data at self._tiles[third row and second column]
-            which will be translated to self._tiles[x]
         self[3:10]
             create new window. Read everything within the bounds of tile 3
             and tile 10.
+        self[(0,30,30,60)]
+            create new window with the specified bounds
             
-        to access the slice capability in other fuction:
+        to access the slice capability in other fuctions than __getitem__:
         1: pass a slice directly -> slice(1,2)
         2: use numpy -> s_[1:2]
-        
         """
         if isinstance(ind, (tuple, list, rio.coords.BoundingBox)):
             if isinstance(ind, (tuple, list)):
@@ -458,26 +489,6 @@ class MapBase:
 
         return ind
 
-    def get_profile(self):
-        """
-        returns the rasterio profile of the loaded map
-        
-        Returns
-        -------
-        rasterio profile object
-        """
-        return copy.deepcopy(self._profile)
-
-    def get_file_bounds(self):
-        """
-        return rasterio bounds object of the whole map
-        
-        Returns
-        -------
-        rasterio bounds object of file
-        """
-        return copy.deepcopy(self._file.bounds)
-
     def get_bounds(self, ind=-1):
         """
         return rasterio bounds object of the current window
@@ -485,25 +496,30 @@ class MapBase:
         Parameters
         ----------
         ind : .
-            see self.get_pointer()
+            see self.get_pointer(), the default is None which gets the bounds of the file.
         
         Returns
         -------
         rasterio bounds object from tile
         """
-        # type and bound checking happens in get_pointer()
-        ind = self.get_pointer(ind)
-        return self._file.window_bounds(self._tiles[ind])
+        if isinstance(ind, type(None)):
+            return copy.deepcopy(self._file.bounds)
+        else:
+            # type and bound checking happens in get_pointer()
+            ind = self.get_pointer(ind)
+            return self._file.window_bounds(self._tiles[ind])
 
-    def get_file_shape(self):
+    def get_file_bounds(self):
         """
-        Function to retrieve the shape of the file
-        
+        return rasterio bounds object of the whole map
+
         Returns
         -------
-        numpy shape object
+        rasterio bounds object of file
         """
-        return self._file.shape
+        return self.get_bounds(ind=None)
+
+    bounds = property(get_file_bounds)
 
     def get_shape(self, ind=-1):
         """
@@ -512,19 +528,37 @@ class MapBase:
         Parameters
         ----------
         ind : .
-            see self.get_pointer()
+            see self.get_pointer(), the default is None which gets the shape of the file.
             
         Returns
         -------
         numpy shape object
         """
-        # convert and check ind
-        ind = self.get_pointer(ind)
-        s = self._tiles[ind]
-        if self.profile['count'] == 1:
-            return tuple(np.around((s.height, s.width)).astype(int))
+        if isinstance(ind, type(None)):
+            s = copy.deepcopy(self._file.shape)
+            if self.profile['count'] == 1:
+                return s
+            else:
+                return s + (self.profile['count'], )
         else:
-            return tuple(np.around((s.height, s.width, self.profile['count'])).astype(int))
+            ind = self.get_pointer(ind)
+            s = self._tiles[ind]
+            if self.profile['count'] == 1:
+                return tuple(np.around((s.height, s.width)).astype(int))
+            else:
+                return tuple(np.around((s.height, s.width, self.profile['count'])).astype(int))
+
+    def get_file_shape(self):
+        """
+        Function to retrieve the shape of the file
+
+        Returns
+        -------
+        numpy shape object
+        """
+        return self.get_shape(ind=None)
+
+    shape = property(get_file_shape)
 
     def __str__(self):
         return f"Map at '{self._location}'"
@@ -561,7 +595,7 @@ class MapBase:
         current index [int]
         """
         for i in range(self._c_tiles):
-            yield (i)
+            yield i
 
     def __enter__(self):
         """
