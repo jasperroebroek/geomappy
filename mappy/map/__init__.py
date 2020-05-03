@@ -13,4 +13,4 @@ from .Map import Map
 from .MapBase import MapBase
 from .MapRead import MapRead
 from .MapWrite import MapWrite
-
+from .GeoDataFrame import plot_shapes, plot_classified_shapes

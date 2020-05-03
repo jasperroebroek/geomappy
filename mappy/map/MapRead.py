@@ -46,6 +46,7 @@ class MapRead(MapBase):
     IOError
         Location of file not found
     """
+
     def __init__(self, location, *, tiles=1, window_size=1, fill_value=None):
         if type(location) != str:
             raise TypeError("Location not recognised")
@@ -507,17 +508,21 @@ class MapRead(MapBase):
         with rio.open(output_file, mode="w", **profile) as dst:
             dst.write(np.moveaxis(data, -1, 0))
 
-    def plot(self, ind=None, layers=1, *, mode="ind", basemap=False, figsize=(10, 10), ax=None, log=False, epsg=None,
-             xticks=30, yticks=30, resolution="110m", fontsize=10, basemap_kwargs=None, **kwargs):
+    def _plot(self, classified, ind=None, layers=1, *, mode="ind", basemap=False, figsize=(10, 10), ax=None,
+              log=False, epsg=None, xticks=30, yticks=30, resolution="110m", fontsize=10, basemap_kwargs=None,
+              bounds=None, **kwargs):
         """
-        plot data at given index (ind)
-        
+        Plot data at given index (ind). Classified or not, depends on the first parameter.
+
         Parameters
         ----------
-        ind : .
+        classified : bool
+            Switch between `plot_classified_map` and `plot_map`
+        ind : ., optional
             check self.get_pointer(). The default is None which will set `mode` to "all"
         layers : int or tuple, optional
-            the layer that is plotted. If a tuple is given it will read either RGB or RGBA layers.
+            The layer that is plotted. If `classified` is True only a single layer is accepted (as integer) while False
+            will accept a tuple representing RGB or RGBA.
         mode : {"ind", "all"}
             if ind is passed, only the data at the given index is plotted. If all is given, it will plot the whole file.
         basemap : bool, optional
@@ -527,7 +532,7 @@ class MapRead(MapBase):
         ax : Axes, optional
             matplotlib axes where plot is drawn on
         log : bool, optional
-            plot the colors on a log scale
+            Plot the colors on a log scale if `classified` is False and only a single layer is selected.
         epsg : int, optional
             EPSG code that will be used to render the plot, the default is the projection of the data itself.
         xticks : float or list, optional
@@ -543,36 +548,42 @@ class MapRead(MapBase):
         fontsize : float/tuple, optional
             fontsize for both the lon/lat ticks and the ticks on the colorbar if one number, if a list of is passed it
             represents the basemap fontsize and the colorbar fontsize.
-        basemap_kwargs
+        basemap_kwargs : dict, optional
             kwargs going to the basemap command
+        bounds : list, optional
+            extend of the plot, if not provided it will plot the extent belonging to the Index. If the string "global"
+            is set the global extent will be used.
         **kwargs
             kwargs going to the plot_map() command
 
         Returns
         -------
-        :obj:`~matplotlib.axes.Axes` or GeoAxis if basemap=True
+        (:obj:`~matplotlib.axes.Axes` or GeoAxis, legend)
         """
         if isinstance(ind, type(None)):
             mode = "all"
 
+        if classified and not isinstance(layers, int):
+            raise TypeError("layers can only be an integer for classified plotting")
+        if not classified and isinstance(layers, (tuple, list)) and len(layers > 4):
+            raise IndexError("layers can only be a maximum of four integers, as the would index for RGB(A)")
+
         if mode == "ind":
             ind = self.get_pointer(ind)
             data = self.get_data(ind, layers=layers)
-            bounds = self._file.window_bounds(self._tiles[ind])
+            extent = self.get_bounds(ind)
         elif mode == "all":
             data = self.get_file_data(layers=layers)
-            bounds = self._file.bounds
+            extent = self.get_file_bounds()
         else:
             raise ValueError("Mode not recognised")
 
-        if data.ndim not in (2, 3):
-            print(f"Can't plot this data. Dimensions : {data.ndim}")
-            return None
-        elif data.ndim == 3 and data.shape[-1] not in (3, 4):
-            print(f"Can't plot this data; only RGB(A) accepted on the third axis.")
-            return None
+        if isinstance(bounds, type(None)):
+            bounds = extent
+        elif bounds == "global":
+            bounds = [-180, -90, 180, 90]
 
-        if log:
+        if not classified and isinstance(layers, int) and log:
             data = np.log(data)
 
         if not isinstance(fontsize, (tuple, list)):
@@ -601,107 +612,24 @@ class MapRead(MapBase):
             plot_epsg = self.epsg if isinstance(epsg, type(None)) else epsg
 
             ax = basemap_function(*bounds, ax=ax, epsg=plot_epsg, figsize=figsize, **basemap_kwargs)
-            ax, legend_ = plot_map(data, transform=transform, extent=(bounds[0], bounds[2], bounds[1], bounds[3]),
-                     ax=ax, **kwargs)
+            kwargs.update({'transform': transform, 'extent': (extent[0], extent[2], extent[1], extent[3])})
 
+        if classified:
+            return plot_classified_map(data, ax=ax, figsize=figsize, **kwargs)
         else:
-            ax, legend_ = plot_map(data, ax=ax, figsize=figsize, **kwargs)
+            return plot_map(data, ax=ax, figsize=figsize, **kwargs)
 
-        return ax, legend_
-
-    def plot_classified(self, ind=None, layers=1, *, mode="ind", basemap=False, figsize=(10, 10), ax=None, epsg=None,
-                        xticks=30, yticks=30, resolution="110m", fontsize=10, basemap_kwargs=None, **kwargs):
+    def plot_map(self, ind=None, layers=1, **kwargs):
         """
-        Plots data in a classified way. Look at plot_classified_map for the implementation.
-
-        Parameters
-        ----------
-        ind : .
-            check self.get_pointer(). The default is None which will set `mode` to "all"
-        layers : int, optional
-            the layer that is plotted. Only an integer value is possible, the default is 1.
-        mode : {"ind", "all"}
-            if ind is passed, only the data at the given index is plotted. If all is given, it will plot the whole file.
-        basemap : bool, optional
-            plot a basemap behind the data
-        figsize : tuple, optional
-            matplotlib figsize parameter
-        ax : Axes, optional
-            matplotlib axes where plot is drawn on
-        epsg : int, optional
-            EPSG code that will be used to render the plot, the default is 4326
-        xticks : float or list, optional
-            parameter that describes the distance between two gridlines in PlateCarree coordinate terms. The default 30
-            means that every 30 degrees a gridline gets drawn. If a list is passed, the procedure is skipped and the
-            coordinates in the list are used.
-        yticks : float or list, optional
-            parameter that describes the distance between two gridlines in PlateCarree coordinate terms. The default 30
-            means that every 30 degrees a gridline gets drawn. If a list is passed, the procedure is skipped and the
-            coordinates in the list are used.
-        resolution : {"110m", "50m", "10m"} , optional
-            coastline resolution
-        fontsize : float/tuple, optional
-            fontsize for both the lon/lat ticks and the ticks on the colorbar if one number, if a list of is passed it
-            represents the basemap fontsize and the colorbar fontsize.
-        basemap_kwargs : dict, optional
-            kwargs for basemap
-        **kwargs
-            kwargs going to the plot_classified_map() command itself
-
-        Returns
-        -------
-        (:obj:`~matplotlib.axes.Axes` or GeoAxis if basemap=True, legend)
-        legend depends on the `legend` parameter
+        Plot map wrapper around `plot_map`. It redirects to `self._plot` with parameter `classified` = False
         """
-        if isinstance(ind, type(None)):
-            mode = "all"
+        return self._plot(classified=False, ind=ind, layers=layers, **kwargs)
 
-        if mode == "ind":
-            ind = self.get_pointer(ind)
-            data = self.get_data(ind, layers=layers)
-            bounds = self._file.window_bounds(self._tiles[ind])
-        elif mode == "all":
-            data = self.get_file_data(layers=layers)
-            bounds = self._file.bounds
-        else:
-            raise ValueError("Mode not recognised")
-
-        if data.ndim > 2:
-            raise ValueError(f"This function is only applicable for 2D data. Can only select one layer")
-
-        if not isinstance(fontsize, (tuple, list)):
-            fontsize = (fontsize, fontsize)
-        kwargs.update({'fontsize': fontsize[1]})
-
-        if basemap:
-            if isinstance(basemap_kwargs, type(None)):
-                basemap_kwargs = {}
-
-            if 'xticks' not in basemap_kwargs:
-                basemap_kwargs.update({'xticks': xticks})
-            if 'yticks' not in basemap_kwargs:
-                basemap_kwargs.update({'yticks': yticks})
-            if 'fontsize' not in basemap_kwargs:
-                basemap_kwargs.update({'fontsize': fontsize[0]})
-            if 'resolution' not in basemap_kwargs:
-                basemap_kwargs.update({'resolution': resolution})
-
-            if isinstance(self.epsg, type(None)):
-                raise RuntimeError("This object does not contain a EPSG code. It can be set through set_epsg()")
-            elif self.epsg == 4326:
-                transform = ccrs.PlateCarree()
-            else:
-                transform = ccrs.epsg(self.epsg)
-            plot_epsg = self.epsg if isinstance(epsg, type(None)) else epsg
-
-            ax = basemap_function(*bounds, ax=ax, epsg=plot_epsg, figsize=figsize, **basemap_kwargs)
-            ax, legend_ = plot_classified_map(data, ax=ax, transform=transform,
-                                     extent=(bounds[0], bounds[2], bounds[1], bounds[3]), **kwargs)
-
-        else:
-            ax, legend_ = plot_classified_map(data, ax=ax, figsize=figsize, **kwargs)
-
-        return ax, legend_
+    def plot_classified_map(self, ind=None, layers=1, **kwargs):
+        """
+        Plot map wrapper around `plot_classified_map`. It redirects to `self._plot` with parameter `classified` = True
+        """
+        return self._plot(classified=True, ind=ind, layers=layers, **kwargs)
 
     def __getitem__(self, ind):
         """

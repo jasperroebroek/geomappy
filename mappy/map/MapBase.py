@@ -560,59 +560,6 @@ class MapBase:
 
     shape = property(get_file_shape)
 
-    def __str__(self):
-        return f"Map at '{self._location}'"
-
-    def __repr__(self):
-        return (
-            f"Map is open in mode '{self._mode}'\n\n"
-            f"Rasterio profile: \n{self._file.profile}\n\n"
-            f"File is closed: {self._file.closed}\n"
-            f"File split in {self._c_tiles} tiles: {{{self._v_tiles, self._h_tiles}}}"
-        )
-
-    def __iter__(self):
-        """
-        Functionality to be used in a loop
-
-        Examples
-        --------
-        1: The following example loops over a created map. In a for loop the object returns
-           the indices of the tiles that were created. These indices can be used to both 
-           read (M_loc[i]) and write (M_loc[i] = np.ndarray) data.
-        
-            >>> loc = "/Users/Downloads/...."
-            >>> M_loc = map(loc, tiles = 3)
-            >>> for i in M_loc:
-                    print(i)
-
-            0
-            1
-            2
-            
-        Yields
-        ------
-        current index [int]
-        """
-        for i in range(self._c_tiles):
-            yield i
-
-    def __enter__(self):
-        """
-        function is used in "with" syntax
-        
-        Returns
-        -------
-        self
-        """
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """
-        function is used at the end of a "with" statement to close the open file
-        """
-        self.close()
-
     def plot_world(self, ind=-1, numbers=False, tiles=True, ax=None, constrain_bounds=None, **kwargs):
         """
         Plots world with the outline of the file. If tiles is true, the different tiles are plotted on the map. If
@@ -730,3 +677,60 @@ class MapBase:
             # so no need to worry about it
             print(f"test: {error}")
             raise AttributeError("test")
+
+    def __str__(self):
+        return f"Map at '{self._location}'"
+
+    def __repr__(self):
+        return (
+            f"Map object\n"
+            f"location: {self._location}'\n"
+            f"mode: '{self._mode}'\n"
+            f"Access: {not self._file.closed}\n"
+            f"Tiles: {self._c_tiles} => {{{self._v_tiles, self._h_tiles}}}\n"
+            f"Window size: {self.window_size}\n"
+            f"Shape: {self.shape}\n"
+            f"Tile shape: {self.get_shape(0)}"
+        )
+
+    def __iter__(self):
+        """
+        Functionality to be used in a loop
+
+        Examples
+        --------
+        1: The following example loops over a created map. In a for loop the object returns
+           the indices of the tiles that were created. These indices can be used to both
+           read (M_loc[i]) and write (M_loc[i] = np.ndarray) data.
+
+            >>> loc = "/Users/Downloads/...."
+            >>> M_loc = map(loc, tiles = 3)
+            >>> for i in M_loc:
+                    print(i)
+
+            0
+            1
+            2
+
+        Yields
+        ------
+        current index [int]
+        """
+        for i in range(self._c_tiles):
+            yield i
+
+    def __enter__(self):
+        """
+        function is used in "with" syntax
+
+        Returns
+        -------
+        self
+        """
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        function is used at the end of a "with" statement to close the open file
+        """
+        self.close()
