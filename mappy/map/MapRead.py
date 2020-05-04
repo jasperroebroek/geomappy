@@ -508,9 +508,8 @@ class MapRead(MapBase):
         with rio.open(output_file, mode="w", **profile) as dst:
             dst.write(np.moveaxis(data, -1, 0))
 
-    def _plot(self, classified, ind=None, layers=1, *, mode="ind", basemap=False, figsize=(10, 10), ax=None,
-              log=False, epsg=None, xticks=30, yticks=30, resolution="110m", fontsize=10, basemap_kwargs=None,
-              bounds=None, **kwargs):
+    def _plot(self, classified, ind=None, layers=1, *, basemap=False, figsize=(10, 10), ax=None, log=False, epsg=None,
+              xticks=30, yticks=30, resolution="110m", fontsize=10, basemap_kwargs=None, bounds=None, **kwargs):
         """
         Plot data at given index (ind). Classified or not, depends on the first parameter.
 
@@ -519,12 +518,10 @@ class MapRead(MapBase):
         classified : bool
             Switch between `plot_classified_map` and `plot_map`
         ind : ., optional
-            check self.get_pointer(). The default is None which will set `mode` to "all"
+            check self.get_pointer(). The default is None which will get all data.
         layers : int or tuple, optional
             The layer that is plotted. If `classified` is True only a single layer is accepted (as integer) while False
             will accept a tuple representing RGB or RGBA.
-        mode : {"ind", "all"}
-            if ind is passed, only the data at the given index is plotted. If all is given, it will plot the whole file.
         basemap : bool, optional
             plot a basemap behind the data
         figsize : tuple, optional
@@ -560,23 +557,13 @@ class MapRead(MapBase):
         -------
         (:obj:`~matplotlib.axes.Axes` or GeoAxis, legend)
         """
-        if isinstance(ind, type(None)):
-            mode = "all"
-
         if classified and not isinstance(layers, int):
             raise TypeError("layers can only be an integer for classified plotting")
         if not classified and isinstance(layers, (tuple, list)) and len(layers > 4):
             raise IndexError("layers can only be a maximum of four integers, as the would index for RGB(A)")
 
-        if mode == "ind":
-            ind = self.get_pointer(ind)
-            data = self.get_data(ind, layers=layers)
-            extent = self.get_bounds(ind)
-        elif mode == "all":
-            data = self.get_file_data(layers=layers)
-            extent = self.get_file_bounds()
-        else:
-            raise ValueError("Mode not recognised")
+        data = self.get_data(ind, layers=layers)
+        extent = self.get_bounds(ind)
 
         if isinstance(bounds, type(None)):
             bounds = extent
