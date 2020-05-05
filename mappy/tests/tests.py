@@ -350,7 +350,7 @@ class TestMap(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestMap, self).__init__(*args, **kwargs)
         self.map1 = Map("../../data/wtd.tif", tiles=(8, 8))
-        self.map2 = Map("../../data/tree_height.asc", tiles=(8, 8))
+        self.map2 = Map("../../data/tree_height.asc", tiles=(8, 8), epsg=4326)
 
     def test_tile_correlation(self):
         loc = "test.tif"
@@ -365,17 +365,17 @@ class TestMap(unittest.TestCase):
         self.assertTrue(np.allclose(c1, c2, equal_nan=True))
 
     # This should be tested once in a while to make sure everything works okay, but it takes a couple of minutes
-    # def test_correlation(self):
-    #     loc = "test.tif"
-    #     self.map1.window_size = 5
-    #     self.map2.window_size = 5
-    #
-    #     self.map1.correlate(self.map2, output_file=loc, window_size=5, overwrite=True)
-    #     t = Map(loc)
-    #     c1 = t[0]
-    #     t.close(verbose=False)
-    #     c2 = correlate_maps_njit(self.map1.get_file_data(), self.map2.get_file_data(), window_size=5)
-    #     self.assertTrue(np.allclose(c1[self.map1.ind_inner], c2[self.map1.ind_inner], equal_nan=True))
+    def test_correlation(self):
+        loc = "test.tif"
+        self.map1.window_size = 5
+        self.map2.window_size = 5
+
+        self.map1.correlate(self.map2, output_file=loc, window_size=5, overwrite=True)
+        t = Map(loc)
+        c1 = t[0]
+        t.close(verbose=False)
+        c2 = correlate_maps_njit(self.map1.get_file_data(), self.map2.get_file_data(), window_size=5)
+        self.assertTrue(np.allclose(c1[self.map1.ind_inner], c2[self.map1.ind_inner], equal_nan=True))
 
     def test_tile_focal_stats(self):
         loc = "test.tif"

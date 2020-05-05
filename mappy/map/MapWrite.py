@@ -41,7 +41,9 @@ class MapWrite(MapBase):
     profile : dict, optional
         custom rasterio profile can be passed which will be used directly to create the file with. All the other
         parameters are neglected.
-    
+    epsg : int, optional
+        EPGS code of the data. This parameter is only used if the code can't be found in the file
+
     Raises
     ------
     IOError
@@ -51,7 +53,7 @@ class MapWrite(MapBase):
     """
 
     def __init__(self, location, *, tiles=1, window_size=1, ref_map=None, overwrite=False, compress=False,
-                 dtype=np.float64, nodata=np.nan, profile=None, count=-1):
+                 dtype=np.float64, nodata=np.nan, count=-1, profile=None, epsg=None):
         self._location = location
         self._mode = "w"
 
@@ -100,16 +102,12 @@ class MapWrite(MapBase):
         # setting parameters by calling property functions
         self.window_size = window_size
         self.tiles = tiles
+        self.epsg = epsg
 
         self._current_ind = 0
         self._writing_buffer = None
 
         self.collector.append(self)
-
-        if isinstance(self._file.crs, type(None)):
-            self._epsg = None
-        else:
-            self._epsg = self._file.crs.to_epsg()
 
     def get_writing_buffer(self):
         """

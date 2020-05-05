@@ -13,8 +13,8 @@ def bounds_to_polygons(bounds_list, max_bounds=None):
     bounds_list : list
         List of rasterio bounds objects (or a list with the same order).
     max_bounds : list, optional
-        Rasterio bounds object containing the maximum bounds that are enforced. By default it is the whole earth,
-        meaning [-180,-90,180,90].
+        Rasterio bounds object containing the maximum bounds that are enforced. By default it is None, which means no
+        type checking is done. They keyword global gives: [-180,-90,180,90].
 
     Returns
     -------
@@ -23,7 +23,7 @@ def bounds_to_polygons(bounds_list, max_bounds=None):
     """
     # todo; this function can be optimised super much by vectorizing the rational
 
-    if max_bounds is None:
+    if max_bounds == "global":
         max_bounds = [-180, -90, 180, 90]
 
     assert type(bounds_list) in (list, tuple), "List of bounds not iterable"
@@ -32,11 +32,14 @@ def bounds_to_polygons(bounds_list, max_bounds=None):
     gdf = gpd.GeoDataFrame(columns=("bounds", "geometry"))
 
     for i, bounds in enumerate(bounds_list):
-        # make sure the bounds don't fall of the earth
-        left = max(bounds[0], max_bounds[0])
-        bottom = max(bounds[1], max_bounds[1])
-        right = min(bounds[2], max_bounds[2])
-        top = min(bounds[3], max_bounds[3])
+        if not isinstance(max_bounds, type(None)):
+            # make sure the bounds don't fall of the earth
+            left = max(bounds[0], max_bounds[0])
+            bottom = max(bounds[1], max_bounds[1])
+            right = min(bounds[2], max_bounds[2])
+            top = min(bounds[3], max_bounds[3])
+        else:
+            left, bottom, right, top = bounds
 
         # create a list with the x coordinates of the corners
         box_x = [left, right, right, left]

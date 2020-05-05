@@ -209,6 +209,8 @@ def cbar_decorator(cbar, ticks=None, ticklabels=None, title="", label="", tick_p
     if not isinstance(ticks, type(None)):
         cbar.set_ticks(ticks)
         if not isinstance(ticklabels, type(None)):
+            if len(ticklabels) != len(ticks):
+                raise IndexError("Length of ticks and ticklabels do not match")
             cbar.set_ticklabels(ticklabels)
 
     if isinstance(tick_params, type(None)):

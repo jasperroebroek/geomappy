@@ -4,6 +4,13 @@ import numpy as np
 from numpy.lib.index_tricks import s_
 import rasterio as rio
 import copy
+from pyproj import Proj
+import pyproj
+from shapely.ops import transform
+import cartopy.crs as ccrs
+from functools import partial
+
+from .misc import bounds_to_platecarree, bounds_to_data_projection
 from ..plotting import basemap as basemap_function
 from ..raster_functions.bounds_to_polygons import bounds_to_polygons
 
@@ -29,6 +36,8 @@ class MapBase:
         Number of tiles that are set on the raster. Set and get via tiles property
     _current_ind : int
         last index passed to the object (last call to self.get_pointer())
+    _data_proj : `Proj`
+        Proj object for transformations
     _file : rasterio pointer
         rasterio file pointer
     _fringe : int
@@ -104,6 +113,7 @@ class MapBase:
         self._vertical_bins = []
         self._iter = []
         self._tiles = []
+        self._data_proj = None
 
     def get_window_size(self):
         """
@@ -234,8 +244,6 @@ class MapBase:
         # recalculation of c_tiles
         self._c_tiles = self._v_tiles * self._h_tiles
 
-
-
         self._iter = [(i, j) for i in range(1, len(self._vertical_bins))
                       for j in range(1, len(self._horizontal_bins))]
 
@@ -269,9 +277,18 @@ class MapBase:
         return self._epsg
 
     def set_epsg(self, epsg):
-        if not isinstance(self._epsg, type(None)):
-            raise RuntimeError("The crs of this file is already set. Converting it is currently not supported")
-        self._epsg = epsg
+        if isinstance(self._file.crs, type(None)):
+            if isinstance(epsg, type(None)):
+                raise TypeError("EPSG can't be found in the file and is not provided in the initialisation")
+            self._epsg = epsg
+        else:
+            self._epsg = self._file.crs.to_epsg()
+
+        self._data_proj = Proj(init=f"epsg:{self._epsg}", preserve_units=False)
+        if self._epsg == 4326 or self._epsg == "4326":
+            self._transform = ccrs.PlateCarree()
+        else:
+            self._transform = ccrs.epsg(self._epsg)
 
     epsg = property(get_epsg, set_epsg)
 
@@ -362,7 +379,7 @@ class MapBase:
                 performed on this  new tile.
             [int]
                 Index of self._tiles range(0,self._c_tiles)
-        
+
         Returns
         -------
         ind : int
@@ -410,16 +427,18 @@ class MapBase:
         """
         if isinstance(ind, (tuple, list, rio.coords.BoundingBox)):
             if isinstance(ind, (tuple, list)):
-                if ind[0] < -180 or ind[0] > 180:
+                x0, y0, x1, y1 = bounds_to_platecarree(self._data_proj, ind)
+
+                if x0 < -180 or x0 > 180:
                     raise ValueError("BoundingBox left coordinate of the globe")
-                if ind[1] < -90 or ind[1] > 90:
+                if y0 < -90 or y0 > 90:
                     raise ValueError("BoundingBox bottom coordinate of the globe")
-                if ind[2] < -180 or ind[2] > 180:
+                if x1 < -180 or x1 > 180:
                     raise ValueError("BoundingBox right coordinate of the globe")
-                if ind[3] < -90 or ind[3] > 90:
+                if y1 < -90 or y1 > 90:
                     raise ValueError("BoundingBox top coordinate of the globe")
 
-                ind = rio.coords.BoundingBox(*ind)
+                ind = rio.coords.BoundingBox(*bounds_to_data_projection(self._data_proj, ind))
 
             # create the space in the self._tiles list if it doesn't exist yet
             try:
@@ -567,6 +586,10 @@ class MapBase:
         plotted in red (ind=-1) or any other tile that might be needed. If the file doesn't contain the whole world
         a line is plotted in green.
 
+        Blue: tiles
+        Green: file boundaries
+        Red: current data (which can be overwritten by providing `ind` directly
+
         Parameters
         ----------
         ind : ., optional
@@ -603,25 +626,22 @@ class MapBase:
 
         # plot line around the file
         bounds = self.get_file_bounds()
-        gdf = bounds_to_polygons([bounds], max_bounds=constrain_bounds)
-        gdf.plot(ax=ax, edgecolor="green", facecolor="none")
+        gdf = bounds_to_polygons([bounds])
+        gdf.crs = f"EPSG:{self.epsg}"
+        gdf.plot(ax=ax, edgecolor="green", facecolor="none", transform=self._transform, zorder=2)
 
-        if not tiles and not numbers:
-            # plot borders of current tile
-            bounds_current_tile = self.get_bounds(ind)
-            gdf = bounds_to_polygons([bounds_current_tile], max_bounds=constrain_bounds)
-            gdf.plot(ax=ax, edgecolors="red", facecolor='none')
+        # plot borders of current tile
+        bounds_current_tile = self.get_bounds(ind)
+        gdf = bounds_to_polygons([bounds_current_tile])
+        gdf.crs = f"EPSG:{self.epsg}"
+        gdf.plot(ax=ax, edgecolors="red", facecolor='none', transform=self._transform, zorder=3)
 
-        elif tiles or numbers:
+        if tiles or numbers:
             # plot borders around all tiles
             bounds_list = [self.get_bounds(i) for i in self]
-            gdf = bounds_to_polygons(bounds_list, max_bounds=constrain_bounds)
-            gdf.plot(ax=ax, edgecolor="blue", facecolor="none")
-
-            # Plot tile at ind
-            bounds = [self.get_bounds(ind)]
-            gdf_current = bounds_to_polygons(bounds, max_bounds=constrain_bounds)
-            gdf_current.plot(ax=ax, edgecolor="red", facecolor="none", linewidth=2)
+            gdf = bounds_to_polygons(bounds_list)
+            gdf.crs = f"EPSG:{self.epsg}"
+            gdf.plot(ax=ax, edgecolor="blue", facecolor="none", transform=self._transform, zorder=1)
 
         if numbers:
             if numbers:
@@ -633,7 +653,7 @@ class MapBase:
                             'color': 'darkred',
                             'weight': 'bold'
                             }
-                    x = ax.text(row.x, row.y, index, fontdict=font, ha='center', va='center')
+                    x = ax.text(row.x, row.y, index, fontdict=font, ha='center', va='center', transform=self._transform)
                     x.set_bbox(dict(facecolor='white', alpha=0.6, edgecolor='grey'))
 
         return ax
@@ -647,7 +667,16 @@ class MapBase:
         current tile is plotted in red (ind=-1) or any other tile that might be needed. If the file doesn't contain the
         whole world a line is plotted in green. For parameters, see self.plot_world()
         """
-        return self.plot_world(ind=ind, constrain_bounds=self.get_file_bounds(), **kwargs)
+        bounds = self.get_file_bounds()
+        gdf = bounds_to_polygons([bounds])
+        gdf.crs = {'init': f"epsg:{self.epsg}"}
+        project = partial(
+            pyproj.transform,
+            Proj(init=f'epsg:{self.epsg}'),  # source coordinate system
+            Proj(init='epsg:4326'))  # destiation
+
+        bounds = transform(project, gdf.geometry[0]).bounds
+        return self.plot_world(ind=ind, constrain_bounds=bounds, **kwargs)
 
     def close(self, clean=True, verbose=True):
         """

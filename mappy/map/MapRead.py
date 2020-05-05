@@ -13,6 +13,7 @@ from mappy.plotting import basemap as basemap_function
 from mappy.plotting import plot_map, plot_classified_map
 from .MapBase import MapBase
 from .MapWrite import MapWrite
+from .misc import bounds_to_platecarree
 from ..progress_bar.progress_bar import progress_bar
 from ..raster_functions import resample_profile, focal_statistics, correlate_maps
 
@@ -25,12 +26,14 @@ class MapRead(MapBase):
     ----------
     location : str
         Location of the map
-    tiles : int or tuple of ints
+    tiles : int or tuple of ints, optional
         See tiles property in MapBase
-    window_size : int
+    window_size : int, optional
         Window size to be set on the map. See property in MapBase
-    fill_value : numeric
+    fill_value : numeric, optional
         Fill value used in rasterio.read call.
+    epsg : int, optional
+        EPGS code of the data. This parameter is only used if the code can't be found in the file
 
     Attributes
     ----------
@@ -47,7 +50,7 @@ class MapRead(MapBase):
         Location of file not found
     """
 
-    def __init__(self, location, *, tiles=1, window_size=1, fill_value=None):
+    def __init__(self, location, *, tiles=1, window_size=1, fill_value=None, epsg=None):
         if type(location) != str:
             raise TypeError("Location not recognised")
         if not os.path.isfile(location):
@@ -73,16 +76,12 @@ class MapRead(MapBase):
         # setting parameters by calling internal property settings functions
         self.window_size = window_size
         self.tiles = tiles
+        self.epsg = epsg
 
         self._current_ind = 0
 
         # collector of the base class. This list contains all files opened with the Map classes
         self.collector.append(self)
-
-        if isinstance(self._file.crs, type(None)):
-            self._epsg = None
-        else:
-            self._epsg = self._file.crs.to_epsg()
 
     def get_data(self, ind=-1, layers=None):
         """
@@ -102,7 +101,7 @@ class MapRead(MapBase):
         
         """
         if isinstance(ind, type(None)):
-            ind = self.get_file_bounds()
+            ind = bounds_to_platecarree(self._data_proj, self.get_file_bounds())
 
         # type and bound checking happens in self.get_pointer()
         ind = self.get_pointer(ind)
@@ -230,8 +229,7 @@ class MapRead(MapBase):
         
         Parameters
         ----------
-        func : {"nanmean", "nanmin", "nanmax", "nanstd", "majority"}
-            todo; check for the presence of nans and switch behaviour if possible
+        func : {"mean", "min", "max", "std", "majority"}
             function to be applied to the map in a windowed fashion.
         output_file : str
             location of output file.
@@ -566,7 +564,7 @@ class MapRead(MapBase):
         extent = self.get_bounds(ind)
 
         if isinstance(bounds, type(None)):
-            bounds = extent
+            bounds = bounds_to_platecarree(self._data_proj, extent)
         elif bounds == "global":
             bounds = [-180, -90, 180, 90]
 
@@ -591,11 +589,12 @@ class MapRead(MapBase):
                 basemap_kwargs.update({'resolution': resolution})
 
             if isinstance(self.epsg, type(None)):
-                raise RuntimeError("This object does not contain a EPSG code. It can be set through self.set_epsg()")
+                raise RuntimeError("This object does not contain a EPSG code")
             elif self.epsg == 4326:
                 transform = ccrs.PlateCarree()
             else:
                 transform = ccrs.epsg(self.epsg)
+
             plot_epsg = self.epsg if isinstance(epsg, type(None)) else epsg
 
             ax = basemap_function(*bounds, ax=ax, epsg=plot_epsg, figsize=figsize, **basemap_kwargs)
@@ -605,6 +604,13 @@ class MapRead(MapBase):
             return plot_classified_map(data, ax=ax, figsize=figsize, **kwargs)
         else:
             return plot_map(data, ax=ax, figsize=figsize, **kwargs)
+
+
+    def plot(self, *args, **kwargs):
+        """
+        alias for self.plot_map
+        """
+        return self(*args, **kwargs)
 
     def plot_map(self, ind=None, layers=1, **kwargs):
         """
