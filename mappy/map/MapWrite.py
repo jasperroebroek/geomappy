@@ -117,7 +117,7 @@ class MapWrite(MapBase):
         -------
         np.ndarray of the current writing buffer or None when it is not set
         """
-        return self._writing_buffer.copy()
+        return self._writing_buffer
 
     def set_writing_buffer(self, writing_buffer):
         """
@@ -142,11 +142,6 @@ class MapWrite(MapBase):
         if self.profile['count'] > 1 and writing_buffer.shape[-1] != self.profile['count']:
             raise ValueError(
                 f"Layers don't match\ncount: {self.profile['count']}\nwriting_buffer: {writing_buffer.shape[-1]}")
-        if writing_buffer.shape != self.get_shape():
-            writing_buffer = writing_buffer[self.ind_inner]
-        if writing_buffer.shape != self.get_shape():
-            raise ValueError(
-               f"Shapes don't match:\n- shape writing_buffer: {writing_buffer.shape}\n- tile shape: {self.get_shape()}")
 
         self._writing_buffer = writing_buffer
 
@@ -167,13 +162,24 @@ class MapWrite(MapBase):
             when writing buffer is not set
         """
         ind = self.get_pointer(ind)
-        if isinstance(self.writing_buffer, type(None)):
+        shape = self.get_shape(ind)
+        writing_buffer = self.writing_buffer
+
+        if writing_buffer.shape != shape:
+            writing_buffer = writing_buffer[self.ind_inner]
+        if writing_buffer.shape != shape:
+            raise ValueError(
+               f"Shapes don't match:\n"
+               f"- shape writing_buffer: {writing_buffer.shape}\n"
+               f"- tile shape: {shape}")
+
+        if isinstance(writing_buffer, type(None)):
             raise NameError("No writing buffer found")
         if self.profile['count'] == 1:
-            self._file.write(self.writing_buffer, 1, window=self._tiles[ind])
+            self._file.write(writing_buffer, 1, window=self._tiles[ind])
         else:
             for i in range(1, self.profile['count'] + 1):
-                self._file.write(self.writing_buffer[:, :, i - 1], i, window=self._tiles[ind])
+                self._file.write(writing_buffer[:, :, i - 1], i, window=self._tiles[ind])
 
     def __setitem__(self, ind, writing_buffer):
         """

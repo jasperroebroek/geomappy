@@ -100,10 +100,6 @@ class MapRead(MapBase):
         numpy array of shape self.get_shape()
         
         """
-        if isinstance(ind, type(None)):
-            ind = bounds_to_platecarree(self._data_proj, self.get_file_bounds())
-
-        # type and bound checking happens in self.get_pointer()
         ind = self.get_pointer(ind)
 
         data = self._file.read(indexes=layers, window=self._tiles[ind], boundless=True, fill_value=self._fill_value)
@@ -502,7 +498,6 @@ class MapRead(MapBase):
         profile.update({'driver': "GTiff", 'count': data.shape[-1]})
         if not isinstance(compress, type(None)):
             profile.update({'compress': compress})
-
         with rio.open(output_file, mode="w", **profile) as dst:
             dst.write(np.moveaxis(data, -1, 0))
 

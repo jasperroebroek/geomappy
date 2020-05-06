@@ -306,7 +306,7 @@ def legend_patches(colors, labels, type='patch', **kwargs):
         return [Patch(facecolor=color, label=label, **kwargs)
                 for color, label in zip(colors, labels)]
     else:
-        return [Line2D([0], [0], color=color, label=label, **kwargs)
+        return [Line2D([0], [0], color=color, label=label, linestyle=type, **kwargs)
                 for color, label in zip(colors, labels)]
 
 

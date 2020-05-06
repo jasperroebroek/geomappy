@@ -76,7 +76,7 @@ class MapBase:
     tiles
         get and set _tiles
     epsg
-        set epsg code if not present
+        get and set epsg code if not present
     ind_inner
         get slice to remove fringes introduced by window_size
     c_tiles
@@ -113,7 +113,16 @@ class MapBase:
         self._vertical_bins = []
         self._iter = []
         self._tiles = []
+        self._epsg = None
         self._data_proj = None
+        self._transform = None
+
+    @property
+    def location(self):
+        """
+        Location of opened file in the object
+        """
+        return copy.deepcopy(self._location)
 
     def get_window_size(self):
         """
@@ -212,7 +221,7 @@ class MapBase:
             self._v_tiles = int(np.sqrt(tiles))
             self._h_tiles = int(tiles / self._v_tiles)
 
-        shape = self.get_file_shape()
+        shape = self._file.shape
 
         # routine to make sure the data is split up in equal parts
         if force_equal_tiles:
@@ -273,27 +282,6 @@ class MapBase:
 
     tiles = property(get_tiles, set_tiles)
 
-    def get_epsg(self):
-        if isinstance(self._epsg, type(None)):
-            raise TypeError("This file does not contain any epsg code. It can be set through set_epsg()")
-        return self._epsg
-
-    def set_epsg(self, epsg):
-        if isinstance(self._file.crs, type(None)):
-            if isinstance(epsg, type(None)):
-                raise TypeError("EPSG can't be found in the file and is not provided in the initialisation")
-            self._epsg = epsg
-        else:
-            self._epsg = self._file.crs.to_epsg()
-
-        self._data_proj = Proj(init=f"epsg:{self._epsg}", preserve_units=False)
-        if self._epsg == 4326 or self._epsg == "4326":
-            self._transform = ccrs.PlateCarree()
-        else:
-            self._transform = ccrs.epsg(self._epsg)
-
-    epsg = property(get_epsg, set_epsg)
-
     @property
     def ind_inner(self):
         """
@@ -317,53 +305,31 @@ class MapBase:
         return {'tiles': self.tiles,
                 'window_size': self.window_size}
 
-    def get_profile(self, ind=-1):
-        """
-        Rasterio profile of a tile in the opened file
+    def get_epsg(self):
+        if isinstance(self._epsg, type(None)):
+            raise TypeError("This file does not contain any epsg code. It can be set through set_epsg()")
+        return self._epsg
 
-        Parameters
-        ----------
-        ind : . , optional
-            See get_pointer(). If set it calculates width, height and transform for the given Index, while None, the
-            default will yield the rasterio profile from the file directly
+    def set_epsg(self, epsg):
+        if isinstance(self._file.crs, type(None)):
+            if isinstance(epsg, type(None)):
+                raise TypeError("EPSG can't be found in the file and is not provided in the initialisation")
+            self._epsg = epsg
+        else:
+            self._epsg = self._file.crs.to_epsg()
 
-        Returns
-        -------
-        dict
-        """
-        profile = copy.deepcopy(self._profile)
-        if not isinstance(ind, type(None)):
-            height, width = self.get_shape(ind)
-            left, bottom, right, top = self.get_bounds(ind)
-            transform = rio.transform.from_bounds(west=left,
-                                                  south=bottom,
-                                                  east=right,
-                                                  north=top,
-                                                  width=width,
-                                                  height=height)
-            profile.update({'height': height, 'width': width, 'transform': transform})
-        return profile
+        self._data_proj = Proj(init=f"epsg:{self._epsg}", preserve_units=False)
+        if self._epsg == 4326 or self._epsg == "4326":
+            self._transform = ccrs.PlateCarree()
+        else:
+            self._transform = ccrs.epsg(self._epsg)
 
-
-    def get_file_profile(self):
-        """
-        Rasterio profile of the rasterio file
-        """
-        return self.get_profile(ind=None)
-
-    profile = property(get_file_profile)
-
-    @property
-    def location(self):
-        """
-        Location of opened file in the object
-        """
-        return copy.deepcopy(self._location)
+    epsg = property(get_epsg, set_epsg)
 
     def get_pointer(self, ind):
         """
         Converts different types of pointer to the right index of the self._tiles list
-        
+
         Parameters
         ----------
         ind :
@@ -371,22 +337,29 @@ class MapBase:
                 Rasterio bounds object or list of four numbers, the bounds of the
                 new window. A tile is created based on these bounds like by passing
                 a slice and gets added as the last entry of self._tiles at position
-                self._c_tiles.
+                self._c_tiles. If it is a list or tuple it is assumed to be coordinates
+                in the latlon system (EPSG:4326) while a Rasterio BoundingBox is assumed
+                to be in the coordinate system of the data.
             [slice]
                 Works like passing an int twice. It finds the outer coordinates
-                of both tiles and creates a new window based on those new 
+                of both tiles and creates a new window based on those new
                 bounds. This window gets added to the list self._tiles at index
                 self._c_tiles, the last entry. This tile will not be accessed
                 when looping over the object, but all other operations can be
                 performed on this  new tile.
             [int]
                 Index of self._tiles range(0,self._c_tiles)
+            [None]
+                Can be used to access the file as a whole
+        crs : {"data", "latlon"}, optional
+            Coordinate system of Index if bounds are used. 'Data' returns the coordinates in the crs of the file, while
+            'latlon' uses EPSG:4326.
 
         Returns
         -------
         ind : int
             Index in range(0,self._c_tiles+1)
-        
+
         Raises
         ------
         TypeError
@@ -394,7 +367,7 @@ class MapBase:
                 one of both numbers is not an integer
             3: if ind is a slice:
                 start/stop parameter is not an integer
-        
+
         IndexError
             1: if ind is a tuple of length two:
                 a: first number of tuple not in range of v_tiles
@@ -403,16 +376,16 @@ class MapBase:
                 numbers are not valid as an index for the self._tiles list
             4: if ind is an int:
                 Index out of range
-                
+
         ValueError
             2: if ind is a tuple or boundingbox and the coordinates are not possible
                to convert to lat and lon values
-               
+
         KeyError
             5: None of the previous cases are applicable when passing an unknown
                type or when a list/tuple is passed that doesn't contain exactly
                2 or 4 parameters
-            
+
         Examples
         --------
         self[4]
@@ -422,23 +395,26 @@ class MapBase:
             and tile 10.
         self[(0,30,30,60)]
             create new window with the specified bounds
-            
+
         to access the slice capability in other fuctions than __getitem__:
         1: pass a slice directly -> slice(1,2)
         2: use numpy -> s_[1:2]
         """
+        if isinstance(ind, type(None)):
+            ind = self._file.bounds
+
         if isinstance(ind, (tuple, list, rio.coords.BoundingBox)):
-            if isinstance(ind, (tuple, list)):
-                x0, y0, x1, y1 = bounds_to_platecarree(self._data_proj, ind)
+            if not isinstance(ind, rio.coords.BoundingBox):
+                x0, y0, x1, y1 = ind
 
                 if x0 < -180 or x0 > 180:
-                    raise ValueError("BoundingBox left coordinate of the globe")
+                    raise ValueError(f"Left coordinate of the globe: {x0}")
                 if y0 < -90 or y0 > 90:
-                    raise ValueError("BoundingBox bottom coordinate of the globe")
+                    raise ValueError(f"Bottom coordinate of the globe: {y0}")
                 if x1 < -180 or x1 > 180:
-                    raise ValueError("BoundingBox right coordinate of the globe")
+                    raise ValueError(f"Right coordinate of the globe: {x1}")
                 if y1 < -90 or y1 > 90:
-                    raise ValueError("BoundingBox top coordinate of the globe")
+                    raise ValueError(f"Top coordinate of the globe: {y1}")
 
                 ind = rio.coords.BoundingBox(*bounds_to_data_projection(self._data_proj, ind))
 
@@ -496,7 +472,37 @@ class MapBase:
 
         return ind
 
-    def get_bounds(self, ind=-1):
+    def get_profile(self, ind=-1):
+        """
+        Rasterio profile of a tile in the opened file
+
+        Parameters
+        ----------
+        ind : . , optional
+            See get_pointer(). If set it calculates width, height and transform for the given Index, while None, the
+            default will yield the rasterio profile from the file directly
+
+        Returns
+        -------
+        dict
+        """
+        profile = copy.deepcopy(self._profile)
+        height, width = self.get_shape(ind)
+        left, bottom, right, top = self.get_bounds(ind)
+        transform = rio.transform.from_bounds(west=left, south=bottom, east=right,
+                                              north=top, width=width, height=height)
+        profile.update({'height': height, 'width': width, 'transform': transform})
+        return profile
+
+    def get_file_profile(self):
+        """
+        Rasterio profile of the rasterio file
+        """
+        return self.get_profile(ind=None)
+
+    profile = property(get_file_profile)
+
+    def get_bounds(self, ind=-1, crs="data"):
         """
         return rasterio bounds object of the current window
         
@@ -504,17 +510,16 @@ class MapBase:
         ----------
         ind : .
             see self.get_pointer()
-        
+        crs : {"data", "latlon"}, optional
+            Coordinate system of the returned bounds. Data returns the coordinates in the crs of the file, while
+            'latlon' uses EPSG:4326.
+
         Returns
         -------
         rasterio bounds object from tile
         """
-        if isinstance(ind, type(None)):
-            return copy.deepcopy(self._file.bounds)
-        else:
-            # type and bound checking happens in get_pointer()
-            ind = self.get_pointer(ind)
-            return self._file.window_bounds(self._tiles[ind])
+        ind = self.get_pointer(ind)
+        return self._file.window_bounds(self._tiles[ind])
 
     def get_file_bounds(self):
         """
@@ -530,7 +535,7 @@ class MapBase:
 
     def get_shape(self, ind=-1):
         """
-        Function to retrieve the shape of the current data in memory
+        Function to retrieve the shape at a given Index
         
         Parameters
         ----------
@@ -541,19 +546,12 @@ class MapBase:
         -------
         numpy shape object
         """
-        if isinstance(ind, type(None)):
-            s = copy.deepcopy(self._file.shape)
-            if self.profile['count'] == 1:
-                return s
-            else:
-                return s + (self.profile['count'], )
+        ind = self.get_pointer(ind)
+        s = self._tiles[ind]
+        if self._profile['count'] == 1:
+            return tuple(np.around((s.height, s.width)).astype(int))
         else:
-            ind = self.get_pointer(ind)
-            s = self._tiles[ind]
-            if self.profile['count'] == 1:
-                return tuple(np.around((s.height, s.width)).astype(int))
-            else:
-                return tuple(np.around((s.height, s.width, self.profile['count'])).astype(int))
+            return tuple(np.around((s.height, s.width, self._profile['count'])).astype(int))
 
     def get_file_shape(self):
         """
@@ -602,9 +600,6 @@ class MapBase:
         if type(tiles) != bool:
             raise TypeError("Tiles needs to be a boolean variable")
 
-        # type checking and conversion
-        ind = self.get_pointer(ind)
-
         if isinstance(constrain_bounds, type(None)):
             extent = [-180, -90, 180, 90]
         else:
@@ -613,11 +608,14 @@ class MapBase:
         ax = basemap_function(*extent, ax=ax, **kwargs)
 
         # plot line around the file
-        bounds = self.get_file_bounds()
+        bounds = self._file.bounds
         gdf = bounds_to_polygons([bounds])
         gdf.crs = f"EPSG:{self.epsg}"
         gdf.plot(ax=ax, edgecolor="green", facecolor="none", transform=self._transform, zorder=2)
 
+        # type checking and conversion
+        ind = self.get_pointer(ind)
+        ind_reset = ind
         # plot borders of current tile
         bounds_current_tile = self.get_bounds(ind)
         gdf = bounds_to_polygons([bounds_current_tile])
@@ -644,11 +642,10 @@ class MapBase:
                     x = ax.text(row.x, row.y, index, fontdict=font, ha='center', va='center', transform=self._transform)
                     x.set_bbox(dict(facecolor='white', alpha=0.6, edgecolor='grey'))
 
-        # reset current ind
-        self.get_pointer(ind)
+        self.get_pointer(ind_reset)
         return ax
 
-    def plot_file(self, ind=-1, **kwargs):
+    def plot_file(self, ind=-1, epsg=None, **kwargs):
         """
         Plots the area of the file with tiles and numbers
 
@@ -656,11 +653,22 @@ class MapBase:
         the map. If numbers is True not only the tiles but also the number of the tiles are plotted on the map. The
         current tile is plotted in red (ind=-1) or any other tile that might be needed. If the file doesn't contain the
         whole world a line is plotted in green. For parameters, see self.plot_world()
+
+        Parameters
+        ----------
+        ind : .
+            see self.get_pointer()
+        epsg : int, optional
+            epsg code of the plot. `None` is the default, which will plot the file in it's native projection
         """
-        bounds = bounds_to_platecarree(self._data_proj, self.get_file_bounds())
-        ax = self.plot_world(ind=ind, constrain_bounds=bounds, epsg=self.epsg, **kwargs)
+        if isinstance(epsg, type(None)):
+            epsg = self.epsg
+        bounds = bounds_to_platecarree(self._data_proj, self._file.bounds)
+        ax = self.plot_world(ind=ind, constrain_bounds=bounds, epsg=epsg, **kwargs)
+
         bounds = self.get_bounds(None)
         ax.set_extent((bounds[0], bounds[2], bounds[1], bounds[3]), crs=self._transform)
+
         return ax
 
     def close(self, clean=True, verbose=True):
