@@ -77,8 +77,9 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
     """
     if m.ndim not in (2, 3):
         raise ValueError("Input data needs to be 2D or present RGB(A) values on the third axis.")
-    if m.ndim == 3 and (m.shape[-1] not in (3, 4) or m.dtype != "bool_"):
-        raise ValueError("3D arrays are only acceptable if presenting RGB(A) information")
+    if m.ndim == 3 and (m.shape[-1] not in (3, 4) or m.dtype == "bool_"):
+        raise ValueError(f"3D arrays are only acceptable if presenting RGB(A) information. Shape: {m.shape}, "
+                         f"dtype: {m.dtype}")
 
     if isinstance(ax, type(None)):
         f, ax = plt.subplots(figsize=figsize)

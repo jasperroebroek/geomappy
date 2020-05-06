@@ -557,7 +557,7 @@ class MapRead(MapBase):
         """
         if classified and not isinstance(layers, int):
             raise TypeError("layers can only be an integer for classified plotting")
-        if not classified and isinstance(layers, (tuple, list)) and len(layers > 4):
+        if not classified and isinstance(layers, (tuple, list)) and len(layers) > 4:
             raise IndexError("layers can only be a maximum of four integers, as the would index for RGB(A)")
 
         data = self.get_data(ind, layers=layers)
@@ -600,17 +600,19 @@ class MapRead(MapBase):
             ax = basemap_function(*bounds, ax=ax, epsg=plot_epsg, figsize=figsize, **basemap_kwargs)
             kwargs.update({'transform': transform, 'extent': (extent[0], extent[2], extent[1], extent[3])})
 
+            if plot_epsg == self.epsg:
+                ax.set_extent((extent[0], extent[2], extent[1], extent[3]), crs=self._transform)
+
         if classified:
             return plot_classified_map(data, ax=ax, figsize=figsize, **kwargs)
         else:
             return plot_map(data, ax=ax, figsize=figsize, **kwargs)
 
-
     def plot(self, *args, **kwargs):
         """
         alias for self.plot_map
         """
-        return self(*args, **kwargs)
+        return self.plot_map(*args, **kwargs)
 
     def plot_map(self, ind=None, layers=1, **kwargs):
         """

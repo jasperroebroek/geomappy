@@ -267,6 +267,8 @@ class MapBase:
             # rasterio window object is stored in self._tiles
             self._tiles.append(rio.windows.Window.from_slices(*s, boundless=True))
 
+        self._tiles.append(None)
+
         self._current_ind = 0
 
     tiles = property(get_tiles, set_tiles)
@@ -440,26 +442,18 @@ class MapBase:
 
                 ind = rio.coords.BoundingBox(*bounds_to_data_projection(self._data_proj, ind))
 
-            # create the space in the self._tiles list if it doesn't exist yet
-            try:
-                self._tiles[self._c_tiles] = 0
-            except IndexError:
-                self._tiles.append(0)
-            finally:
-                # add window object to self._tiles list
-                temporary_window = rio.windows.from_bounds(*ind, self._file.transform)
+            # add window object to self._tiles list
+            temporary_window = rio.windows.from_bounds(*ind, self._file.transform)
 
-                # round the entries and create the window
-                col_off = np.round(temporary_window.col_off).astype(int)
-                row_off = np.round(temporary_window.row_off).astype(int)
-                width = np.round(temporary_window.width).astype(int)
-                height = np.round(temporary_window.height).astype(int)
+            # round the entries and create the window
+            col_off = np.round(temporary_window.col_off).astype(int)
+            row_off = np.round(temporary_window.row_off).astype(int)
+            width = np.round(temporary_window.width).astype(int)
+            height = np.round(temporary_window.height).astype(int)
 
-                self._tiles[self._c_tiles] = rio.windows.Window(col_off=col_off,
-                                                                row_off=row_off,
-                                                                width=width,
-                                                                height=height)
-                ind = self._c_tiles
+            self._tiles[self._c_tiles] = rio.windows.Window(col_off=col_off, row_off=row_off,
+                                                            width=width, height=height)
+            ind = self.c_tiles
 
         elif isinstance(ind, slice):
             if not isinstance(ind.start, int):
@@ -486,20 +480,14 @@ class MapBase:
             height = height - row_off
             width = width - col_off
 
-            # if self._tiles[self.index] doesn't exist, create it
-            try:
-                self._tiles[self._c_tiles] = 0
-            except IndexError:
-                self._tiles.append(0)
-            finally:
-                self._tiles[self._c_tiles] = rio.windows.Window(col_off, row_off, width, height)
-                ind = self._c_tiles
+            self._tiles[self._c_tiles] = rio.windows.Window(col_off, row_off, width, height)
+            ind = self.c_tiles
 
         elif isinstance(ind, int):
             if ind not in list(range(-1, self._c_tiles + 1)):
                 raise IndexError("Index out of range")
             if ind == -1:
-                return self._current_ind
+                ind = self._current_ind
         else:
             raise KeyError("ind parameter not understood")
 
@@ -515,7 +503,7 @@ class MapBase:
         Parameters
         ----------
         ind : .
-            see self.get_pointer(), the default is None which gets the bounds of the file.
+            see self.get_pointer()
         
         Returns
         -------
@@ -547,7 +535,7 @@ class MapBase:
         Parameters
         ----------
         ind : .
-            see self.get_pointer(), the default is None which gets the shape of the file.
+            see self.get_pointer()
             
         Returns
         -------
@@ -656,6 +644,8 @@ class MapBase:
                     x = ax.text(row.x, row.y, index, fontdict=font, ha='center', va='center', transform=self._transform)
                     x.set_bbox(dict(facecolor='white', alpha=0.6, edgecolor='grey'))
 
+        # reset current ind
+        self.get_pointer(ind)
         return ax
 
     def plot_file(self, ind=-1, **kwargs):
@@ -667,16 +657,11 @@ class MapBase:
         current tile is plotted in red (ind=-1) or any other tile that might be needed. If the file doesn't contain the
         whole world a line is plotted in green. For parameters, see self.plot_world()
         """
-        bounds = self.get_file_bounds()
-        gdf = bounds_to_polygons([bounds])
-        gdf.crs = {'init': f"epsg:{self.epsg}"}
-        project = partial(
-            pyproj.transform,
-            Proj(init=f'epsg:{self.epsg}'),  # source coordinate system
-            Proj(init='epsg:4326'))  # destiation
-
-        bounds = transform(project, gdf.geometry[0]).bounds
-        return self.plot_world(ind=ind, constrain_bounds=bounds, **kwargs)
+        bounds = bounds_to_platecarree(self._data_proj, self.get_file_bounds())
+        ax = self.plot_world(ind=ind, constrain_bounds=bounds, epsg=self.epsg, **kwargs)
+        bounds = self.get_bounds(None)
+        ax.set_extent((bounds[0], bounds[2], bounds[1], bounds[3]), crs=self._transform)
+        return ax
 
     def close(self, clean=True, verbose=True):
         """
