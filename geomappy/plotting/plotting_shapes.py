@@ -33,33 +33,49 @@ def _plot_geometries(ax, df, colors, linewidth, markersize, **kwargs):
     **kwargs
         Keyword arguments for the geopandas plotting functions: plot_point_collection, plot_polygon_collection and
         plot_linestring_collection
+
+    Notes
+    -----
+    Setting either ``facecolor`` or ``edgecolor`` does the same as in geopandas. It overwrite the behaviour of this
+    function.
     """
     geom_types = df.geometry.type
     poly_idx = np.asarray((geom_types == "Polygon") | (geom_types == "MultiPolygon"))
     line_idx = np.asarray((geom_types == "LineString") | (geom_types == "MultiLineString"))
     point_idx = np.asarray((geom_types == "Point") | (geom_types == "MultiPoint"))
 
+    facecolor = kwargs.pop('facecolor', np.array(colors))
+    edgecolor = kwargs.pop('edgecolor', np.array(colors))
+
+    if not isinstance(facecolor, np.ndarray):
+        facecolor = pd.Series([facecolor]*df.shape[0])
+    if not isinstance(edgecolor, np.ndarray):
+        edgecolor = pd.Series([edgecolor]*df.shape[0])
+
     # plot all Polygons and all MultiPolygon components in the same collection
     polys = df.geometry[poly_idx]
     if not polys.empty:
-        plot_polygon_collection(ax, polys, color=colors[poly_idx], linewidth=linewidth, **kwargs)
+        plot_polygon_collection(ax, polys, facecolor=facecolor[poly_idx], edgecolor=edgecolor[poly_idx],
+                                linewidth=linewidth, **kwargs)
 
     # plot all LineStrings and MultiLineString components in same collection
     lines = df.geometry[line_idx]
     if not lines.empty:
-        plot_linestring_collection(ax, lines, color=colors[line_idx], linewidth=linewidth, **kwargs)
+        plot_linestring_collection(ax, lines, facecolor=facecolor[line_idx], edgecolor=edgecolor[line_idx],
+                                   linewidth=linewidth, **kwargs)
 
     # plot all Points in the same collection
     points = df.geometry[point_idx]
     if not points.empty:
         if isinstance(markersize, np.ndarray):
             markersize = markersize[point_idx]
-        plot_point_collection(ax, points, color=colors[point_idx], markersize=markersize, linewidth=linewidth, **kwargs)
+        plot_point_collection(ax, points, facecolor=facecolor[point_idx], edgecolor=edgecolor[point_idx],
+                              markersize=markersize, linewidth=linewidth, **kwargs)
 
 
 def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin_labels=None, cmap=None, vmin=None,
                 vmax=None, legend="colorbar", clip_legend=False, ax=None, figsize=(10, 10), legend_ax=None,
-                legend_kwargs=None, fontsize=None, aspect=30, pad_fraction=0.6, linewidth=0, force_equal_figsize=None,
+                legend_kwargs=None, fontsize=None, aspect=30, pad_fraction=0.6, linewidth=1, force_equal_figsize=None,
                 nan_color="White", **kwargs):
     """
     Plot shapes in a continuous fashion
@@ -127,6 +143,9 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
     if there is not a perfect overlap. If provided to this function it will be handled by **kwargs. The same goes for
     'transform' if the plotting projection is different from the data projection.
 
+    Setting either ``facecolor`` or ``edgecolor`` does the same as in geopandas. It overwrite the behaviour of this
+    function.
+
     Returns
     -------
     (Axes or GeoAxes, legend)
@@ -141,6 +160,11 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
 
     if isinstance(cmap, type(None)):
         cmap = plt.cm.get_cmap("viridis")
+        if isinstance(values, type(None)):
+            if 'facecolor' not in kwargs:
+                kwargs['facecolor'] = "lightblue"
+            if 'edgecolor' not in kwargs:
+                kwargs['edgecolor'] = 'lightblue'
     elif isinstance(cmap, str):
         cmap = plt.cm.get_cmap(cmap)
     elif not isinstance(cmap, Colormap):
@@ -217,7 +241,7 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
 def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, colors=None, cmap="tab10",
                            labels=None, legend="legend", clip_legend=False, ax=None, figsize=(10, 10),
                            suppress_warnings=False, legend_ax=None, legend_kwargs=None, fontsize=None, aspect=30,
-                           pad_fraction=0.6, linewidth=0, force_equal_figsize=False, nan_color="White", **kwargs):
+                           pad_fraction=0.6, linewidth=1, force_equal_figsize=False, nan_color="White", **kwargs):
     """
     Plot shapes with discrete classes or index
 
@@ -284,6 +308,9 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
     if there is not a perfect overlap. If provided to this function it will be handled by **kwargs. The same goes for
     'transform' if the plotting projection is different from the data projection.
 
+    Setting either ``facecolor`` or ``edgecolor`` does the same as in geopandas. It overwrite the behaviour of this
+    function.
+
     Returns
     -------
     (Axes or GeoAxes, legend)
@@ -311,7 +338,7 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
         if len(bins) != len(colors):
             raise IndexError(f"length of bins and colors don't match\nbins: {len(bins)}\ncolors: {len(colors)}")
     else:
-        colors = cmap_discrete(cmap=cmap, n=len(list), return_type="list")
+        colors = cmap_discrete(cmap=cmap, n=len(bins), return_type="list")
 
     if not isinstance(labels, type(None)):
         if len(bins) != len(labels):
@@ -340,6 +367,7 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
 
     plotting_colors = pd.Series(cmap(norm(m_binned)).tolist())
     plotting_colors[pd.isna(values)] = nan_color
+
     _plot_geometries(ax, geometry, plotting_colors, linewidth, markersize, **kwargs)
 
     # Legend

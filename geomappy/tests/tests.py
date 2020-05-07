@@ -6,6 +6,7 @@ from scipy.stats import pearsonr
 from geomappy import overlapping_arrays, rolling_sum, rolling_window, focal_statistics, Map, focal_mean
 from geomappy.raster_functions.correlate_maps import correlate_maps_njit
 from geomappy.raster_functions.correlate_maps import correlate_maps_base
+import geomappy as mp
 
 
 def correlate_maps_simple(map1, map2, window_size=5, fraction_accepted=0.7):

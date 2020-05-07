@@ -246,7 +246,7 @@ def plot_classified_map(m, bins=None, colors=None, cmap="tab10", labels=None, le
         if len(bins) != len(colors):
             raise IndexError(f"length of bins and colors don't match\nbins: {len(bins)}\ncolors: {len(colors)}")
     else:
-        colors = cmap_discrete(cmap=cmap, n=len(list), return_type="list")
+        colors = cmap_discrete(cmap=cmap, n=len(bins), return_type="list")
 
     if not isinstance(labels, type(None)):
         if len(bins) != len(labels):

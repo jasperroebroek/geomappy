@@ -59,7 +59,7 @@ corr : :obj:`~numpy.ndarray`
 """
 
 
-@njit(cache=True)
+@njit()
 def _correlate_maps_reduce(map1, map2, window_size=5, fraction_accepted=0.7, reduce=False, verbose=False):
     shape = (map1.shape[0] // window_size, map2.shape[1] // window_size)
     corr = np.full(shape, np.nan)
@@ -94,7 +94,7 @@ def _correlate_maps_reduce(map1, map2, window_size=5, fraction_accepted=0.7, red
     return corr
 
 
-@njit(cache=True)
+@njit()
 def _correlate_maps_full(map1, map2, window_size=5, fraction_accepted=0.7, reduce=False, verbose=False):
     fringe = window_size // 2
     corr = np.full(map1.shape, np.nan)

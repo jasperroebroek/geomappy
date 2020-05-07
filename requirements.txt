@@ -1,0 +1,8 @@
+cartopy # from 0.18 many improvements are possible
+geopandas
+rasterio
+descartes
+
+#optional
+numba
+scipy # necessary to perform tests
