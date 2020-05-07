@@ -1,3 +1,3 @@
-import mappy as mp
+import geomappy as mp
 
 mp.basemap()
