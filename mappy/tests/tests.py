@@ -356,7 +356,6 @@ class TestMap(unittest.TestCase):
         loc = "test.tif"
         self.map1.window_size = 5
         self.map2.window_size = 5
-
         self.map1.correlate(self.map2, output_file=loc, window_size=5, ind=32, overwrite=True)
         t = Map(loc)
         c1 = t[0]

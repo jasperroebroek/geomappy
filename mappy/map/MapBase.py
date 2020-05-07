@@ -351,9 +351,6 @@ class MapBase:
                 Index of self._tiles range(0,self._c_tiles)
             [None]
                 Can be used to access the file as a whole
-        crs : {"data", "latlon"}, optional
-            Coordinate system of Index if bounds are used. 'Data' returns the coordinates in the crs of the file, while
-            'latlon' uses EPSG:4326.
 
         Returns
         -------
@@ -416,7 +413,12 @@ class MapBase:
                 if y1 < -90 or y1 > 90:
                     raise ValueError(f"Top coordinate of the globe: {y1}")
 
-                ind = rio.coords.BoundingBox(*bounds_to_data_projection(self._data_proj, ind))
+                bounds1 = bounds_to_data_projection(self._data_proj, (x0, y0, x1, y1))
+                bounds2 = bounds_to_data_projection(self._data_proj, (x0, y1, x1, y0))
+                x = (bounds1[0], bounds1[2], bounds2[0], bounds2[2])
+                y = (bounds1[1], bounds1[3], bounds2[1], bounds2[3])
+
+                ind = rio.coords.BoundingBox(np.min(x), np.min(y), np.max(x), np.max(y))
 
             # add window object to self._tiles list
             temporary_window = rio.windows.from_bounds(*ind, self._file.transform)
@@ -502,7 +504,7 @@ class MapBase:
 
     profile = property(get_file_profile)
 
-    def get_bounds(self, ind=-1, crs="data"):
+    def get_bounds(self, ind=-1):
         """
         return rasterio bounds object of the current window
         
@@ -510,9 +512,6 @@ class MapBase:
         ----------
         ind : .
             see self.get_pointer()
-        crs : {"data", "latlon"}, optional
-            Coordinate system of the returned bounds. Data returns the coordinates in the crs of the file, while
-            'latlon' uses EPSG:4326.
 
         Returns
         -------

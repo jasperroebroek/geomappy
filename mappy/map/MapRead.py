@@ -597,6 +597,8 @@ class MapRead(MapBase):
 
             if plot_epsg == self.epsg:
                 ax.set_extent((extent[0], extent[2], extent[1], extent[3]), crs=self._transform)
+            elif plot_epsg == 4326 and isinstance(ind, (list, tuple)) and not isinstance(ind, rio.coords.BoundingBox):
+                ax.set_extent((ind[0], ind[2], ind[1], ind[3]))
 
         if classified:
             return plot_classified_map(data, ax=ax, figsize=figsize, **kwargs)

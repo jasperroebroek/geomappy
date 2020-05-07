@@ -7,7 +7,7 @@ from ..ndarray_functions.rolling_functions import rolling_window, rolling_sum, r
 
 
 def _focal_majority(a, window_size, fraction_accepted, reduce, r, ind_inner, majority_mode):
-    if a.dtype not in ('float32', 'float64'):
+    if not np.issubdtype(a.dtype, np.floating):
         a = a.astype(np.float64)
 
     values = np.unique(a)
@@ -184,7 +184,7 @@ def focal_statistics(a, window_size, *, func=None, fraction_accepted=0.7, verbos
     if func not in list_of_functions:
         raise KeyError("Function not available")
 
-    if a.dtype != np.float64 and func != "majority":
+    if not np.issubdtype(a.dtype, np.floating) and func != "majority":
         # print("input array converted to float")
         a = a.astype(np.float64)
 

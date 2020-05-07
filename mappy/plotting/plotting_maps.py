@@ -77,7 +77,7 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
     """
     if m.ndim not in (2, 3):
         raise ValueError("Input data needs to be 2D or present RGB(A) values on the third axis.")
-    if m.ndim == 3 and (m.shape[-1] not in (3, 4) or m.dtype == "bool_"):
+    if m.ndim == 3 and (m.shape[-1] not in (3, 4) or np.issubdtype(m.dtype, np.bool_)):
         raise ValueError(f"3D arrays are only acceptable if presenting RGB(A) information. Shape: {m.shape}, "
                          f"dtype: {m.dtype}")
 
@@ -109,12 +109,13 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
         nan_mask = np.isnan(m)
         m = (m > bins[0]).astype(float)
         m[nan_mask] = np.nan
-        ax, legend_ = plot_classified_map(m, colors=['lightgrey', 'red'], labels=[f'< {bins[0]}', f'> {bins[0]}'],
-                                          ax=ax, legend_ax=legend_ax, legend=legend, legend_kwargs=legend_kwargs,
-                                          aspect=aspect, pad_fraction=pad_fraction, force_equal_figsize=False,
-                                          nan_color=nan_color, **kwargs)
+        ax, legend_ = plot_classified_map(m, colors=['lightgrey', 'red'], bins=[0, 1],
+                                          labels=[f'< {bins[0]}', f'> {bins[0]}'], ax=ax, legend_ax=legend_ax,
+                                          legend=legend, legend_kwargs=legend_kwargs, aspect=aspect,
+                                          pad_fraction=pad_fraction, force_equal_figsize=False, nan_color=nan_color,
+                                          **kwargs)
 
-    elif m.dtype != "bool_" and m.ndim == 2:
+    elif not np.issubdtype(m.dtype, np.bool_) and m.ndim == 2:
         if isinstance(bins, type(None)):
             norm, extend = _determine_cmap_boundaries_continuous(m=m, vmin=vmin, vmax=vmax)
             cmap.set_bad(nan_color)

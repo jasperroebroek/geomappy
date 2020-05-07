@@ -30,7 +30,7 @@ def _determine_cmap_boundaries_discrete(m, bins, cmap, clip_legend=False):
     """
     m = np.array(m)
 
-    if 'float' in m.dtype.name:
+    if np.issubdtype(m.dtype, np.floating):
         data = m[~np.isnan(m)]
     else:
         data = m.flatten()
@@ -102,7 +102,7 @@ def _determine_cmap_boundaries_continuous(m, vmin, vmax):
     -------
     norm, extend
     """
-    if m.dtype == np.float:
+    if np.issubdtype(m.dtype, np.floating):
         data = m[~np.isnan(m)]
     else:
         data = m

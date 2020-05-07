@@ -154,7 +154,7 @@ def rolling_sum(a, window_size, reduce=False):
         return cumsum[window_size:] - cumsum[:-window_size]
 
     elif a.ndim == 2 and not reduce:
-        if a.dtype == np.bool_:
+        if np.issubdtype(a.dtype, np.bool_):
             dtype = np.int
         else:
             dtype = a.dtype
@@ -173,7 +173,7 @@ def rolling_sum(a, window_size, reduce=False):
 
     elif a.ndim == 3 and not reduce:
         # todo; check if this is actually faster than the backup solution
-        if a.dtype == np.bool_:
+        if np.issubdtype(a.dtype, np.bool_):
             dtype = np.int
         else:
             dtype = a.dtype

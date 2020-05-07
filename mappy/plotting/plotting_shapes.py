@@ -159,7 +159,7 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
                                              aspect=aspect, pad_fraction=pad_fraction, force_equal_figsize=False,
                                              nan_color=nan_color, **kwargs)
 
-    elif values.dtype != "bool_":
+    elif np.issubdtype(values.dtype, np.bool_):
         if isinstance(legend_kwargs, type(None)):
             if legend == "colorbar" or not legend:
                 legend_kwargs = {}
