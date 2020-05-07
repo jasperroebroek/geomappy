@@ -1,8 +1,9 @@
 import unittest
 import numpy as np
 from numpy import s_
-from geomappy import overlapping_arrays, rolling_mean, rolling_sum, rolling_window, focal_statistics, Map, focal_mean
 from scipy.stats import pearsonr
+
+from geomappy import overlapping_arrays, rolling_sum, rolling_window, focal_statistics, Map, focal_mean
 from geomappy.raster_functions.correlate_maps import correlate_maps_njit
 from geomappy.raster_functions.correlate_maps import correlate_maps_base
 

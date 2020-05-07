@@ -6,9 +6,8 @@ import numpy as np
 import pandas as pd
 from geopandas.plotting import plot_polygon_collection, plot_linestring_collection, plot_point_collection
 from matplotlib.colors import Colormap, ListedColormap, Normalize
-from mpl_toolkits import axes_grid1
 
-from .colors import add_colorbar, cmap_random, create_colorbar_axes, cmap_discrete
+from .colors import add_colorbar, create_colorbar_axes, cmap_discrete
 from .misc import _determine_cmap_boundaries_discrete, _create_geometry_values_and_sizes, \
     _determine_cmap_boundaries_continuous, cbar_decorator
 from ..ndarray_functions import nanunique, nandigitize
@@ -153,13 +152,13 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         nan_mask = np.isnan(values)
         values = (values > bins[0]).astype(float)
         values[nan_mask] = np.nan
-        ax, legend_ = plot_classified_shapes(df=geometry, values=values, s=markersize, linewidth=linewidth,
+        ax, legend_ = plot_classified_shapes(df=geometry, values=values, s=markersize, linewidth=linewidth, bins=[0, 1],
                                              colors=['lightgrey', 'red'], labels=[f'< {bins[0]}', f'> {bins[0]}'],
                                              ax=ax, legend_ax=legend_ax, legend=legend, legend_kwargs=legend_kwargs,
                                              aspect=aspect, pad_fraction=pad_fraction, force_equal_figsize=False,
                                              nan_color=nan_color, **kwargs)
 
-    elif np.issubdtype(values.dtype, np.bool_):
+    elif not np.issubdtype(values.dtype, np.bool_):
         if isinstance(legend_kwargs, type(None)):
             if legend == "colorbar" or not legend:
                 legend_kwargs = {}
@@ -203,7 +202,7 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         # Boolean values
         ax, legend_ = plot_classified_shapes(df=geometry, values=values.astype(int), s=markersize,
                                              linewidth=linewidth, colors=['lightgrey', 'red'],
-                                             labels=[f'< {bins[0]}', f'> {bins[0]}'], ax=ax, legend_ax=legend_ax,
+                                             labels=['False', 'True'], ax=ax, legend_ax=legend_ax,
                                              legend=legend, legend_kwargs=legend_kwargs, aspect=aspect,
                                              pad_fraction=pad_fraction, force_equal_figsize=False, nan_color=nan_color,
                                              **kwargs)
