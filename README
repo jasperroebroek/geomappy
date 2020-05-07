@@ -1,84 +1,13 @@
-This package was created to interface with raster files, as a layer on top rasterio. It can split the files up in
-regular chunks and contains a plotting interface, both on top of the raster files directly and as a function accepting
-ndarrays. Reading and writing files can be done efficiently in this tiled fashion. It also accepts a window_size
-parameter which will expand each tile with a border that will be used to perform focal statistics. A basemap function
-is included as a replacement for the old Basemap package and is built on cartopy.
+This project was created to interface raster and shape files and facilitate plotting them in a homogeneous way. See the
+examples notebook for visual examples of the interfacing and plotting functionality.
 
->>> import mappy as mp
-
-###################
-## MAP INTERFACE ##
-###################
-
-OPENING THE FILE
-----------------
-Opening a file in "read" mode:
->>> test_map = mp.Map("test.tif")
-
-LOADING THE DATA
-----------------
-Load all the data of the file in an array
->>> test_map.get_file_data()
-
-SPLITTING THE FILE IN TILES AND LOADING PARTS SEPARATELY
---------------------------------------------------------
-setting tiles (this will try to split the file up in 10x10 tiles)
->>> test_map.tiles = 100
-
-view the tiling on a global map
->>> test_map.plot_world()
-
-view the same global map but with the indices displayed
->>> test_map.plot_world(numbers=True)
-
-load the data of the fifth tile
->>> test_map[4]
-
-load the data of everything between the fifth and the tenth tile
->>> test_map[4:9]
-
-load the data of the third column and third row
->>> test_map[(2,2)]
-
-the active area of the map can be plotted. It accepts the same interface as the list interface
->>> test_map.plot_world((2,2))
-
-WINDOW_SIZE
------------
-To show the overlap of the tiles when a window_size is set
->>> test_map.window_size = 200
->>> test_map.plot_world()
-
-PLOTTING THE DATA
------------------
-there are two different plotting schemes, one for interfacing with continous data and one for discrete data.
-
-plot the data simply
->>> test_map.plot()
-
-with a basemap behind it
->>> test_map.plot(basemap=True)
-
-plot data with distinct boundaries
->>> test_map.plot(bins = [1,2,3])
-
-plot categorical data (bins and colors overlap with the data in the raster)
->>> test_map.plot_classified(bins = [1,2,3], colors=["Red","Green","Blue"])
-
-this plotting can be done outside the Map class with normal arrays
->>> plot_map(array)
->>> plot_map(array, bins=[1,2,3])
-
-and similarly with categorical data
->>> plot_classified_map(bins = [1,2,3], colors=["Red","Green","Blue"])
-
-the basemap can be interfaced in the following way, as a normal function
->>> mp.basemap()
-
-
-#########
-# NOTES #
-#########
-
-- Focal statistics are accessible through the Map class and as a function in ndarray_functions
-- Some handy cmap functionality is stored in plotting.colors
+Beside this the project contains:
+ - Both reading and writing files through the same Map interface, making it convenient to pull a file, do some
+    calculations and store the result back in a file. This also works with the tiling behaviour displayed in the
+    notebook. This helps in breaking up the calculations, needing much less memory to work with huge files.
+ - focal statistics through the Map interface (geomappy.raster_functions)
+ - functions to extend the rasterio functionality, such as reprojecting a file based on the profile of another file
+    (geomappy.raster_functions)
+ - several handy functions for color mixing (geomappy.plotting.colors)
+ - a progress bar function (geomappy.progress_bar)
+ - ND rolling functions (geomappy.ndarray_functions)
