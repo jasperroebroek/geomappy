@@ -368,9 +368,6 @@ class TestMap(unittest.TestCase):
     # This should be tested once in a while to make sure everything works okay, but it takes a couple of minutes
     def test_correlation(self):
         loc = "test.tif"
-        self.map1.window_size = 5
-        self.map2.window_size = 5
-
         self.map1.correlate(self.map2, output_file=loc, window_size=5, overwrite=True)
         t = Map(loc)
         c1 = t[0]

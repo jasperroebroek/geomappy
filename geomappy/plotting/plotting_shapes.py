@@ -170,6 +170,9 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
     elif not isinstance(cmap, Colormap):
         raise TypeError("cmap not recognized")
 
+    if isinstance(values, type(None)):
+        legend=False
+
     geometry, values, markersize = _create_geometry_values_and_sizes(lat=lat, lon=lon, values=values, s=s, df=df)
 
     if not isinstance(bins, type(None)) and len(bins) == 1:
