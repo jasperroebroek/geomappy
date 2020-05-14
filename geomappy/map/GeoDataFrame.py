@@ -8,14 +8,14 @@ from ..plotting import plot_classified_shapes as _plot_classified_shapes
 from ..plotting import basemap as basemap_function
 
 
-def add_method(cls):
+def add_method(*cls):
     """
     Decorator to add functions to existing classes
 
     Parameters
     ----------
     cls
-        class that the function will be added to
+        class or classes that the function that the wrapper is placed around will be added to
 
     Notes
     -----
@@ -25,7 +25,8 @@ def add_method(cls):
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             return func(self, *args, **kwargs)
-        setattr(cls, func.__name__, wrapper)
+        for c in cls:
+            setattr(c, func.__name__, wrapper)
         # Note we are not binding func, but wrapper which accepts self but does exactly the same as func
         return func # returning func means func can still be used normally
     return decorator
@@ -137,18 +138,22 @@ def _plot_combined_shapes(classified, *, df=None, values=None, basemap=False, fi
         return _plot_shapes(df=df, values=values, ax=ax, figsize=figsize, **kwargs)
 
 
-@add_method(gpd.GeoDataFrame)
+@add_method(gpd.GeoDataFrame, gpd.GeoSeries)
 def plot_shapes(self=None, *, ax=None, **kwargs):
     """
     Wrapper around `_plot_shapes`. It redirects to `_plot_combined_shapes` with parameter `classified` = False
     """
     if isinstance(self, type(None)):
         return _plot_shapes(ax=ax, **kwargs)
-    else:
+    elif isinstance(self, gpd.GeoDataFrame):
         return _plot_combined_shapes(classified=False, ax=ax, df=self, **kwargs)
+    elif isinstance(self, gpd.GeoSeries):
+        return _plot_combined_shapes(classified=False, ax=ax, df=gpd.GeoDataFrame(self), **kwargs)
+    else:
+        raise TypeError("This method does not support positional arguments")
 
 
-@add_method(gpd.GeoDataFrame)
+@add_method(gpd.GeoDataFrame, gpd.GeoSeries)
 def plot_classified_shapes(self=None, *, ax=None, **kwargs):
     """
     Wrapper around `_plot_classified_shapes`. It redirects to `_plot_combined_shapes` with parameter
@@ -156,5 +161,9 @@ def plot_classified_shapes(self=None, *, ax=None, **kwargs):
     """
     if isinstance(self, type(None)):
         return _plot_classified_shapes(ax=ax, **kwargs)
-    else:
+    elif isinstance(self, gpd.GeoDataFrame):
         return _plot_combined_shapes(classified=True, ax=ax, df=self, **kwargs)
+    elif isinstance(self, gpd.GeoSeries):
+        return _plot_combined_shapes(classified=True, ax=ax, df=gpd.GeoDataFrame(self), **kwargs)
+    else:
+        raise TypeError("This method does not support positional arguments")
