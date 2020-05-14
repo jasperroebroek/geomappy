@@ -1,14 +1,16 @@
+from copy import copy
+
 import cartopy
-import matplotlib.pyplot as plt
-import numpy as np
-import matplotlib.ticker as mticker
 import cartopy.crs as ccrs
 import cartopy.feature as cf
-from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
+import numpy as np
 import shapely
 import shapely.geometry as sgeom
-from copy import copy
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
+from packaging import version
 
 """
 inspiration source:
@@ -25,18 +27,16 @@ def _clone_geoaxes(ax):
     return ax
 
 
-def basemap_xticks(ax, ticks, precision=0, side='bottom', add=True, fontsize=10):
+def basemap_xticks(ax, ticks, side='bottom', add=True, fontsize=10, formatter=None):
     """
     Calculate and insert xticks on a GeoAxis
 
     Parameters
     ----------
-    ax : geoaxis
-        geoaxis that the xticks need to be inserted in
+    ax : ``GeoAxes``
+        GeoAxes that the xticks need to be inserted in
     ticks : list
         locations of the ticks in PlateCarree coordinates
-    precision : int, optional
-        precision of the coordinates that are displayed. Default is 0.
     side : {"top", "bottom"}
         side of the axes that gets the ticks
     add : bool, optional
@@ -44,6 +44,8 @@ def basemap_xticks(ax, ticks, precision=0, side='bottom', add=True, fontsize=10)
         should have `add` = True
     fontsize : float, optional
         fontsize of the labels
+    formatter : matplotlib.tickformatter, optional
+        The formatter for the labels. The default is the default cartopy LongitudeFormatter
     """
     # tick_extractor (pick the first coordinate)
     te = lambda xy: xy[0]
@@ -54,44 +56,38 @@ def basemap_xticks(ax, ticks, precision=0, side='bottom', add=True, fontsize=10)
     # Insert and format the ticks
     if add:
         ax = _clone_geoaxes(ax)
-        ax.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
+    ax.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
     if side == "top":
         ax.xaxis.tick_top()
-    ax.set_xticks(xticks)
-    xticklabels_formatted = []
-    # Format the labels
-    for label in xticklabels:
-        if int(label) == -180 or int(label) == 180:
-            xticklabels_formatted.append(str(180) + u'\u00B0')
-        elif int(label) == 0:
-            xticklabels_formatted.append(str(0) + u'\u00B0')
-        else:
-            if label < 0:
-                hemisphere = u'\u00B0' + "W"
-            elif label > 0:
-                hemisphere = u'\u00B0' + "E"
-            else:
-                hemisphere = u'\u00B0'
 
-            if precision == 0:
-                xticklabels_formatted.append(str(int(np.abs(np.round(label)))) + hemisphere)
-            else:
-                xticklabels_formatted.append(str(np.abs(np.round(label, precision))) + hemisphere)
+    if isinstance(formatter, type(None)):
+        formatter = LongitudeFormatter()
+
+    if version.parse(cartopy.__version__) < version.parse("0.18"):
+        ax_temp = plt.gcf().add_subplot(projection=ccrs.PlateCarree())
+        ax_temp.set_xticks(xticklabels, crs=ccrs.PlateCarree())
+        ax_temp.xaxis.set_major_formatter(formatter)
+        plt.draw()
+        xticklabels_formatted = [item.get_text() for item in ax_temp.get_xticklabels()]
+        ax_temp.figure.delaxes(ax_temp)
+    else:
+        formatter.set_locs(xticklabels)
+        xticklabels_formatted = [formatter(value) for value in xticklabels]
+
+    ax.set_xticks(xticks)
     ax.set_xticklabels(xticklabels_formatted)
 
 
-def basemap_yticks(ax, ticks, precision=0, side='left', add=True, fontsize=10):
+def basemap_yticks(ax, ticks, side='left', add=True, fontsize=10, formatter=None):
     """
     Calculate and insert yticks on a GeoAxis
 
     Parameters
     ----------
-    ax : geoaxis
-        geoaxis that the yticks need to be inserted in
+    ax : ``GeoAxes``
+        GeoAxes that the yticks need to be inserted in
     ticks : list
         locations of the ticks in PlateCarree coordinates
-    precision : int, optional
-        precision of the coordinates that are displayed. Default is 0.
     side : {"left", "right"}
         side of the axes that gets the ticks
     add : bool, optional
@@ -99,6 +95,8 @@ def basemap_yticks(ax, ticks, precision=0, side='left', add=True, fontsize=10):
         should have 'add' = True
     fontsize : float, optional
         fontsize of the labels
+    formatter : matplotlib.tickformatter, optional
+        The formatter for the labels. The default is the default cartopy LatitudeFormatter
     """
     # tick_extractor (pick the second coordinate)
     te = lambda xy: xy[1]
@@ -107,32 +105,27 @@ def basemap_yticks(ax, ticks, precision=0, side='left', add=True, fontsize=10):
     yticks, yticklabels = _basemap_ticks(ax, ticks, side, lc, te)
 
     # Insert and format the ticks
-    # Insert and format the ticks
     if add:
         ax = _clone_geoaxes(ax)
-        ax.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
+    ax.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
     if side == "right":
         ax.yaxis.tick_right()
-    ax.set_yticks(yticks)
-    yticklabels_formatted = []
-    # Format the labels
-    for label in yticklabels:
-        if int(label) == -90 or int(label) == 90:
-            yticklabels_formatted.append(str(90) + u'\u00B0')
-        elif int(label) == 0:
-            yticklabels_formatted.append(str(0) + u'\u00B0')
-        else:
-            if label < 0:
-                hemisphere = u'\u00B0' + "S"
-            elif label > 0:
-                hemisphere = u'\u00B0' + "N"
-            else:
-                hemisphere = u'\u00B0'
 
-            if precision == 0:
-                yticklabels_formatted.append(str(int(np.abs(np.round(label)))) + hemisphere)
-            else:
-                yticklabels_formatted.append(str(np.abs(np.round(label, precision))) + hemisphere)
+    if isinstance(formatter, type(None)):
+        formatter = LatitudeFormatter()
+
+    if version.parse(cartopy.__version__) < version.parse("0.18"):
+        ax_temp = plt.gcf().add_subplot(projection=ccrs.PlateCarree())
+        ax_temp.set_yticks(yticklabels, crs=ccrs.PlateCarree())
+        ax_temp.yaxis.set_major_formatter(formatter)
+        plt.draw()
+        yticklabels_formatted = [item.get_text() for item in ax_temp.get_yticklabels()]
+        ax_temp.figure.delaxes(ax_temp)
+    else:
+        formatter.set_locs(yticklabels)
+        yticklabels_formatted = [formatter(value) for value in yticklabels]
+
+    ax.set_yticks(yticks)
     ax.set_yticklabels(yticklabels_formatted)
 
 
@@ -204,8 +197,8 @@ class ProjectCustomExtent(ccrs.Projection):
     """
     Creating a custom extent for a given epsg code, if the hardcoded values do not suffice
     """
-    def __init__(self, epsg=28992, extent=[-300000, 500000, -100000, 800000]):
 
+    def __init__(self, epsg=28992, extent=[-300000, 500000, -100000, 800000]):
         xmin, xmax, ymin, ymax = extent
 
         self.xmin = xmin
@@ -217,7 +210,6 @@ class ProjectCustomExtent(ccrs.Projection):
 
     @property
     def boundary(self):
-
         coords = ((self.x_limits[0], self.y_limits[0]),
                   (self.x_limits[0], self.y_limits[1]),
                   (self.x_limits[1], self.y_limits[1]),
@@ -245,22 +237,17 @@ class ProjectCustomExtent(ccrs.Projection):
 
 
 def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None, figsize=(10, 10), resolution="110m",
-            coastlines=True, earth_image=False, land=False, ocean=False, xticks=30, yticks=30, grid=True, precision=0,
-            n_steps=300, linewidth=1, grid_linewidth=None, border_linewidth=None, coastline_linewidth=None,
-            grid_alpha=0.5, fontsize=10):
+            coastlines=True, earth_image=False, land=False, ocean=False, xticks=30, yticks=30, xtick_formatter=None,
+            ytick_formatter=None, labels=True, xlabel_location="bottom", ylabel_location="left", grid=True, xlines=None,
+            ylines=None, grid_color="grey", grid_linestyle="--", grid_alpha=0.5, grid_linewidth=None,
+            border_linewidth=None, coastline_linewidth=None, linewidth=1, n_steps=300, fontsize=10):
     """
     Parameters
     ----------
-    x0 : float, optional
-        most western latitude
-    x1 : float, optional
-        most eastern latitude
-    y0 : float, optional
-        most southern longitude
-    y1 : float, optional
-        most northern longitude
+    x0, x1, y0, y1 : float, optional
+        Latitude and Longitude of the corners
     epsg : int or str, optional
-        EPSG code of the geoaxes
+        EPSG code of the GeoAxes
     projection : `ccrs.projection`
         cartopy projection object. If provided it overwrites the epsg code.
     ax : `plt.axes` or GeoAxes
@@ -275,21 +262,37 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
     earth_image : bool, optional
         plot a background on the map, the default is False
     land : bool, optional
-        switch to color the landmass lightgrey
+        Switch to color the landmass. The default color is lightgrey, but a color might be used here that overwrites
+        that default.
     ocean : bool, optional
-        switch to color the ocean lightblue
-    xticks : float or list, optional
-        parameter that describes the distance between two gridlines in PlateCarree coordinate terms. The default 30
-        means that every 30 degrees a gridline gets drawn. If a list is passed, the procedure is skipped and the
-        coordinates in the list are used.
-    yticks : float or list, optional
-        parameter that describes the distance between two gridlines in PlateCarree coordinate terms. The default 30
-        means that every 30 degrees a gridline gets drawn. If a list is passed, the procedure is skipped and the
-        coordinates in the list are used.
+        Switch to color the ocean. The default color is lightblue, but a color might be used here that overwrites
+        that default.
+    xticks, yticks : float or list, optional
+        Parameter that describes the distance between two xticks in PlateCarree coordinate terms. The default 30
+        means that every 30 degrees a labels gets drawn. If a list is passed, the procedure is skipped and the
+        coordinates in the list are used. These parameters are used for the labels and gridlines are set to the same
+        rules if xlines/ylines are not provided.
+    xtick_formatter, ytick_formatter : matplotlib.formatter, optional
+        Latitude and Longitude formatters. Using the the cartopy one as default.
+    labels : bool, optional
+        Switch to draw labels
+    xlabel_location : {"bottom", "top", "both"}, optional
+        Location of the xlabels
+    ylabel_location : {"left", "right", "both"}, optional
+        Location of the ylabels
     grid : bool, optional
-        switch for gridlines and ticks
-    precision : int, optional
-        the numerical precision of the labels
+        Switch for gridlines
+    xlines, ylines : float or list, optional
+        Parameter that describes the distance between two gridlines in PlateCarree coordinate terms. The default 30
+        means that every 30 degrees a line gets drawn. If a list is passed, the procedure is skipped and the
+        coordinates in the list are used. These parameters are used for the gridlines only, for the labels see xticks
+        and yticks. If these parameters are not set xticks and yticks will be used instead.
+    grid_color : color, optional
+        Color of the gridlines, the default is grey
+    grid_linestyle : str, optional
+        matplotlib linestyle for the gridlines.
+    grid_alpha : float, optional
+        opacity of the gridlines
     grid_linewidth : float, optional
         linewidth specifier for gridlines. If not specified, the value will be taken from 'linewidth'.
     border_linewidth : float, optional
@@ -301,15 +304,20 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
         the others are not specifically specified.
     n_steps : int, optional
         the number of discrete steps when plotting the gridlines. For circular gridlines this can be too low.
-    grid_alpha : float, optional
-        opacity of the gridlines
     fontsize : float, optional
         label fontsize
 
     Returns
     -------
     Cartopy geoaxis
-    
+
+    Notes
+    -----
+    # Labels on projections that are not a rectangle, when plotted, are not handled in this function. This needs to be
+      done outside the function and needs a cartopy version over 0.18.
+    # Labels are not checked for overlap, so if they do you need to specify the exact labels that you want
+    # If you are plotting a very small area and xticks and yticks are very small, it can take a long time to do,
+      in which case it might be beneficial to put the labels yourself.
     """
     if isinstance(projection, type(None)):
         if isinstance(epsg, type(None)):
@@ -330,6 +338,7 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
         ax.figure.delaxes(ax)
         ax = plt.gcf().add_subplot(position=position, projection=projection)
 
+    # Set extent
     extent = list(ax.get_extent(crs=ccrs.PlateCarree()))
     if extent[0] < x0:
         extent[0] = x0
@@ -339,7 +348,6 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
         extent[2] = y0
     if extent[3] > y1:
         extent[3] = y1
-
     ax.set_extent(extent, crs=ccrs.PlateCarree())
 
     if not isinstance(linewidth, (float, int)):
@@ -356,62 +364,128 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
 
     if earth_image:
         ax.stock_img()
-    if land:
-        ax.add_feature(cf.LAND, color="lightgrey")
-    if ocean:
-        ax.add_feature(cf.OCEAN, color="lightblue")
+    if isinstance(land, bool) and land == True:
+        if isinstance(land, bool):
+            land = 'lightgrey'
+        ax.add_feature(cf.LAND, color=land)
+    if isinstance(ocean, bool) and ocean == True:
+        if isinstance(ocean, bool):
+            ocean = 'lightblue'
+        ax.add_feature(cf.OCEAN, color=ocean)
 
+    # Determine ticks and gridlines
     if isinstance(xticks, (float, int)):
         xtick_locations = np.linspace(-180, 180, int(360 / xticks + 1))
     else:
-        xtick_locations = xticks
+        xtick_locations = np.array(xticks)
+    
+    if isinstance(xlines, type(None)):
+        if len(xtick_locations) == 0:
+            xline_locations = [-180,180]
+        else:
+            xline_locations = xtick_locations
+    elif isinstance(xlines, (float, int)):
+        xline_locations = np.linspace(-180, 180, int(360 / xlines + 1))
+    else:
+        xline_locations = xlines
 
     if isinstance(yticks, (float, int)):
         ytick_locations = np.linspace(-90, 90, int(180 / yticks + 1))
     else:
-        ytick_locations = yticks
+        ytick_locations = np.array(yticks)
+        
+    if isinstance(ylines, type(None)):
+        if len(ytick_locations) == 0:
+            yline_locations = [-90, 90]
+        else:
+            yline_locations = ytick_locations
+    elif isinstance(ylines, (float, int)):
+        yline_locations = np.linspace(-180, 180, int(360 / ylines + 1))
+    else:
+        yline_locations = ylines
 
+    # Draw grid
     if grid:
-        if isinstance(ax.projection, ccrs.PlateCarree):
-            g = ax.gridlines(draw_labels=False, color="gray", linestyle="--", crs=ccrs.PlateCarree(),
-                             linewidth=grid_linewidth, alpha=grid_alpha)
-            g.xlocator = mticker.FixedLocator(xtick_locations)
-            g.ylocator = mticker.FixedLocator(ytick_locations)
-            g.n_steps = 30
+        g = ax.gridlines(draw_labels=False, color=grid_color, linestyle=grid_linestyle, crs=ccrs.PlateCarree(),
+                         linewidth=grid_linewidth, alpha=grid_alpha)
+        g.xlocator = mticker.FixedLocator(xline_locations)
+        g.ylocator = mticker.FixedLocator(yline_locations)
+        g.n_steps = n_steps
 
-            ax.set_xticks(xtick_locations, crs=ccrs.PlateCarree())
-            ax.xaxis.set_major_formatter(LongitudeFormatter())
-            ax.set_yticks(ytick_locations, crs=ccrs.PlateCarree())
-            ax.yaxis.set_major_formatter(LatitudeFormatter())
+    # Determine label locations
+    xlabels_top = (xlabel_location == "top" or xlabel_location == "both")
+    xlabels_bottom = (xlabel_location == "bottom" or xlabel_location == "both")
+    ylabels_left = (ylabel_location == "left" or ylabel_location == "both")
+    ylabels_right = (ylabel_location == "right" or ylabel_location == "both")
 
-        elif isinstance(ax.projection, ccrs.Mercator):
-            # todo; figure out how to display the 90 degree mercator marks
-            g = ax.gridlines(draw_labels=True, color="gray", linestyle="--", crs=ccrs.PlateCarree(),
-                             linewidth=grid_linewidth, alpha=grid_alpha)
-            g.xlocator = mticker.FixedLocator(xtick_locations)
-            g.ylocator = mticker.FixedLocator(ytick_locations)
-            g.n_steps = 30
+    if labels:
+        if isinstance(xtick_formatter, type(None)):
+            xtick_formatter = LongitudeFormatter()
+        if isinstance(ytick_formatter, type(None)):
+            ytick_formatter = LatitudeFormatter()
 
-            g.xlabels_top = False
-            g.ylabels_right = False
+        if isinstance(ax.projection, ccrs.Mercator):
+            g = ax.gridlines(draw_labels=True, color=grid_color, linestyle=grid_linestyle, crs=ccrs.PlateCarree(),
+                             linewidth=grid_linewidth, alpha=0)
+            g.xlabels_top = xlabels_top
+            g.xlabels_bottom = xlabels_bottom
+            g.ylabels_left = ylabels_left
+            g.ylabels_right = ylabels_right
+
             g.xlocator = mticker.FixedLocator(xtick_locations)
             g.ylocator = mticker.FixedLocator(ytick_locations)
             g.xformatter = LONGITUDE_FORMATTER
             g.yformatter = LATITUDE_FORMATTER
 
-        else:
-            g = ax.gridlines(draw_labels=False, color="gray", linestyle="--", crs=ccrs.PlateCarree(),
-                             linewidth=grid_linewidth, alpha=grid_alpha)
-            g.xlocator = mticker.FixedLocator(xtick_locations)
-            g.ylocator = mticker.FixedLocator(ytick_locations)
-            g.n_steps = n_steps
+        elif isinstance(ax.projection, ccrs.PlateCarree):
+            xtick_locations = xtick_locations[np.logical_and(xtick_locations >= x0, xtick_locations <= x1)]
+            ytick_locations = ytick_locations[np.logical_and(ytick_locations >= y0, ytick_locations <= y1)]
 
-            basemap_xticks(ax, list(xtick_locations), add=False, precision=precision)
-            basemap_yticks(ax, list(ytick_locations), add=False, precision=precision)
+            if xlabel_location == "bottom":
+                ax.set_xticks(xtick_locations, crs=ccrs.PlateCarree())
+                ax.xaxis.set_major_formatter(xtick_formatter)
+            elif xlabel_location == "top":
+                ax.xaxis.tick_top()
+                ax.set_xticks(xtick_locations, crs=ccrs.PlateCarree())
+                ax.xaxis.set_major_formatter(xtick_formatter)
+            else:
+                ax.set_xticks(xtick_locations, crs=ccrs.PlateCarree())
+                ax.xaxis.set_major_formatter(xtick_formatter)
+                ax_new = _clone_geoaxes(ax)
+                ax_new.xaxis.tick_top()
+                ax_new.set_xticks(xtick_locations, crs=ccrs.PlateCarree())
+                ax_new.xaxis.set_major_formatter(xtick_formatter)
+
+            if ylabel_location == "left":
+                ax.set_yticks(ytick_locations, crs=ccrs.PlateCarree())
+                ax.yaxis.set_major_formatter(ytick_formatter)
+            elif ylabel_location == "right":
+                ax.yaxis.tick_right()
+                ax.set_yticks(ytick_locations, crs=ccrs.PlateCarree())
+                ax.yaxis.set_major_formatter(ytick_formatter)
+            else:
+                ax.set_yticks(ytick_locations, crs=ccrs.PlateCarree())
+                ax.yaxis.set_major_formatter(ytick_formatter)
+                ax_new = _clone_geoaxes(ax)
+                ax_new.yaxis.tick_top()
+                ax_new.set_yticks(ytick_locations, crs=ccrs.PlateCarree())
+                ax_new.yaxis.set_major_formatter(ytick_formatter)
+
+        else:
+            if len(xtick_locations) > 0:
+                if xlabels_bottom:
+                    basemap_xticks(ax, list(xtick_locations), add=False, side='bottom', formatter=xtick_formatter)
+                if xlabels_top:
+                    basemap_xticks(ax, list(xtick_locations), add=True, side='top', formatter=xtick_formatter)
+
+            if len(ytick_locations) > 0:
+                if ylabels_left:
+                    basemap_yticks(ax, list(ytick_locations), add=False, side='left', formatter=ytick_formatter)
+                if ylabels_right:
+                    basemap_yticks(ax, list(ytick_locations), add=True, side='right', formatter=ytick_formatter)
 
     ax.outline_patch.set_linewidth(border_linewidth)
     ax.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
-    ax.set_extent(extent, crs=ccrs.PlateCarree())
 
     return ax
 
@@ -422,6 +496,7 @@ if __name__ == "__main__":
     plt.show()
 
     basemap(x0=0)
+    plt.tight_layout()
     plt.show()
 
     basemap(epsg=3857)
@@ -444,14 +519,12 @@ if __name__ == "__main__":
     plt.show()
 
     # Add labels on four axes
-    ax = basemap(epsg=5643, resolution="10m", grid=True, xticks=2, yticks=2)
-    basemap_xticks(ax, list(np.linspace(-180, 180, (360 // 2 + 1))), side="top")
-    basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 2 + 1))), side="right")
+    ax = basemap(epsg=5643, resolution="10m", grid=True, xticks=2, yticks=2, xlabel_location='both',
+                 ylabel_location='both')
     plt.show()
 
     # Add labels on three axes
-    ax = basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5)
-    basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 5 + 1))), side="right")
+    ax = basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5, ylabel_location='both')
     plt.show()
 
     # Changing fontsize
@@ -460,7 +533,5 @@ if __name__ == "__main__":
     plt.show()
 
     # Smaller extent and labels on both sides
-    ax = basemap(x0=0, epsg=3035, resolution="10m", grid=True, xticks=5, yticks=10)
-    basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 5 + 1))), side="right")
-    plt.tight_layout()
+    ax = basemap(x0=0, epsg=3035, resolution="10m", grid=True, xticks=5, yticks=10, ylabel_location="both")
     plt.show()
