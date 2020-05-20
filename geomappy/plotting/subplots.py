@@ -24,7 +24,7 @@ def subplots(n=1, **kwargs):
     ax : list of :obj:`~matplotlib.axes.Axes`
         flat list of axes that can be looped over
     """
-    if "figsize" not in kwargs.keys():
+    if "figsize" not in kwargs:
         kwargs["figsize"] = (10, 10)
 
     if not isinstance(n, (list, tuple, int)):

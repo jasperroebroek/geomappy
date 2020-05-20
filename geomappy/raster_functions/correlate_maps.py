@@ -79,7 +79,7 @@ def _correlate_maps_reduce(map1, map2, window_size=5, fraction_accepted=0.7, red
                 continue
 
             if np.all(d1 == d1[0]) or np.all(d2 == d2[0]):
-                corr[i // window_size, j // window_size]
+                corr[i // window_size, j // window_size] = 0
                 continue
 
             d1_mean = d1.mean()

@@ -139,8 +139,7 @@ def cmap_2d(shape=(1000, 1000), v=None, alpha=0, plotting=False, diverging=False
         corner_colors = to_rgba_array(v)
     cmap = np.empty((*shape, 3))
     for i in range(3):
-        cmap[:, :, i] = grid_from_corners(corner_colors[:, i], shape=shape,
-                                          plotting=False)
+        cmap[:, :, i] = grid_from_corners(corner_colors[:, i], shape=shape)
     if diverging:
         x, y = np.mgrid[-1:1:shape[0] * 1j, -1:1:shape[1] * 1j]
         cmap += (-diverging_alpha * x ** 2 / 2 + -diverging_alpha * y ** 2 / 2 + diverging_alpha)[:, :, np.newaxis]
@@ -298,15 +297,16 @@ def cmap_random(n, color_type='pastel', first_color=None, last_color=None, retur
         return randRGBcolors
 
 
-def legend_patches(colors, labels, type='patch', **kwargs):
+def legend_patches(colors, labels, type='patch', edgecolor="lightgrey", **kwargs):
     if len(colors) != len(labels):
         raise IndexError("Length of labels and colors don't match")
 
     if type == 'patch':
-        return [Patch(facecolor=color, label=label, **kwargs)
+        return [Patch(facecolor=color, label=label, edgecolor=edgecolor, **kwargs)
                 for color, label in zip(colors, labels)]
     else:
-        return [Line2D([0], [0], color=color, label=label, linestyle=type, **kwargs)
+        return [Line2D([0], [0], markerfacecolor=color, label=label, linestyle=type, markeredgecolor=edgecolor,
+                       **kwargs)
                 for color, label in zip(colors, labels)]
 
 

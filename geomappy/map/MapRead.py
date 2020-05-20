@@ -560,8 +560,12 @@ class MapRead(MapBase):
 
         if isinstance(bounds, type(None)):
             bounds = bounds_to_platecarree(self._data_proj, extent)
+            set_bounds = False
         elif bounds == "global":
             bounds = [-180, -90, 180, 90]
+            set_bounds = True
+        else:
+            set_bounds = True
 
         if not classified and isinstance(layers, int) and log:
             data = np.log(data)
@@ -595,10 +599,11 @@ class MapRead(MapBase):
             ax = basemap_function(*bounds, ax=ax, epsg=plot_epsg, figsize=figsize, **basemap_kwargs)
             kwargs.update({'transform': transform, 'extent': (extent[0], extent[2], extent[1], extent[3])})
 
-            if plot_epsg == self.epsg:
-                ax.set_extent((extent[0], extent[2], extent[1], extent[3]), crs=self._transform)
-            elif plot_epsg == 4326 and isinstance(ind, (list, tuple)) and not isinstance(ind, rio.coords.BoundingBox):
-                ax.set_extent((ind[0], ind[2], ind[1], ind[3]))
+            if not set_bounds:
+                if plot_epsg == self.epsg:
+                    ax.set_extent((extent[0], extent[2], extent[1], extent[3]), crs=self._transform)
+                elif plot_epsg == 4326 and isinstance(ind, (list, tuple)) and not isinstance(ind, rio.coords.BoundingBox):
+                    ax.set_extent((ind[0], ind[2], ind[1], ind[3]))
 
         if classified:
             return plot_classified_map(data, ax=ax, figsize=figsize, **kwargs)

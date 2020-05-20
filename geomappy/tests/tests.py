@@ -63,37 +63,40 @@ def correlate_maps_simple(map1, map2, window_size=5, fraction_accepted=0.7):
 
 class TestRollingSum(unittest.TestCase):
     def test_1D(self):
+        np.random.seed(0)
         a = np.random.rand(100)
         self.assertTrue(np.allclose(rolling_sum(a, 3), rolling_window(a, 3).sum(axis=1)))
         self.assertTrue(np.allclose(rolling_sum(a, 9), rolling_window(a, 9).sum(axis=1)))
 
     def test_2D(self):
+        np.random.seed(0)
         a = np.random.rand(20, 20)
         self.assertTrue(np.allclose(rolling_sum(a, 3), rolling_window(a, 3).sum(axis=(2, 3))))
         self.assertTrue(np.allclose(rolling_sum(a, 9), rolling_window(a, 9).sum(axis=(2, 3))))
 
     def test_3D(self):
+        np.random.seed(0)
         a = np.random.rand(15, 15, 15)
         self.assertTrue(np.allclose(rolling_sum(a, 3), rolling_window(a, 3).sum(axis=(3, 4, 5))))
         self.assertTrue(np.allclose(rolling_sum(a, 9), rolling_window(a, 9).sum(axis=(3, 4, 5))))
 
     def test_4D(self):
+        np.random.seed(0)
         a = np.random.rand(12, 12, 12, 12)
         self.assertTrue(np.allclose(rolling_sum(a, 3), rolling_window(a, 3).sum(axis=(4, 5, 6, 7))))
         self.assertTrue(np.allclose(rolling_sum(a, 9), rolling_window(a, 9).sum(axis=(4, 5, 6, 7))))
 
     def test_5D(self):
+        np.random.seed(0)
         a = np.random.rand(10, 10, 10, 10, 10)
         self.assertTrue(np.allclose(rolling_sum(a, 3), rolling_window(a, 3).sum(axis=(5, 6, 7, 8, 9))))
 
     def test_reduce(self):
+        np.random.seed(0)
         a = np.random.rand(5, 5)
         self.assertTrue(rolling_sum(a, window_size=5, reduce=True), a.sum())
 
     def test_assumptions(self):
-        with self.assertRaises(ValueError):
-            # uneven window_size should raise a ValueError
-            rolling_sum(np.array([1, 2, 3]), 4)
         with self.assertRaises(ValueError):
             # window_size bigger than dimensions of array should raise ValueError
             rolling_sum(np.array([1, 2, 3]), 5)
@@ -102,6 +105,7 @@ class TestRollingSum(unittest.TestCase):
 class TestCorrelateMapsNumba(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestCorrelateMapsNumba, self).__init__(*args, **kwargs)
+        np.random.seed(0)
         self.map1 = np.random.rand(20, 20)
         self.map2 = np.random.rand(20, 20)
 
@@ -150,6 +154,7 @@ class TestCorrelateMapsNumba(unittest.TestCase):
 
     def test_correlation_value(self):
         # test the value of the correlation against scipys implementation
+        np.random.seed(0)
         c1 = np.random.rand(5, 5)
         c2 = np.random.rand(5, 5)
         self.assertTrue(np.allclose(pearsonr(c1.flatten(), c2.flatten())[0],
@@ -170,6 +175,7 @@ class TestCorrelateMapsNumba(unittest.TestCase):
 class TestCorrelateMapsNumpy(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestCorrelateMapsNumpy, self).__init__(*args, **kwargs)
+        np.random.seed(0)
         self.map1 = np.random.rand(20, 20)
         self.map2 = np.random.rand(20, 20)
 
@@ -216,6 +222,7 @@ class TestCorrelateMapsNumpy(unittest.TestCase):
 
     def test_correlation_value(self):
         # test the value of the correlation against scipys implementation
+        np.random.seed(0)
         c1 = np.random.rand(5, 5)
         c2 = np.random.rand(5, 5)
         self.assertTrue(np.allclose(pearsonr(c1.flatten(), c2.flatten())[0],
@@ -257,16 +264,19 @@ class TestRollingWindow(unittest.TestCase):
 
 class TestFocalStatistics(unittest.TestCase):
     def test_focalmean(self):
+        np.random.seed(0)
         a = np.random.rand(100, 100)
         self.assertTrue(np.allclose(rolling_window(a, 3).mean(axis=(2, 3)),
                                     focal_statistics(a, window_size=3, func="mean")[1:-1, 1:-1]))
 
     def test_focalmean_reduce(self):
+        np.random.seed(0)
         a = np.random.rand(100, 100)
         self.assertTrue(np.allclose(rolling_window(a, 5, reduce=True).mean(axis=(2, 3)),
                                     focal_statistics(a, window_size=5, func="mean", reduce=True)))
 
     def test_focalmean_reduce_fraction_accepted_0(self):
+        np.random.seed(0)
         a = np.full((5, 5), np.nan)
         # return nan when nothing is present
         self.assertTrue(np.allclose(focal_statistics(a, window_size=5, func="mean", reduce=True, fraction_accepted=0)
@@ -278,6 +288,7 @@ class TestFocalStatistics(unittest.TestCase):
                                     , np.nanmean(rolling_window(a, 5, reduce=True))))
 
     def test_focalmean_reduce_fraction_accepted_1(self):
+        np.random.seed(0)
         a = np.random.rand(5, 5)
         # return value when all values are present
         self.assertTrue(np.allclose(focal_statistics(a, window_size=5, func="mean", reduce=True, fraction_accepted=1)
@@ -289,50 +300,59 @@ class TestFocalStatistics(unittest.TestCase):
                                     , np.array([[np.nan]]), equal_nan=True))
 
     def test_focalstd_df_0(self):
+        np.random.seed(0)
         a = np.random.rand(100, 100)
         self.assertTrue(np.allclose(rolling_window(a, 3).std(axis=(2, 3)),
                                     focal_statistics(a, window_size=3, func="std", std_df=0)[1:-1, 1:-1]))
 
     def test_focalstd_df_1(self):
+        np.random.seed(0)
         a = np.random.rand(100, 100)
         self.assertTrue(np.allclose(rolling_window(a, 3).std(axis=(2, 3), ddof=1),
                                     focal_statistics(a, window_size=3, func="std", std_df=1)[1:-1, 1:-1]))
 
     def test_focalmin(self):
+        np.random.seed(0)
         a = np.random.rand(100, 100)
         self.assertTrue(np.allclose(rolling_window(a, 3).min(axis=(2, 3)),
                                     focal_statistics(a, window_size=3, func="min")[1:-1, 1:-1]))
 
     def test_focalnanmin(self):
+        np.random.seed(0)
         a = np.random.rand(5, 5)
         min = a.min()
         a[1, 1] = np.nan
         self.assertTrue(focal_statistics(a, window_size=5, func="min")[2, 2] == min)
 
     def test_focalnanmin_reduce(self):
+        np.random.seed(0)
         a = np.random.rand(5, 5)
         min = a.min()
         a[1, 1] = np.nan
         self.assertTrue(focal_statistics(a, window_size=5, func="min", reduce=True) == min)
 
     def test_focalmax(self):
+        np.random.seed(0)
         a = np.random.rand(100, 100)
         self.assertTrue(np.allclose(rolling_window(a, 3).max(axis=(2, 3)),
                                     focal_statistics(a, window_size=3, func="max")[1:-1, 1:-1]))
 
     def test_focalnanmax(self):
+        np.random.seed(0)
         a = np.random.rand(5, 5)
         max = a.max()
         a[1, 1] = np.nan
         self.assertTrue(focal_statistics(a, window_size=5, func="max")[2, 2] == max)
 
     def test_focalnanmax_reduce(self):
+        np.random.seed(0)
         a = np.random.rand(5, 5)
         max = a.max()
         a[1, 1] = np.nan
         self.assertTrue(focal_statistics(a, window_size=5, func="max", reduce=True) == max)
 
     def test_errors(self):
+        np.random.seed(0)
         a = np.random.rand(100, 100)
         with self.assertRaises(IndexError):
             focal_statistics(a, window_size=101, func="max")
