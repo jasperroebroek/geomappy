@@ -4,9 +4,11 @@
 import os
 
 import cartopy.crs as ccrs
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import rasterio as rio
+from pyproj import Proj, transform
 from shapely.geometry import Point, Polygon
 
 from geomappy.plotting import basemap as basemap_function
@@ -97,8 +99,7 @@ class MapRead(MapBase):
         
         Returns
         -------
-        numpy array of shape self.get_shape()
-        
+        numpy.ndarray of shape self.get_shape()
         """
         ind = self.get_pointer(ind)
 
@@ -131,78 +132,55 @@ class MapRead(MapBase):
 
     values = property(get_file_data)
 
-    def sample_raster(self, points):
+    def sample_raster(self, points, layers=None):
         """
-        Function to sample the raster at a list of given points
+        Sample the raster at points
 
         Parameters
         ----------
-        points 
-            1: [list]
-                list of tuples with longitude and latitude
-            2: [DataFrame]
-                must contain a Lon and Lat column
-            
+        points : list or GeoDataFrame
+            Either list of tuples with Lat/Lon values or a GeoDataFrame with points. If polygons are present in the
+            GeoDataFrame the centroid will be used to obtain the values.
+        layers : int or list, optional
+            The number of the layer required or a list of layers (which might contain duplicates if needed).
+            The default is None, which will use all layers.
+
         Returns
         -------
-        list of values in the same order as the points were given
-        
-        Raises
-        ------
-        TypeError
-            1: wrong type of parameter passed to plotting
-            2: points not a list of lists or pandas dataframe
-        ValueError
-            1: single points don't have exactly two coordinates
-            2: longitude out of bounds
-            3: latitude out of bounds
+        (GeoSeries, array)
+            points in the georefence system of the data and array with values
         """
-        # todo; evaluate this function
-        # todo; integrate with geopandas
-        # todo; 3D
-        # todo; outside bounds
-
         # Create a Polygon of the area that can be sampled
         bounds = self.get_file_bounds()
         box_x = [bounds[0], bounds[2], bounds[2], bounds[0]]
         box_y = [bounds[3], bounds[3], bounds[1], bounds[1]]
         bounding_box = Polygon(zip(box_x, box_y))
+        outline = gpd.GeoDataFrame(geometry=[bounding_box])
+        outline.crs = self._data_proj.definition_string()
+        outline = outline.to_crs({'init': 'epsg:4326'})
 
-        # store the sampled values
-        sampled_values = []
-        # store the shapely Points
-        points_geometry = []
+        if not isinstance(points, (gpd.GeoSeries, gpd.GeoDataFrame)):
+            if not isinstance(points, (tuple, list)):
+                raise TypeError("points should either be a GeoDataFrame or a list of tuples")
+            points = gpd.GeoDataFrame(geometry=[Point(point[0], point[1]) for point in points],
+                                      crs={'init': 'epsg:4326'})
 
-        if type(points) == pd.DataFrame:
-            points = points.apply(lambda x: (x.Lon, x.Lat), axis=1).to_list()
+        points = points.loc[points.geometry.apply(lambda x: outline.contains(x)).values, :]\
+            .to_crs(self._data_proj.definition_string())
 
-        if type(points) not in (list, tuple):
-            raise TypeError("Points can only be passed as a list or dataframe")
-        else:
-            if type(points[0]) not in (list, tuple):
-                raise TypeError("Points is not perceived as a list of lists")
+        geom_types = points.geometry.type
+        point_idx = np.asarray((geom_types == "Point"))
+        points.loc[~point_idx, 'geometry'] = points.loc[~point_idx, 'geometry'].centroid
 
-        for point in points:
-            if len(point) != 2:
-                raise ValueError(f"point doesn't have two coordinates: {point}")
-            if point[0] < -180 or point[0] > 180:
-                raise ValueError(f"Longitude out of range: {point[0]}")
-            if point[1] < -90 or point[1] > 90:
-                raise ValueError(f"Latitude out of range: {point[1]}")
+        if points.empty:
+            raise IndexError("Geometries are all outside the bounds")
 
-            # create shapely Point
-            points_geometry.append(Point(point[0], point[1]))
-            # check if point is inside the bounds of the file
-            if bounding_box.contains(points_geometry[-1]):
-                # add value to store
-                sampled_values.append(list(self._file.sample([point]))[0][0])
-            else:
-                # add NaN to store
-                sampled_values.append(np.nan)
+        sampling_points = points.geometry.apply(lambda x: (x.x, x.y)).values.tolist()
+        values = self._file.sample(sampling_points, indexes=layers)
 
-        return sampled_values
+        return points.geometry, np.array([x for x in values])
 
-    def cross_profile(self, c1, c2, n=100):
+    def cross_profile(self, c1, c2, n=100, layers=1):
         """
         Routine to create a cross profile, based on self.sample_raster
 
@@ -212,9 +190,12 @@ class MapRead(MapBase):
             Location of the start and end of the cross profile (Lat, Lon)
         n : int, optional
             Number of sampling points
+        layers : int or list, optional
+            The number of the layer required or a list of layers (which might contain duplicates if needed).
+            The default is None, which will use all layers.
         """
         points = np.linspace(c1, c2, num=n).tolist()
-        return np.array(self.sample_raster(points=points))
+        return self.sample_raster(points=points, layers=layers)
 
     def _focal_stat_iter(self, output_file=None, ind=None, layers=1, *, func=None, overwrite=False, compress=False,
                          p_bar=True, verbose=False, reduce=False, window_size=None, dtype=None, majority_mode="nan",

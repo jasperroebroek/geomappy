@@ -206,7 +206,7 @@ class PlotShapes(Plot):
                                   markersize=markersize, linewidth=linewidth, **kwargs)
 
     def _draw(self, geometry, markersize, linewidth):
-        """Sets the colors that will be passed on to `_plot_geometries`"""
+        """Sets the colors that will be passed on to `PlotShapes._plot_geometries`"""
         values = self.params.values
         colors = pd.Series(self.params.cmap(self.params.norm(values)).tolist())
         colors[np.isnan(values)] = self.params._nan_color

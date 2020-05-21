@@ -79,16 +79,14 @@ def _plot_combined_shapes(classified, *, df=None, values=None, basemap=False, fi
     Returns
     -------
     (:obj:`~matplotlib.axes.Axes` or GeoAxis, legend)
+
+    Notes
+    -----
+    To have a more fine-grained control over the projections of the both the data and the plot a cartopy transform
+    object can be passed to kwargs (data, as `transform`) and basemap_kwargs (plot, as `projection`).
     """
     if isinstance(df, type(None)):
         raise TypeError("Internal error: df not received")
-
-    if isinstance(bounds, type(None)):
-        extent = df.total_bounds.tolist()
-    elif bounds == 'global':
-        extent = [-180, -90, 180, 90]
-    else:
-        extent = bounds
 
     if not classified and log and not isinstance(values, type(None)):
         if isinstance(values, str):
@@ -115,11 +113,11 @@ def _plot_combined_shapes(classified, *, df=None, values=None, basemap=False, fi
 
         if isinstance(data_epsg, type(None)):
             crs = df.crs
-            if "init" in crs and 'epsg' in crs['init']:
-                init = crs['init']
-                data_epsg = int(init[init.find(":") + 1:])
-            else:
-                raise ValueError("EPSG code was not found in the DataFrame crs object, please pass directly")
+            if isinstance(crs, type(None)):
+                raise ValueError("CRS could not be obtained from the GeoDataFrame, please pass an EPSG code to"
+                                 " `data_epsg` or ")
+            df = df.to_crs({'init': 'epsg:4326'})
+            data_epsg = 4326
 
         if isinstance(plot_epsg, type(None)):
             plot_epsg = data_epsg
@@ -129,8 +127,16 @@ def _plot_combined_shapes(classified, *, df=None, values=None, basemap=False, fi
         else:
             transform = ccrs.epsg(data_epsg)
 
+        if isinstance(bounds, type(None)):
+            extent = df.total_bounds.tolist()
+        elif bounds == 'global':
+            extent = [-180, -90, 180, 90]
+        else:
+            extent = bounds
+
         ax = basemap_function(*extent, ax=ax, epsg=plot_epsg, figsize=figsize, **basemap_kwargs)
-        kwargs.update({'transform': transform})
+        if 'transform' not in kwargs:
+            kwargs.update({'transform': transform})
 
     if classified:
         return _plot_classified_shapes(df=df, values=values, ax=ax, figsize=figsize, **kwargs)
@@ -148,7 +154,7 @@ def plot_shapes(self=None, *, ax=None, **kwargs):
     elif isinstance(self, gpd.GeoDataFrame):
         return _plot_combined_shapes(classified=False, ax=ax, df=self, **kwargs)
     elif isinstance(self, gpd.GeoSeries):
-        return _plot_combined_shapes(classified=False, ax=ax, df=gpd.GeoDataFrame(self), **kwargs)
+        return _plot_combined_shapes(classified=False, ax=ax, df=gpd.GeoDataFrame(self, crs=self.crs), **kwargs)
     else:
         raise TypeError("This method does not support positional arguments")
 
@@ -157,13 +163,13 @@ def plot_shapes(self=None, *, ax=None, **kwargs):
 def plot_classified_shapes(self=None, *, ax=None, **kwargs):
     """
     Wrapper around `_plot_classified_shapes`. It redirects to `_plot_combined_shapes` with parameter
-    `classified` = False
+    `classified` = True
     """
     if isinstance(self, type(None)):
         return _plot_classified_shapes(ax=ax, **kwargs)
     elif isinstance(self, gpd.GeoDataFrame):
         return _plot_combined_shapes(classified=True, ax=ax, df=self, **kwargs)
     elif isinstance(self, gpd.GeoSeries):
-        return _plot_combined_shapes(classified=True, ax=ax, df=gpd.GeoDataFrame(self), **kwargs)
+        return _plot_combined_shapes(classified=True, ax=ax, df=gpd.GeoDataFrame(self, crs=self.crs), **kwargs)
     else:
         raise TypeError("This method does not support positional arguments")
