@@ -4,6 +4,7 @@ __pycache__/
 code_base_expansion/
 scratch/
 data/
+examples/geomappy
 
 .DS_Store
 thesis.py
