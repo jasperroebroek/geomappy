@@ -81,10 +81,7 @@ class Map:
         """
         returning tile settings for all open maps
         """
-        l = {}
-        for m in MapBase.collector:
-            l.update({m.location: m.tiles})
-        return l
+        return {m.location: m.tiles for m in MapBase.collector}
 
     @staticmethod
     def set_tiles(tiles):
@@ -96,23 +93,15 @@ class Map:
         tiles : int or tuple
             Parameter for setting the MapBase.tiles property
         """
-        l = []
         for m in MapBase.collector:
             m.tiles = tiles
-            l.append(m.tiles)
-        l = np.array(l)
-        if ~np.all(l == l[0, :]):
-            warnings.warn("Not all tiles are set equal")
 
     @staticmethod
     def get_window_size():
         """
         retrieve window_size settings for all open maps
         """
-        l = {}
-        for m in MapBase.collector:
-            l.update({m.location: m.window_size})
-        return l
+        return {m.location: m.window_size for m in MapBase.collector}
 
     @staticmethod
     def set_window_size(window_size):
@@ -150,6 +139,7 @@ class Map:
         """
         # todo; test this function
         if isinstance(m1, MapWrite) or isinstance(m2, MapWrite):
+            print("One of the objects is not readable")
             return False
         if m1.tiles != m2.tiles:
             print("Tiles don't match")
@@ -257,7 +247,7 @@ class MapBase:
 
     def __init__(self, **kwargs):
         raise NotImplementedError("MapBase is used as the base class for MapRead and MapWrite instances. "
-                                  "This class is not directly callable.")
+                                  "This class can't be used directly.")
         self._location = ""
         self._profile = {}
         self._mode = "undefined"

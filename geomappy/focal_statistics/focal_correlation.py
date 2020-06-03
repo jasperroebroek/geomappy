@@ -58,6 +58,7 @@ corr : :obj:`~numpy.ndarray`
     while if reduce is True, the output is reduce by the window size: shape//window_size.
 """
 
+# todo; combine _correlate_maps_reduce with _correlate_maps_full
 
 @njit()
 def _correlate_maps_reduce(map1, map2, window_size=5, fraction_accepted=0.7, reduce=False, verbose=False):

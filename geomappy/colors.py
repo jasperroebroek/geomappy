@@ -44,17 +44,16 @@ def plot_colors(c, figsize=(10, 1), ticks=False, **kwargs):
         N = c.N
         cmap = c
 
-    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    fig, ax = plt.subplots(figsize=figsize)
 
     bounds = np.linspace(0, 1, N + 1)
     if N < 256:
         norm = colors.BoundaryNorm(bounds, N)
-    else:
-        norm = None
 
     cb = ColorbarBase(ax, cmap=cmap, norm=norm, spacing='proportional', ticks=None,
                       boundaries=bounds, format='%1i', orientation=u'horizontal', **kwargs)
     ax.patch.set_edgecolor('black')
+
     if not ticks:
         plt.tick_params(axis='x',  # changes apply to the x-axis
                         which='both',  # both major and minor ticks are affected
@@ -62,9 +61,8 @@ def plot_colors(c, figsize=(10, 1), ticks=False, **kwargs):
                         top=False,  # ticks along the top edge are off
                         labelbottom=False)  # labels along the bottom edge are off
     else:
-        cb.set_ticks(np.linspace(1/(2*N), 1-1/(2*N), N))
+        cb.set_ticks(np.linspace(1 / (2 * N), 1 - 1 / (2 * N), N))
         cb.set_ticklabels(np.arange(N))
-    plt.tight_layout()
 
 
 def cmap_2d(shape=(1000, 1000), v=None, alpha=0, plotting=False, diverging=False, diverging_alpha=0.5, rotate=0,
@@ -80,7 +78,7 @@ def cmap_2d(shape=(1000, 1000), v=None, alpha=0, plotting=False, diverging=False
         If provided it will override the corner colors.
         It needs to exist of a list of four colors (convertible by to_rgba_array).
     alpha : float, optional
-        Value between 0 and 1. For details check Ryan's paper. Default is 0.
+        Value between 0 and 1. Default is 0.
     plotting : bool, optional
         Plotting cmap. Default is False
     diverging : bool, optional
@@ -101,6 +99,12 @@ def cmap_2d(shape=(1000, 1000), v=None, alpha=0, plotting=False, diverging=False
     cmap : :obj:`~numpy.ndarray`
         The created two dimensional legend. Array of dimensions (*shape, 3). 
         RGB configuration
+
+    Notes
+    -----
+    For reference see
+    Teuling et al., 2010: "Bivariate colour maps for visualizing climate data"
+    http://iacweb.ethz.ch/doc/publications/2153_ftp.pdf
     """
 
     if alpha < 0 or alpha > 1:
@@ -164,10 +168,10 @@ def cmap_discrete(cmap='hsv', n=256, return_type='cmap'):
 
     Parameters
     ----------
-    n : int
-        Number of colors
     cmap : str or cmap instance, optional
         Name of cmap (or cmap itself). If `cmap` is a string it needs to be available in the matplotlib namespace
+    n : int
+        Number of colors
     return_type : str, optional
         'cmap' returns a linearly segmented cmap, 'list' returns a :obj:`~numpy.ndarray` array with the colors. This
         array will have shape (n, 4).
@@ -242,7 +246,6 @@ def cmap_random(n, color_type='pastel', first_color=None, last_color=None, retur
     Source
     ------
     https://stackoverflow.com/questions/14720331/how-to-generate-random-colors-in-matplotlib
-    
     """
     if color_type not in ('bright', 'pastel'):
         print('Please choose "bright" or "soft" for type')
@@ -289,7 +292,7 @@ def cmap_random(n, color_type='pastel', first_color=None, last_color=None, retur
             if last_color == "white":
                 randRGBcolors[-1] = [1, 1, 1]
 
-    random_colormap = LinearSegmentedColormap.from_list('new_map', randRGBcolors, N=n)
+    random_colormap = LinearSegmentedColormap.from_list('random_cmap', randRGBcolors, N=n)
 
     if return_type == "cmap":
         return random_colormap
@@ -334,6 +337,7 @@ def create_colorbar_axes(ax, aspect=30, pad_fraction=0.6, position="right"):
     pad = axes_grid1.axes_size.Fraction(pad_fraction, width)
     ax = divider.append_axes(position=position, size=width, pad=pad, axes_class=plt.Axes)
     return ax
+
 
 def add_colorbar(im=None, ax=None, cax=None, aspect=30, pad_fraction=0.6, position="right", shrink=1, **kwargs):
     """
@@ -392,7 +396,7 @@ def add_colorbar(im=None, ax=None, cax=None, aspect=30, pad_fraction=0.6, positi
             elif position == "top":
                 bbox = [(1 - shrink) / 2, 1 + pad, shrink, length]
 
-            ip = ip = InsetPosition(ax, bbox)
+            ip = InsetPosition(ax, bbox)
             cax.set_axes_locator(ip)
 
     elif shrink < 1:

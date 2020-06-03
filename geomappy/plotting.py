@@ -10,7 +10,7 @@ from matplotlib.colors import Colormap, BoundaryNorm, Normalize, ListedColormap,
 from shapely.geometry import Point
 
 from .utils import nandigitize
-from .colors import cmap_discrete, create_colorbar_axes, add_colorbar, legend_patches, cmap_2d
+from .colors import cmap_discrete, create_colorbar_axes, add_colorbar, legend_patches
 
 
 # PLOTTING
@@ -583,7 +583,6 @@ class Colorbar(Legend):
     fontsize : numeric, optional
         Fontsize for the legend
     kwargs : dict
-        # todo; implement the function here
         Keyword arguments for ``cbar_decorater function``
     """
     def __init__(self, aspect=30, pad_fraction=0.6, legend_ax=None, fontsize=None, **kwargs):
@@ -1144,152 +1143,3 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
                              position=legend_kwargs.get("position", "right")).axis("off")
 
     return ax, legend
-
-
-def create_map_cmap_2d(map1, map2, bin1=None, bin2=None, vmin1=None, vmax1=None, vmin2=None, vmax2=None, cmap=None,
-                       diverging=False, plotting=False, figsize=(10, 10), ax=None, silent=False, show=False):
-    """
-    Combine two maps with a two dimensional legend.
-    # todo; convert to Plot rational
-
-    Parameters
-    ----------
-    map1, map2 : array
-        two identically shaped arrays
-    bin1, bin2 : list, optional
-        bins used for digitization with raster_functions.misc.nandigitize().
-    vmin1, vmax1, vmin2, vmax2
-        min and max of both input maps used for plotting (like vmin and vmax in imshow). Ff None, which is the default,
-        they will be calculated from the data. These values are only considered when no bin is passed.
-    cmap : array, optional
-        3D array providing bins for map1 and map2 and RGB colors on the third axis. This can be created with the cmap_2d
-        interface. If not provided it will be created on the fly. If the map is already classified by np.digitize it
-        will be recognized and that specific axis will be split in the number of bins as intended. If not digitized
-        1000 bins will be created, which will be a smooth scale.
-    diverging : bool, optional
-        Use a diverging color scale if cmap is not provided. This means that the center of the 2D color legend will  be
-        white instead of grey to notify divergence. Default is False.
-    plotting : bool, optional
-        plotting the created result
-    show : bool, optional
-        Execute the plt.plot() command
-    ax : Axis, optional
-        matplotlib axes where the plot should be plotted to. If not given a new
-        figure is created, which is the default behaviour.
-    figsize : list, optional
-        Figsize parameter for matplotlib. Default is (10,10)
-    silent : bool, optional
-        Return the created map, which is a 3D numpy array with on the last axis the
-        RGB color components (0-1).
-
-    Returns
-    -------
-    map : np.ndarray
-        numpy array containing the newly created map. Dimensionality depends on 'cmap' parameter. If none is passed a
-        RGB legend is created, resulting in a 3D array
-    """
-    if not isinstance(bin1, type(None)):
-        map1 = nandigitize(map1, bins=bin1)
-    if not isinstance(bin2, type(None)):
-        map2 = nandigitize(map2, bins=bin2)
-
-    if map1.shape != map2.shape:
-        raise ValueError("maps are not of equal shape")
-    if type(plotting) != bool:
-        raise TypeError("plotting is a boolean variable")
-    if type(diverging) != bool:
-        raise TypeError("diverging is a boolean variable")
-
-    # copy maps to prevent overwriting problems because a memory locations is send
-    # to the function instead of an array.
-    axis0 = map1.copy()
-    axis1 = map2.copy()
-
-    # create a nan mask that will be used to overwrite the final map with nans
-    mask = np.logical_or(np.isnan(axis0), np.isnan(axis1))
-
-    # create lists with the unique values in both maps (nan values filtered out)
-    axis0_unique = np.unique(axis0[~np.isnan(axis0)])
-    axis1_unique = np.unique(axis1[~np.isnan(axis1)])
-
-    # Routine to check if input maps are already classified or not.
-    # Output is a list of two boolean values. A map is classified if the unique
-    # values of that map overlap with a linspace instance with the same min,max and
-    # length as the unique values.
-    # for example:
-    #       unique_values = [0,1,2]
-    #       np.linspace(unique_values[0], unique_values[-1], num = unique_values.size)
-    #       > [0,1,2]
-    # these two lists are equal and therefore the map can be seen as classified.
-    classified = [np.allclose(np.linspace(axis0_unique[0], axis0_unique[-1],
-                                          num=axis0_unique.size), axis0_unique),
-                  np.allclose(np.linspace(axis1_unique[0], axis1_unique[-1],
-                                          num=axis1_unique.size), axis1_unique)]
-
-    # If cmap is not provided it is created here.
-    if isinstance(cmap, type(None)):
-        print("cmap:")
-        l = [axis0_unique.size if classified[0] else 1000,
-             axis1_unique.size if classified[1] else 1000]
-        cmap = cmap_2d(shape=l, plotting=True, diverging=diverging)
-
-    old_settings = np.seterr(all='ignore')  # silence all numpy warnings
-
-    # Routines to create a vector containing the bins for both input maps
-    # called axisx_space.
-    if classified[0]:
-        # if axis0_unique.size != cmap.shape[0]:
-        #    raise IndexError("Shape of cmap and the first map don't match")
-        axis0_space = list(axis0_unique)
-    else:
-        if type(vmin1) != type(None):
-            axis0[axis0 < vmin1] = vmin1
-        if type(vmax1) != type(None):
-            axis0[axis0 > vmax1] = vmax1
-        axis0_space = np.linspace(np.nanmin(axis0), np.nanmax(axis0),
-                                  num=cmap.shape[0])
-
-    if classified[1]:
-        # if axis1_unique.size != cmap.shape[1]:
-        #    raise IndexError("Shape of cmap and the second map don't match")
-        axis1_space = list(axis1_unique)
-    else:
-        if not isinstance(vmin2, type(None)):
-            axis1[axis1 < vmin2] = vmin2
-        if type(vmax2) != type(None):
-            axis1[axis1 > vmax2] = vmax2
-        axis1_space = np.linspace(np.nanmin(axis1), np.nanmax(axis1),
-                                  num=cmap.shape[1])
-
-    np.seterr(**old_settings)  # reset to default
-
-    # remove nans with temporary value that will be replaced based on the mask variable
-    axis0[np.isnan(axis0)] = 0
-    axis1[np.isnan(axis1)] = 0
-
-    # digitize both maps
-    axis0_digitized = np.digitize(axis0, axis0_space) - 1
-    axis1_digitized = np.digitize(axis1, axis1_space) - 1
-
-    # combine maps with cmap
-    digitized_map = cmap[axis0_digitized, axis1_digitized]
-    # set the nan values to white
-
-    if cmap.ndim == 2:
-        digitized_map[mask] = -1
-    if cmap.ndim == 3:
-        digitized_map[mask, :] = np.array((1, 1, 1))
-
-    # plotting routine
-    if plotting:
-        if type(ax) == type(None):
-            f, ax = plt.subplots(1, figsize=figsize)
-        ax.imshow(digitized_map)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        if show:
-            plt.show()
-
-    if not silent:
-        return digitized_map
-

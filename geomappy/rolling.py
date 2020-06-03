@@ -117,8 +117,7 @@ def rolling_mean(a, window_size, reduce=False):
         to buffer the window size on the edges:
             shape : [s - window_size + 1 for s in a.shape]
     """
-    # TODO; implement reduce
-    return rolling_sum(a, window_size, reduce=reduce)/np.power(window_size, a.ndim)
+    return rolling_sum(a, window_size, reduce=reduce) / np.power(window_size, a.ndim)
 
 
 def rolling_sum(a, window_size, reduce=False):
