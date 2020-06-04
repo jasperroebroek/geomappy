@@ -1,4 +1,4 @@
-from .map import Map
+from .raster import Raster
 from .geodataframe import gpd
 from .plotting import plot_classified_map, plot_classified_shapes, plot_shapes, plot_map, Legend, LegendPatches, \
     Colorbar

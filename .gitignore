@@ -4,6 +4,7 @@ __pycache__/
 code_base_expansion/
 scratch/
 data/
+geomappy.egg-info/
 examples/geomappy
 
 .DS_Store

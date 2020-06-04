@@ -119,7 +119,7 @@ def reproject_map_like(input_map=None, ref_map=None, output_map=None, resampling
         reference map or input map not found or output_map already exists
     """
     # todo; make it possible to write several bands instead of just one
-    # todo; make it accept Map
+    # todo; make it accept Raster
     if not os.path.isfile(ref_map):
         raise IOError("no reference map provided")
     if not os.path.isfile(input_map):

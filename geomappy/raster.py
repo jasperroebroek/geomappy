@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Wrapper around rasterio functionality. Object creation happens by calling Map() which distributes the requests to
-MapRead() and MapWrite() for reading and writing respectively (rasterio mode='r' and mode='w'). It is possible for both
-reading and writing to do this chunk by chunk in tiles for files that are bigger than the installed RAM. A window_size
-parameter can be used for the calculation of focal statistics. In reading this will add a buffer of data around the
-actual tile to be able to calculate values on the border. By setting the same window_size in a MapWrite object trims
-this border without values before writing it to the file as if everything happened in one calculation.
+Wrapper around rasterio functionality. Object creation happens by calling Raster() which distributes the requests to
+_RasterReader() and _RasterWriter() for reading and writing respectively (rasterio mode='r' and mode='w'). It is
+possible for both reading and writing to do this chunk by chunk in tiles for files that are bigger than the installed
+RAM. A window_size parameter can be used for the calculation of focal statistics. In reading this will add a buffer of
+data around the actual tile to be able to calculate values on the border. By setting the same window_size in a
+_RasterWriter object trims this border without values before writing it to the file as if everything happened in one calculation.
 """
 
 import copy
@@ -29,9 +29,9 @@ from .profile import resample_profile
 from .bounds import bounds_to_platecarree, bounds_to_polygons, bounds_to_data_projection
 
 
-class Map:
+class Raster:
     """
-    Creating a map object. Depending on the `mode` a MapRead() or MapWrite() object will be returned.
+    Creating a map object. Depending on the `mode` a _RasterReader() or _RasterWriter() object will be returned.
     
     Parameters
     ----------
@@ -40,14 +40,14 @@ class Map:
     mode : {'r','w'}
         Mode of opening the file. Corresponds  with standard rasterio functionality
     **kwargs
-        Arguments to be passed to either MapRead or MapWrite class creation functions
+        Arguments to be passed to either _RasterReader or _RasterWriter class creation functions
         
     Returns
     -------
     If mode == "r":
-        `MapRead` object
+        `_RasterReader` object
     If mode == "w":
-        `MapWrite` object
+        `_RasterWriter` object
     
     Raises
     ------
@@ -61,27 +61,27 @@ class Map:
             raise ValueError("Mode not recognized. Needs to be 'r' or 'w'")
 
         if mode == "r":
-            return MapRead(location, **kwargs)
+            return _RasterReader(location, **kwargs)
         if mode == "w":
-            return MapWrite(location, **kwargs)
+            return _RasterWriter(location, **kwargs)
 
     @staticmethod
     def close():
         """
-        function closing all connections created with the MapBase class and its subclasses.
+        function closing all connections created with the _RasterBase class and its subclasses.
         """
         print()
-        for m in MapBase.collector:
+        for m in _RasterBase.collector:
             print(f"close file: '{m.location}'")
             m.close(clean=False, verbose=False)
-        MapBase.collector = []
+        _RasterBase.collector = []
 
     @staticmethod
     def get_tiles():
         """
         returning tile settings for all open maps
         """
-        return {m.location: m.tiles for m in MapBase.collector}
+        return {m.location: m.tiles for m in _RasterBase.collector}
 
     @staticmethod
     def set_tiles(tiles):
@@ -91,9 +91,9 @@ class Map:
         Parameters
         ----------
         tiles : int or tuple
-            Parameter for setting the MapBase.tiles property
+            Parameter for setting the _RasterBase.tiles property
         """
-        for m in MapBase.collector:
+        for m in _RasterBase.collector:
             m.tiles = tiles
 
     @staticmethod
@@ -101,7 +101,7 @@ class Map:
         """
         retrieve window_size settings for all open maps
         """
-        return {m.location: m.window_size for m in MapBase.collector}
+        return {m.location: m.window_size for m in _RasterBase.collector}
 
     @staticmethod
     def set_window_size(window_size):
@@ -111,9 +111,9 @@ class Map:
         Parameters
         ----------
         window_size : int, optional
-            'window_size' parameter for MapBase.window_size property
+            'window_size' parameter for _RasterBase.window_size property
         """
-        for m in MapBase.collector:
+        for m in _RasterBase.collector:
             m.window_size = window_size
 
     @staticmethod
@@ -121,7 +121,7 @@ class Map:
         """
         Returns a list of all open maps
         """
-        return MapBase.collector
+        return _RasterBase.collector
 
     @staticmethod
     def equal(m1, m2):
@@ -130,7 +130,7 @@ class Map:
         
         Parameters
         ----------
-        m1, m2 : MapRead
+        m1, m2 : _RasterReader
             Maps to be compared on settings and values
             
         Returns
@@ -138,7 +138,7 @@ class Map:
         equality : [bool]
         """
         # todo; test this function
-        if isinstance(m1, MapWrite) or isinstance(m2, MapWrite):
+        if isinstance(m1, _RasterWriter) or isinstance(m2, _RasterWriter):
             print("One of the objects is not readable")
             return False
         if m1.tiles != m2.tiles:
@@ -165,22 +165,22 @@ class Map:
         return True
 
 
-class MapBase:
+class _RasterBase:
     """
-    Main map object, based on rasterio functionality. The rasterio pointer is exposed through MapBase._file
+    Main map object, based on rasterio functionality. The rasterio pointer is exposed through _RasterBase._file
 
     Attributes
     ----------
     collector : list
-        Every new instance of MapBase, or its children, will be added to this list. This is convenient for closing of
+        Every new instance of _RasterBase, or its children, will be added to this list. This is convenient for closing of
         all file connections with the following loop:
 
-            >>> for i in MapBase.collector:
+            >>> for i in _RasterBase.collector:
             ..:    i.close()
 
         this functionality is callable by:
 
-            >>> Map.close()
+            >>> Raster.close()
 
     _c_tiles : int
         Number of tiles that are set on the raster. Set and get via tiles property
@@ -232,7 +232,7 @@ class MapBase:
     c_tiles
         get number of tiles
     signature
-        get MapBase signature
+        get _RasterBase signature
     profile
         get rasterio file profile
     location
@@ -246,7 +246,7 @@ class MapBase:
     collector = []
 
     def __init__(self, **kwargs):
-        raise NotImplementedError("MapBase is used as the base class for MapRead and MapWrite instances. "
+        raise NotImplementedError("_RasterBase is used as the base class for _RasterReader and _RasterWriter instances. "
                                   "This class can't be used directly.")
         self._location = ""
         self._profile = {}
@@ -838,7 +838,7 @@ class MapBase:
         try:
             self._file.close()
             if clean:
-                MapBase.collector.remove(self)
+                _RasterBase.collector.remove(self)
             if verbose:
                 print(f"close file: '{self._location}'")
             del self
@@ -850,11 +850,11 @@ class MapBase:
             raise AttributeError("test")
 
     def __str__(self):
-        return f"Map at '{self._location}'"
+        return f"Raster at '{self._location}'"
 
     def __repr__(self):
         return (
-            f"Map object\n"
+            f"Raster object\n"
             f"location: {self._location}'\n"
             f"mode: '{self._mode}'\n"
             f"Access: {not self._file.closed}\n"
@@ -907,9 +907,9 @@ class MapBase:
         self.close()
 
 
-class MapWrite(MapBase):
+class _RasterWriter(_RasterBase):
     """
-    Subclass of MapBase, file opened in 'w' mode.
+    Subclass of _RasterBase, file opened in 'w' mode.
 
     Instance attributes
     -------------------
@@ -1090,26 +1090,29 @@ class MapWrite(MapBase):
         self.write(ind)
 
 
-class MapRead(MapBase):
+class _RasterReader(_RasterBase):
     """
-    Instance of MapBase, file opened in 'r' mode.
+    Instance of _RasterBase, file opened in 'r' mode.
 
     Parameters
     ----------
     location : str
         Location of the map
+    variable : str, optional
+        the specific variable to use when looking at a NetCDF file.
     tiles : int or tuple of ints, optional
-        See tiles property in MapBase
+        See tiles property in _RasterBase
     window_size : int, optional
-        Window size to be set on the map. See property in MapBase
+        Window size to be set on the map. See property in _RasterBase
     fill_value : numeric, optional
         Fill value used in rasterio.read call.
     epsg : int, optional
-        EPGS code of the data. This parameter is only used if the code can't be found in the file
+        EPGS code of the data. This parameter is only used if the code can't be determined from the file's crs. The
+        default is 4326.
 
     Attributes
     ----------
-    See Also MapBase
+    See Also _RasterBase
 
     values : ndarray
         all data of the file
@@ -1122,7 +1125,7 @@ class MapRead(MapBase):
         Location of file not found
     """
 
-    def __init__(self, location, *, tiles=1, window_size=1, fill_value=None, epsg=None):
+    def __init__(self, location, *, variable=None, tiles=1, window_size=1, fill_value=None, epsg=4326):
         if type(location) != str:
             raise TypeError("Location not recognised")
         if not os.path.isfile(location):
@@ -1131,7 +1134,20 @@ class MapRead(MapBase):
         self._location = location
         self._mode = "r"
 
-        # open file in reading mode and set the global nan_value
+        # open file in reading mode
+        if location.endswith(".nc"):
+            if isinstance(variable, type(None)):
+                file = rio.open(location)
+                report = file.subdatasets
+                file.close()
+                raise ValueError(f"When opening a netcdf file, a variable needs to be specified:\n"
+                                 f"Either set a `variable` or specify the variable in the rasterio way:"
+                                 f"netcdf:location.nc:variable.\n"
+                                 f"The options are:\n"
+                                 f"{report}")
+            else:
+                location = f"netcdf:{location}:{variable}"
+
         self._file = rio.open(location)
         self._profile = self._file.profile
 
@@ -1152,7 +1168,7 @@ class MapRead(MapBase):
 
         self._current_ind = 0
 
-        # collector of the base class. This list contains all files opened with the Map classes
+        # collector of the base class. This list contains all files opened with the Raster classes
         self.collector.append(self)
 
     def get_data(self, ind=-1, layers=None):
@@ -1162,7 +1178,7 @@ class MapRead(MapBase):
         Parameters
         ----------
         ind : .
-            see MapBase.get_pointer(). If set to None it will read the whole file.
+            see _RasterBase.get_pointer(). If set to None it will read the whole file.
         layers : int or list, optional
             The number of the layer required or a list of layers (which might contain duplicates if needed).
             The default is None, which will load all layers.
@@ -1356,8 +1372,8 @@ class MapRead(MapBase):
         profile.update({'count': 1, 'driver': "GTiff"})
 
         if isinstance(ind, type(None)):
-            with MapWrite(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
-                          overwrite=overwrite, profile=profile) as f:
+            with _RasterWriter(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
+                               overwrite=overwrite, profile=profile) as f:
                 for i in self:
                     if verbose:
                         print(f"\nTILE: {i + 1}/{self._c_tiles}")
@@ -1385,7 +1401,7 @@ class MapRead(MapBase):
             if reduce:
                 profile = resample_profile(profile, 1 / window_size)
 
-            with MapWrite(output_file, overwrite=overwrite, profile=profile) as f:
+            with _RasterWriter(output_file, overwrite=overwrite, profile=profile) as f:
                 f[0] = focal_statistics(self[ind, layers], func=func, window_size=window_size, verbose=verbose,
                                         reduce=reduce, majority_mode=majority_mode, **kwargs)
 
@@ -1393,26 +1409,26 @@ class MapRead(MapBase):
 
     def focal_mean(self, **kwargs):
         """
-        Function passes call to MapRead._focal_stat_iter with func = "nanmean". Function forces float64 dtype.
+        Function passes call to _RasterReader._focal_stat_iter with func = "nanmean". Function forces float64 dtype.
         """
         kwargs['dtype'] = np.float64
         return self._focal_stat_iter(func="mean", **kwargs)
 
     def focal_min(self, **kwargs):
         """
-        Function passes call to MapRead._focal_stat_iter with func = "nanmin"
+        Function passes call to _RasterReader._focal_stat_iter with func = "nanmin"
         """
         return self._focal_stat_iter(func="min", **kwargs)
 
     def focal_max(self, **kwargs):
         """
-        Function passes call to MapRead._focal_stat_iter with func = "nanmax"
+        Function passes call to _RasterReader._focal_stat_iter with func = "nanmax"
         """
         return self._focal_stat_iter(func="max", **kwargs)
 
     def focal_std(self, **kwargs):
         """
-        Function passes call to MapRead._focal_stat_iter with func = "nanstd".
+        Function passes call to _RasterReader._focal_stat_iter with func = "nanstd".
 
         Function forces float dtype.
         """
@@ -1421,7 +1437,7 @@ class MapRead(MapBase):
 
     def focal_majority(self, **kwargs):
         """
-        Function passes call to MapRead._focal_stat_iter with func = "majority". If `majority_mode` is not given as a
+        Function passes call to _RasterReader._focal_stat_iter with func = "majority". If `majority_mode` is not given as a
         parameter or set to "nan" the dtype will be forced to float64.
         """
         return self._focal_stat_iter(func="majority", **kwargs)
@@ -1433,7 +1449,7 @@ class MapRead(MapBase):
 
         Parameters
         ----------
-        other : MapRead
+        other : _RasterReader
             map to correlate with
         ind : . , optional
             see self.get_pointer(). If set, no tiled behaviour occurs.
@@ -1443,7 +1459,7 @@ class MapRead(MapBase):
             Location of output file
         window_size : int, optional
             Size of the window used for the correlation calculations. It should be bigger than 1, the default is the
-            window_size set on self (`MapRead`).
+            window_size set on self (`_RasterReader`).
         fraction_accepted : float, optional
             Fraction of the window that has to contain not-nans for the function to calculate the correlation.
             The default is 0.7.
@@ -1459,12 +1475,12 @@ class MapRead(MapBase):
         Raises
         ------
         TypeError
-            Other is not of type MapRead
+            Other is not of type _RasterReader
         """
         # todo; implement reduce
         # todo; implement parallel
 
-        if not isinstance(other, MapRead):
+        if not isinstance(other, _RasterReader):
             raise TypeError("Other not correctly passed")
 
         if self._v_tiles != other._v_tiles:
@@ -1498,9 +1514,9 @@ class MapRead(MapBase):
                 return None
 
         if isinstance(ind, type(None)):
-            with MapWrite(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
-                          ref_map=self._location, overwrite=overwrite, compress=compress, dtype=np.float64,
-                          count=1) as f:
+            with _RasterWriter(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
+                               ref_map=self._location, overwrite=overwrite, compress=compress, dtype=np.float64,
+                               count=1) as f:
                 for i in self:
                     if verbose:
                         print(f"\nTILE: {i + 1}/{self._c_tiles}")
@@ -1518,7 +1534,7 @@ class MapRead(MapBase):
             if not isinstance(compress, type(None)):
                 profile.update({'compress': compress})
 
-            with MapWrite(output_file, overwrite=overwrite, profile=profile, window_size=self.window_size) as f:
+            with _RasterWriter(output_file, overwrite=overwrite, profile=profile, window_size=self.window_size) as f:
                 f[0] = correlate_maps(self[ind, self_layers], other[ind, other_layers], window_size=self.window_size,
                                          fraction_accepted=fraction_accepted, verbose=verbose)
 

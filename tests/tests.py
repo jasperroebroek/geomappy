@@ -5,7 +5,7 @@ from scipy.stats import pearsonr
 
 from geomappy.utils import overlapping_arrays
 from geomappy.rolling import rolling_window, rolling_sum
-from geomappy.map import Map
+from geomappy.raster import Raster
 from geomappy.focal_statistics import focal_mean, focal_statistics
 from geomappy.focal_statistics.focal_correlation import correlate_maps_base, correlate_maps_njit
 
@@ -103,9 +103,9 @@ class TestRollingSum(unittest.TestCase):
             rolling_sum(np.array([1, 2, 3]), 5)
 
 
-class TestCorrelateMapsNumba(unittest.TestCase):
+class TestCorrelateRastersNumba(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestCorrelateMapsNumba, self).__init__(*args, **kwargs)
+        super(TestCorrelateRastersNumba, self).__init__(*args, **kwargs)
         np.random.seed(0)
         self.map1 = np.random.rand(20, 20)
         self.map2 = np.random.rand(20, 20)
@@ -173,9 +173,9 @@ class TestCorrelateMapsNumba(unittest.TestCase):
                                     pearsonr(c1, c2)[0]))
 
 
-class TestCorrelateMapsNumpy(unittest.TestCase):
+class TestCorrelateRastersNumpy(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestCorrelateMapsNumpy, self).__init__(*args, **kwargs)
+        super(TestCorrelateRastersNumpy, self).__init__(*args, **kwargs)
         np.random.seed(0)
         self.map1 = np.random.rand(20, 20)
         self.map2 = np.random.rand(20, 20)
@@ -369,18 +369,18 @@ class TestFocalStatistics(unittest.TestCase):
     # todo; test majority with its different modes
 
 
-class TestMap(unittest.TestCase):
+class TestRaster(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestMap, self).__init__(*args, **kwargs)
-        self.map1 = Map("../data/wtd.tif", tiles=(8, 8))
-        self.map2 = Map("../data/tree_height.asc", tiles=(8, 8), epsg=4326)
+        super(TestRaster, self).__init__(*args, **kwargs)
+        self.map1 = Raster("../data/wtd.tif", tiles=(8, 8))
+        self.map2 = Raster("../data/tree_height.asc", tiles=(8, 8), epsg=4326)
 
     def test_tile_correlation(self):
         loc = "test.tif"
         self.map1.window_size = 5
         self.map2.window_size = 5
         self.map1.correlate(self.map2, output_file=loc, window_size=5, ind=32, overwrite=True)
-        t = Map(loc)
+        t = Raster(loc)
         c1 = t[0]
         t.close(verbose=False)
         c2 = correlate_maps_njit(self.map1[32], self.map2[32], window_size=5)
@@ -390,7 +390,7 @@ class TestMap(unittest.TestCase):
     def test_correlation(self):
         loc = "test.tif"
         self.map1.correlate(self.map2, output_file=loc, window_size=5, overwrite=True)
-        t = Map(loc)
+        t = Raster(loc)
         c1 = t[0]
         t.close(verbose=False)
         c2 = correlate_maps_njit(self.map1.get_file_data(), self.map2.get_file_data(), window_size=5)
@@ -399,7 +399,7 @@ class TestMap(unittest.TestCase):
     def test_tile_focal_stats(self):
         loc = "test.tif"
         self.map1.focal_mean(ind=32, window_size=5, output_file=loc, overwrite=True, reduce=True)
-        t = Map(loc)
+        t = Raster(loc)
         c1 = t[0]
         t.close(verbose=False)
         c2 = focal_mean(self.map1[32], window_size=5, reduce=True)
@@ -408,7 +408,7 @@ class TestMap(unittest.TestCase):
     def test_focal_stats(self):
         loc = "test.tif"
         self.map1.focal_mean(window_size=5, output_file=loc, overwrite=True, reduce=True)
-        t = Map(loc)
+        t = Raster(loc)
         c1 = t[0]
         t.close(verbose=False)
         c2 = focal_mean(self.map1.get_file_data(), window_size=5, reduce=True)
