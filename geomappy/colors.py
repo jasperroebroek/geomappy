@@ -302,13 +302,14 @@ def cmap_random(n, color_type='pastel', first_color=None, last_color=None, retur
 
 def legend_patches(colors, labels, type='patch', edgecolor="lightgrey", **kwargs):
     if len(colors) != len(labels):
-        raise IndexError("Length of labels and colors don't match")
+        raise IndexError(f"Length of labels and colors don't match:\n"
+                         f"{labels}\n{colors}")
 
     if type == 'patch':
         return [Patch(facecolor=color, label=label, edgecolor=edgecolor, **kwargs)
                 for color, label in zip(colors, labels)]
     else:
-        return [Line2D([0], [0], markerfacecolor=color, label=label, linestyle=type, markeredgecolor=edgecolor,
+        return [Line2D([0], [0], color=color, label=label, linestyle=type, markeredgecolor=edgecolor,
                        **kwargs)
                 for color, label in zip(colors, labels)]
 

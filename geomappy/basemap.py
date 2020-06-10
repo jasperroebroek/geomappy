@@ -20,11 +20,12 @@ https://nbviewer.jupyter.org/gist/ajdawson/dd536f786741e987ae4e
 
 def _clone_geoaxes(ax):
     extent = ax.get_extent()
-    ax = ax.figure.add_subplot(projection=ax.projection, zorder=-1, label="xtick_new_" + str(np.random.rand()))
-    ax.set_xlim(extent[0], extent[1])
-    ax.set_ylim(extent[2], extent[3])
-    ax.outline_patch.set_linewidth(0)
-    return ax
+    projection = ax.projection
+
+    ax_new = ax.figure.add_subplot(projection=projection, zorder=-1, label="xtick_new_" + str(np.random.rand()))
+    ax_new.set_extent(extent, crs=projection)
+    ax_new.outline_patch.set_linewidth(0)
+    return ax_new
 
 
 def basemap_xticks(ax, ticks, side='bottom', add=True, fontsize=10, formatter=None):
@@ -338,6 +339,8 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
         ax.figure.delaxes(ax)
         ax = plt.gcf().add_subplot(position=position, projection=projection)
 
+    ax.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
+
     # Set extent
     extent = list(ax.get_extent(crs=ccrs.PlateCarree()))
     if extent[0] < x0:
@@ -381,7 +384,7 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
     
     if isinstance(xlines, type(None)):
         if len(xtick_locations) == 0:
-            xline_locations = [-180,180]
+            xline_locations = [-180, 180]
         else:
             xline_locations = xtick_locations
     elif isinstance(xlines, (float, int)):
@@ -455,6 +458,7 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
                 ax_new.xaxis.tick_top()
                 ax_new.set_xticks(xtick_locations, crs=ccrs.PlateCarree())
                 ax_new.xaxis.set_major_formatter(xtick_formatter)
+                ax_new.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
 
             if ylabel_location == "left":
                 ax.set_yticks(ytick_locations, crs=ccrs.PlateCarree())
@@ -470,22 +474,26 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
                 ax_new.yaxis.tick_top()
                 ax_new.set_yticks(ytick_locations, crs=ccrs.PlateCarree())
                 ax_new.yaxis.set_major_formatter(ytick_formatter)
+                ax_new.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
 
         else:
             if len(xtick_locations) > 0:
                 if xlabels_bottom:
-                    basemap_xticks(ax, list(xtick_locations), add=False, side='bottom', formatter=xtick_formatter)
+                    basemap_xticks(ax, list(xtick_locations), add=False, side='bottom', formatter=xtick_formatter,
+                                   fontsize=fontsize)
                 if xlabels_top:
-                    basemap_xticks(ax, list(xtick_locations), add=True, side='top', formatter=xtick_formatter)
+                    basemap_xticks(ax, list(xtick_locations), add=True, side='top', formatter=xtick_formatter,
+                                   fontsize=fontsize)
 
             if len(ytick_locations) > 0:
                 if ylabels_left:
-                    basemap_yticks(ax, list(ytick_locations), add=False, side='left', formatter=ytick_formatter)
+                    basemap_yticks(ax, list(ytick_locations), add=False, side='left', formatter=ytick_formatter,
+                                   fontsize=fontsize)
                 if ylabels_right:
-                    basemap_yticks(ax, list(ytick_locations), add=True, side='right', formatter=ytick_formatter)
+                    basemap_yticks(ax, list(ytick_locations), add=True, side='right', formatter=ytick_formatter,
+                                   fontsize=fontsize)
 
     ax.outline_patch.set_linewidth(border_linewidth)
-    ax.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
 
     return ax
 

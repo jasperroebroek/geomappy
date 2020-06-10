@@ -66,13 +66,14 @@ class Raster:
             return _RasterWriter(location, **kwargs)
 
     @staticmethod
-    def close():
+    def close(verbose=True):
         """
         function closing all connections created with the _RasterBase class and its subclasses.
         """
         print()
         for m in _RasterBase.collector:
-            print(f"close file: '{m.location}'")
+            if verbose:
+                print(f"close file: '{m.location}'")
             m.close(clean=False, verbose=False)
         _RasterBase.collector = []
 
@@ -505,7 +506,7 @@ class _RasterBase:
         Returns
         -------
         ind : int
-            Index in range(0,self._c_tiles+1)
+            Index in range(0, self._c_tiles+1)
 
         Raises
         ------
@@ -1125,7 +1126,7 @@ class _RasterReader(_RasterBase):
         Location of file not found
     """
 
-    def __init__(self, location, *, variable=None, tiles=1, window_size=1, fill_value=None, epsg=4326):
+    def __init__(self, location, *, variable=None, tiles=1, window_size=1, fill_value=None, epsg=None):
         if type(location) != str:
             raise TypeError("Location not recognised")
         if not os.path.isfile(location):

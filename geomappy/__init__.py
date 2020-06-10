@@ -8,6 +8,6 @@ from .colors import add_colorbar
 import matplotlib
 
 import warnings
-warnings.filterwarnings("once", category=FutureWarning)
-warnings.filterwarnings("once", category=matplotlib.MatplotlibDeprecationWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=matplotlib.MatplotlibDeprecationWarning)
 matplotlib.rcParams["image.interpolation"] = 'none'

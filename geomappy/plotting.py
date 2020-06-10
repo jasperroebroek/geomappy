@@ -246,7 +246,9 @@ class PlotParams:
             self._cmap = plt.cm.get_cmap("viridis")
         elif isinstance(cmap, str):
             self._cmap = plt.cm.get_cmap(cmap)
-        elif not isinstance(cmap, Colormap):
+        elif isinstance(cmap, Colormap):
+            self._cmap = cmap
+        else:
             raise TypeError("cmap not recognized")
 
         self._cmap.set_bad(nan_color)
@@ -387,8 +389,7 @@ class ScalarPlotParams(PlotParams):
             self._extend = extend
 
         else:
-            bins = np.array(bins)
-            bins.sort()
+            bins = np.unique(np.sort(np.array(bins)))
 
             boundaries = bins.copy()
 
@@ -477,7 +478,7 @@ class ClassifiedPlotParams(PlotParams):
         if isinstance(bins, type(None)):
             bins = np.unique(data)
         else:
-            bins = np.unique(np.sort(np.array(bins).flatten()))
+            bins = np.unique(np.sort(np.array(bins)))
 
         if len(bins) > 9 and not suppress_warnings:
             raise ValueError("Number of bins above 9, this creates issues with visibility. This error can be suppressed"
@@ -490,6 +491,9 @@ class ClassifiedPlotParams(PlotParams):
             colors = np.array(colors)
         else:
             if isinstance(cmap, type(None)):
+                if len(bins) <= 9:
+                    raise TypeError("More than 9 classes are present, in which case cmap or colors not to be set "
+                                    "explicitly")
                 colors = cmap_discrete(cmap="Set1", n=9, return_type="list")[:len(bins)]
             else:
                 colors = cmap_discrete(cmap=cmap, n=len(bins), return_type='list')
@@ -511,9 +515,8 @@ class ClassifiedPlotParams(PlotParams):
             labels = labels[present]
             colors = colors[present]
 
-        values = nandigitize(values, bins=bins, right=True)
-
-        self._norm = Normalize(0, bins.size - 1)
+        boundaries = np.hstack((bins[0]-1, [(bins[i]+bins[i-1])/2 for i in range(1, len(bins))], bins[-1]+1))
+        self._norm = BoundaryNorm(boundaries, len(bins))
         self._cmap = ListedColormap(colors)
         self._nan_color = nan_color
         self._cmap.set_bad(nan_color)
@@ -629,7 +632,7 @@ class Colorbar(Legend):
         if not isinstance(params.bins, type(None)):
             if len(params.bins) == params.cmap.N and isinstance(params, ClassifiedPlotParams):
                 boundaries = cbar._boundaries
-                tick_locations = [(boundaries[i] - boundaries[i - 1]) / 2 + boundaries[i - 1]
+                tick_locations = [(boundaries[i] + boundaries[i - 1]) / 2
                                   for i in range(1, len(boundaries))]
             elif isinstance(params.norm, BoundaryNorm):
                 tick_locations = params.bins
@@ -840,6 +843,8 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
     ax, legend = PlotRaster(ax=ax, figsize=figsize, fontsize=fontsize, params=plot_params, legend=legend, **kwargs).draw()
 
     if force_equal_figsize and legend != 'colorbar':
+        if isinstance(legend_kwargs, type(None)):
+            legend_kwargs = {}
         create_colorbar_axes(ax=ax, aspect=aspect, pad_fraction=pad_fraction,
                              position=legend_kwargs.get("position", "right")).axis("off")
 
@@ -919,6 +924,8 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
         .draw()
 
     if force_equal_figsize and legend != 'colorbar':
+        if isinstance(legend_kwargs, type(None)):
+            legend_kwargs = {}
         create_colorbar_axes(ax=ax, aspect=aspect, pad_fraction=pad_fraction,
                              position=legend_kwargs.get("position", "right")).axis("off")
 
@@ -1035,6 +1042,8 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         .draw(geometry=geometry, markersize=markersize, linewidth=linewidth)
 
     if force_equal_figsize and legend != 'colorbar':
+        if isinstance(legend_kwargs, type(None)):
+            legend_kwargs = {}
         create_colorbar_axes(ax=ax, aspect=aspect, pad_fraction=pad_fraction,
                              position=legend_kwargs.get("position", "right")).axis("off")
 
@@ -1139,6 +1148,8 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
         .draw(geometry=geometry, markersize=markersize, linewidth=linewidth)
 
     if force_equal_figsize and legend != 'colorbar':
+        if isinstance(legend_kwargs, type(None)):
+            legend_kwargs = {}
         create_colorbar_axes(ax=ax, aspect=aspect, pad_fraction=pad_fraction,
                              position=legend_kwargs.get("position", "right")).axis("off")
 
