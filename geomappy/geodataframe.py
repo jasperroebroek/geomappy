@@ -110,7 +110,7 @@ def _plot_combined_shapes(classified, *, df=None, values=None, basemap=False, fi
         else:
             extent = bounds
 
-        ax = basemap_function(*extent, ax=ax, epsg=plot_epsg, figsize=figsize, **basemap_kwargs)
+        ax = basemap_function(extent, ax=ax, epsg=plot_epsg, figsize=figsize, **basemap_kwargs)
         if 'transform' not in kwargs:
             kwargs.update({'transform': transform})
 

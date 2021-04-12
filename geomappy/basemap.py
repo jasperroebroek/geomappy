@@ -1,5 +1,4 @@
 from copy import copy
-
 import cartopy
 import cartopy.crs as ccrs
 import cartopy.feature as cf
@@ -10,8 +9,6 @@ import shapely
 import shapely.geometry as sgeom
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
-from packaging import version
-
 """
 inspiration source:
 https://nbviewer.jupyter.org/gist/ajdawson/dd536f786741e987ae4e
@@ -24,7 +21,7 @@ def _clone_geoaxes(ax):
 
     ax_new = ax.figure.add_subplot(projection=projection, zorder=-1, label="xtick_new_" + str(np.random.rand()))
     ax_new.set_extent(extent, crs=projection)
-    ax_new.outline_patch.set_linewidth(0)
+    ax_new.spines['geo'].set_linewidth(0)
     return ax_new
 
 
@@ -64,16 +61,8 @@ def basemap_xticks(ax, ticks, side='bottom', add=True, fontsize=10, formatter=No
     if isinstance(formatter, type(None)):
         formatter = LongitudeFormatter()
 
-    if version.parse(cartopy.__version__) < version.parse("0.18"):
-        ax_temp = plt.gcf().add_subplot(projection=ccrs.PlateCarree())
-        ax_temp.set_xticks(xticklabels, crs=ccrs.PlateCarree())
-        ax_temp.xaxis.set_major_formatter(formatter)
-        plt.draw()
-        xticklabels_formatted = [item.get_text() for item in ax_temp.get_xticklabels()]
-        ax_temp.figure.delaxes(ax_temp)
-    else:
-        formatter.set_locs(xticklabels)
-        xticklabels_formatted = [formatter(value) for value in xticklabels]
+    formatter.set_locs(xticklabels)
+    xticklabels_formatted = [formatter(value) for value in xticklabels]
 
     ax.set_xticks(xticks)
     ax.set_xticklabels(xticklabels_formatted)
@@ -115,16 +104,8 @@ def basemap_yticks(ax, ticks, side='left', add=True, fontsize=10, formatter=None
     if isinstance(formatter, type(None)):
         formatter = LatitudeFormatter()
 
-    if version.parse(cartopy.__version__) < version.parse("0.18"):
-        ax_temp = plt.gcf().add_subplot(projection=ccrs.PlateCarree())
-        ax_temp.set_yticks(yticklabels, crs=ccrs.PlateCarree())
-        ax_temp.yaxis.set_major_formatter(formatter)
-        plt.draw()
-        yticklabels_formatted = [item.get_text() for item in ax_temp.get_yticklabels()]
-        ax_temp.figure.delaxes(ax_temp)
-    else:
-        formatter.set_locs(yticklabels)
-        yticklabels_formatted = [formatter(value) for value in yticklabels]
+    formatter.set_locs(yticklabels)
+    yticklabels_formatted = [formatter(value) for value in yticklabels]
 
     ax.set_yticks(yticks)
     ax.set_yticklabels(yticklabels_formatted)
@@ -237,20 +218,24 @@ class ProjectCustomExtent(ccrs.Projection):
         return self.ymin, self.ymax
 
 
-def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None, figsize=(10, 10), resolution="110m",
-            coastlines=True, earth_image=False, land=False, ocean=False, xticks=30, yticks=30, xtick_formatter=None,
-            ytick_formatter=None, labels=True, xlabel_location="bottom", ylabel_location="left", grid=True, xlines=None,
-            ylines=None, grid_color="grey", grid_linestyle="--", grid_alpha=0.5, grid_linewidth=None,
-            border_linewidth=None, coastline_linewidth=None, linewidth=1, n_steps=300, fontsize=10):
+def basemap(extent=None, epsg=4326, projection=None, extent_projection=None, ax=None, figsize=(10, 10),
+            resolution="110m", coastlines=True, earth_image=False, land=False, ocean=False, xticks=30, yticks=30,
+            xtick_formatter=None, ytick_formatter=None, labels=True, xlabel_location="bottom", ylabel_location="left",
+            grid=True, xlines=None, ylines=None, grid_color="grey", grid_linestyle="--", grid_alpha=0.5,
+            grid_linewidth=None, border_linewidth=None, coastline_linewidth=None, linewidth=1, n_steps=300,
+            fontsize=10):
     """
     Parameters
     ----------
-    x0, x1, y0, y1 : float, optional
-        Latitude and Longitude of the corners
+    extent : list, optional
+        A list with the four coordinates (x0, y0, x1, y1), or the string "global", which will set the plot
+        to it's natural maximum extent.
     epsg : int or str, optional
         EPSG code of the GeoAxes
-    projection : `ccrs.projection`
+    projection : `ccrs.projection`, optional
         cartopy projection object. If provided it overwrites the epsg code.
+    extent_projection : `ccrs.projection`, optional
+        cartopy projection that define the units of the extent. By default lat-lon are expected.
     ax : `plt.axes` or GeoAxes
         if a regular matplotlib axis is provided here, it gets replaced by a geoaxis. If a geoaxis is inserted, it
         just perform all the operations on that.
@@ -320,8 +305,8 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
     # If you are plotting a very small area and xticks and yticks are very small, it can take a long time to do,
       in which case it might be beneficial to put the labels yourself.
     """
-    if isinstance(projection, type(None)):
-        if isinstance(epsg, type(None)):
+    if projection is None:
+        if epsg is None:
             raise TypeError("Both projection and EPSG code are not provided")
         else:
             if epsg == 4326:
@@ -331,7 +316,7 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
             else:
                 projection = ccrs.epsg(epsg)
 
-    if isinstance(ax, type(None)):
+    if ax is None:
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(projection=projection)
     elif not isinstance(ax, cartopy.mpl.geoaxes.GeoAxesSubplot):
@@ -342,24 +327,26 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
     ax.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
 
     # Set extent
-    extent = list(ax.get_extent(crs=ccrs.PlateCarree()))
-    if extent[0] < x0:
-        extent[0] = x0
-    if extent[1] > x1:
-        extent[1] = x1
-    if extent[2] < y0:
-        extent[2] = y0
-    if extent[3] > y1:
-        extent[3] = y1
-    ax.set_extent(extent, crs=ccrs.PlateCarree())
+    if extent == "global":
+        ax.set_global()
+
+    elif extent is not None:
+        extent = [extent[0], extent[2], extent[1], extent[3]]
+
+        if extent_projection is None:
+            extent_projection = ccrs.PlateCarree()
+
+        ax.set_extent(extent, crs=extent_projection)
+
+    x0, x1, y0, y1 = ax.get_extent()
 
     if not isinstance(linewidth, (float, int)):
         raise TypeError("Linewidth should be numeric")
-    if isinstance(coastline_linewidth, type(None)):
+    if coastline_linewidth is None:
         coastline_linewidth = linewidth
-    if isinstance(border_linewidth, type(None)):
+    if border_linewidth is None:
         border_linewidth = linewidth
-    if isinstance(grid_linewidth, type(None)):
+    if grid_linewidth is None:
         grid_linewidth = linewidth
 
     if coastlines:
@@ -367,11 +354,11 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
 
     if earth_image:
         ax.stock_img()
-    if isinstance(land, bool) and land == True:
+    if land and isinstance(land, bool):
         if isinstance(land, bool):
             land = 'lightgrey'
         ax.add_feature(cf.LAND, color=land)
-    if isinstance(ocean, bool) and ocean == True:
+    if ocean and isinstance(ocean, bool):
         if isinstance(ocean, bool):
             ocean = 'lightblue'
         ax.add_feature(cf.OCEAN, color=ocean)
@@ -416,24 +403,23 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
         g.n_steps = n_steps
 
     # Determine label locations
-    xlabels_top = (xlabel_location == "top" or xlabel_location == "both")
-    xlabels_bottom = (xlabel_location == "bottom" or xlabel_location == "both")
-    ylabels_left = (ylabel_location == "left" or ylabel_location == "both")
-    ylabels_right = (ylabel_location == "right" or ylabel_location == "both")
+    labels_top = (xlabel_location == "top" or xlabel_location == "both")
+    labels_bottom = (xlabel_location == "bottom" or xlabel_location == "both")
+    labels_left = (ylabel_location == "left" or ylabel_location == "both")
+    labels_right = (ylabel_location == "right" or ylabel_location == "both")
 
     if labels:
-        if isinstance(xtick_formatter, type(None)):
+        if xtick_formatter is None:
             xtick_formatter = LongitudeFormatter()
-        if isinstance(ytick_formatter, type(None)):
+        if ytick_formatter is None:
             ytick_formatter = LatitudeFormatter()
 
         if isinstance(ax.projection, ccrs.Mercator):
-            g = ax.gridlines(draw_labels=True, color=grid_color, linestyle=grid_linestyle, crs=ccrs.PlateCarree(),
-                             linewidth=grid_linewidth, alpha=0)
-            g.xlabels_top = xlabels_top
-            g.xlabels_bottom = xlabels_bottom
-            g.ylabels_left = ylabels_left
-            g.ylabels_right = ylabels_right
+            g = ax.gridlines(draw_labels=True, crs=ccrs.PlateCarree(), alpha=0)
+            g.top_labels = labels_top
+            g.bottom_labels = labels_bottom
+            g.left_labels = labels_left
+            g.right_labels = labels_right
 
             g.xlocator = mticker.FixedLocator(xtick_locations)
             g.ylocator = mticker.FixedLocator(ytick_locations)
@@ -444,32 +430,26 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
             xtick_locations = xtick_locations[np.logical_and(xtick_locations >= x0, xtick_locations <= x1)]
             ytick_locations = ytick_locations[np.logical_and(ytick_locations >= y0, ytick_locations <= y1)]
 
-            if xlabel_location == "bottom":
-                ax.set_xticks(xtick_locations, crs=ccrs.PlateCarree())
-                ax.xaxis.set_major_formatter(xtick_formatter)
-            elif xlabel_location == "top":
+            if xlabel_location == 'top':
                 ax.xaxis.tick_top()
-                ax.set_xticks(xtick_locations, crs=ccrs.PlateCarree())
-                ax.xaxis.set_major_formatter(xtick_formatter)
-            else:
-                ax.set_xticks(xtick_locations, crs=ccrs.PlateCarree())
-                ax.xaxis.set_major_formatter(xtick_formatter)
+
+            ax.set_xticks(xtick_locations)
+            ax.xaxis.set_major_formatter(xtick_formatter)
+
+            if xlabel_location == 'both':
                 ax_new = _clone_geoaxes(ax)
                 ax_new.xaxis.tick_top()
-                ax_new.set_xticks(xtick_locations, crs=ccrs.PlateCarree())
+                ax_new.set_xticks(xtick_locations)
                 ax_new.xaxis.set_major_formatter(xtick_formatter)
                 ax_new.tick_params(axis='both', which='both', length=0, labelsize=fontsize)
 
-            if ylabel_location == "left":
-                ax.set_yticks(ytick_locations, crs=ccrs.PlateCarree())
-                ax.yaxis.set_major_formatter(ytick_formatter)
-            elif ylabel_location == "right":
+            if ylabel_location == "right":
                 ax.yaxis.tick_right()
-                ax.set_yticks(ytick_locations, crs=ccrs.PlateCarree())
-                ax.yaxis.set_major_formatter(ytick_formatter)
-            else:
-                ax.set_yticks(ytick_locations, crs=ccrs.PlateCarree())
-                ax.yaxis.set_major_formatter(ytick_formatter)
+
+            ax.set_yticks(ytick_locations)
+            ax.yaxis.set_major_formatter(ytick_formatter)
+
+            if ylabel_location == 'both':
                 ax_new = _clone_geoaxes(ax)
                 ax_new.yaxis.tick_top()
                 ax_new.set_yticks(ytick_locations, crs=ccrs.PlateCarree())
@@ -478,68 +458,74 @@ def basemap(x0=-180, y0=-90, x1=180, y1=90, epsg=4326, projection=None, ax=None,
 
         else:
             if len(xtick_locations) > 0:
-                if xlabels_bottom:
+                if labels_bottom:
                     basemap_xticks(ax, list(xtick_locations), add=False, side='bottom', formatter=xtick_formatter,
                                    fontsize=fontsize)
-                if xlabels_top:
+                if labels_top:
                     basemap_xticks(ax, list(xtick_locations), add=True, side='top', formatter=xtick_formatter,
                                    fontsize=fontsize)
 
             if len(ytick_locations) > 0:
-                if ylabels_left:
+                if labels_left:
                     basemap_yticks(ax, list(ytick_locations), add=False, side='left', formatter=ytick_formatter,
                                    fontsize=fontsize)
-                if ylabels_right:
+                if labels_right:
                     basemap_yticks(ax, list(ytick_locations), add=True, side='right', formatter=ytick_formatter,
                                    fontsize=fontsize)
 
-    ax.outline_patch.set_linewidth(border_linewidth)
+    ax.spines['geo'].set_linewidth(border_linewidth)
+    ax.figure.canvas.draw()
 
     return ax
 
 
 # TESTS
 if __name__ == "__main__":
-    basemap()
+    ax = basemap()
     plt.show()
 
-    basemap(x0=0)
-    plt.tight_layout()
+    basemap([0, -90, 180, 90])
     plt.show()
 
     basemap(epsg=3857)
     plt.show()
 
-    ax = basemap(y0=0, epsg=3857)
+    ax = basemap(epsg=3857)
     plt.show()
 
     # Trying out different projections
-    basemap(epsg=3035, resolution="10m", grid=True)
+    basemap(epsg=3035, resolution="10m")
     plt.show()
 
-    basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5)
+    basemap([0, 30, 30, 60], epsg=3035, xticks=5, yticks=5)
     plt.show()
 
-    basemap(epsg=3857, resolution="10m", grid=True)
+    basemap(epsg=3035, resolution="10m", xticks=5, yticks=5)
     plt.show()
 
-    basemap(epsg=5643, resolution="10m", grid=True, xticks=5, yticks=5)
+    basemap(epsg=3857, resolution="10m")
+    plt.show()
+
+    basemap(epsg=5643, resolution="10m", xticks=5, yticks=5)
     plt.show()
 
     # Add labels on four axes
-    ax = basemap(epsg=5643, resolution="10m", grid=True, xticks=2, yticks=2, xlabel_location='both',
+    ax = basemap(epsg=5643, resolution="10m", xticks=2, yticks=2, xlabel_location='both',
                  ylabel_location='both')
     plt.show()
 
     # Add labels on three axes
-    ax = basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5, ylabel_location='both')
+    ax = basemap(epsg=3035, resolution="10m", xticks=5, yticks=5, ylabel_location='both')
     plt.show()
 
+    # Clip to impossible global
+    # ax = basemap([-180, -90, 180, 90], epsg=3035, resolution="10m", xticks=5, yticks=5, ylabel_location='both')
+    # plt.show()
+
     # Changing fontsize
-    ax = basemap(epsg=3035, resolution="10m", grid=True, xticks=5, yticks=5, fontsize=6)
-    basemap_yticks(ax, list(np.linspace(-90, 90, (180 // 5 + 1))), side="right", fontsize=6)
+    ax = basemap(epsg=3035, resolution="10m", xticks=5, yticks=5, fontsize=6, xlabel_location='right')
     plt.show()
 
     # Smaller extent and labels on both sides
-    ax = basemap(x0=0, epsg=3035, resolution="10m", grid=True, xticks=5, yticks=10, ylabel_location="both")
+    ax = basemap(epsg=3035, resolution="10m", xticks=5, yticks=10, ylabel_location="both")
     plt.show()

@@ -2,6 +2,8 @@ import geopandas as gpd
 from pyproj import Proj, transform
 from shapely.geometry import Polygon
 
+PROJ_LAT_LON = Proj(4326, preserve_units=False)
+
 
 def bounds_to_polygons(bounds_list, max_bounds=None):
     """
@@ -57,10 +59,10 @@ def bounds_to_polygons(bounds_list, max_bounds=None):
 
 
 def bounds_to_platecarree(proj, bounds):
-    p_lat_lon = Proj(init="epsg:4326", preserve_units=False)
-    return (*transform(proj, p_lat_lon, bounds[0], bounds[1]), *transform(proj, p_lat_lon, bounds[2], bounds[3]))
+    return (*transform(proj, PROJ_LAT_LON, bounds[0], bounds[1], always_xy=True),
+            *transform(proj, PROJ_LAT_LON, bounds[2], bounds[3], always_xy=True))
 
 
 def bounds_to_data_projection(proj, bounds):
-    p_lat_lon = Proj(init="epsg:4326", preserve_units=False)
-    return (*transform(p_lat_lon, proj, bounds[0], bounds[1]), *transform(p_lat_lon, proj, bounds[2], bounds[3]))
+    return (*transform(PROJ_LAT_LON, proj, bounds[0], bounds[1], always_xy=True),
+            *transform(PROJ_LAT_LON, proj, bounds[2], bounds[3], always_xy=True))

@@ -95,124 +95,99 @@ def update_line(w_str):
     sys.stdout.flush()
 
 
-def reproject_map_like(input_map=None, ref_map=None, output_map=None, resampling=Resampling.bilinear, dtype=None):
+def reproject_map_like(input_map=None, ref_map=None, output_map=None, resampling=Resampling.bilinear, dtype=None,
+                       nodata=None):
     """
     Reprojecting a map like a reference map.
 
     Parameters
     ----------
-    input_map : str
-        Path to the input map
-    ref_map : str
-        todo; make to accept profile directly
+    input_map : str, tuple, Raster
+        Path to the input map or a Raster object. If a tuple is passed, it is assumed that it is of the form
+        (data, `rio.Profile`). In this case data should contain layer information on the third axis.
+    ref_map : str, Raster, `rio.Profile`
         Path to the reference map where the profile is pulled from
     output_map : str
         Path to the location where the transformed map is written to.
     resampling : `rio.Resampling`
-        resampling strategy
+        Resampling strategy
     dtype : `numpy.dtype`, optional
-        export dtype
+        export dtype. If not given it defaults to the dtype of the input data
+    nodata : numeric, optional
+        export nodata values. If not given it defaults to the input nodata value.
 
     Raises
     ------
     IOError
-        reference map or input map not found or output_map already exists
+        Output_map already exists
     """
-    # todo; make it possible to write several bands instead of just one
-    # todo; make it accept Raster
-    if not os.path.isfile(ref_map):
-        raise IOError("no reference map provided")
-    if not os.path.isfile(input_map):
-        raise IOError("no input map provided")
+    # todo; create a new function to adjust for a different resolution
+    from .raster import _RasterBase
     if os.path.isfile(output_map):
         raise IOError("output file name already exists")
 
-    with rio.open(ref_map) as ref_file:
-        ref_transform = ref_file.transform
-        ref_crs = ref_file.crs
-        shape = ref_file.shape
-        profile = ref_file.profile
+    if isinstance(input_map, (str, _RasterBase)):
+        if isinstance(input_map, str):
+            src = rio.open(input_map)
+            input_map_flag = True
+        elif isinstance(input_map, _RasterBase):
+            src = input_map._file
+            input_map_flag = False
+        print("loading data")
+        data = src.read()
+        src_profile = src.profile
+        if input_map_flag:
+            src.close()
+    elif isinstance(input_map, tuple):
+        data, src_profile = input_map
 
-    with rio.open(input_map) as src:
-        current_transform = src.transform
-        current_crs = src.crs
-        nodata = src.profile['nodata']
-        if isinstance(dtype, type(None)):
-            dtype = src.profile['dtype']
+    if isinstance(ref_map, str):
+        ref_file = rio.open(ref_map)
+        ref_profile = ref_file.profile
+        ref_file.close()
+    elif isinstance(ref_map, _RasterBase):
+        ref_profile = ref_map._file.profile
+    elif isinstance(ref_map, rio.profiles.Profile):
+        ref_profile = ref_map
 
-        if isinstance(current_crs, type(None)):
-            print("input map does not have a CRS. Therefore the crs of the reference map is assumed")
-            current_crs = ref_crs
+    ref_transform = ref_profile['transform']
+    ref_crs = ref_profile['crs']
+    shape = (src_profile['count'], ref_profile['height'], ref_profile['width'])
 
-        new_map = np.ndarray(shape, dtype=dtype)
-        print("start reprojecting")
-        reproject(src.read(1), new_map,
-                  src_transform=current_transform,
-                  src_crs=current_crs,
-                  dst_transform=ref_transform,
-                  dst_crs=ref_crs,
-                  src_nodata=nodata,
-                  dst_nodata=nodata,
-                  resampling=resampling)
+    current_transform = src_profile['transform']
+    current_crs = src_profile['crs']
+
+    if isinstance(nodata, type(None)):
+        nodata = src_profile['nodata']
+    if isinstance(dtype, type(None)):
+        dtype = src_profile['dtype']
+    if isinstance(current_crs, type(None)):
+        print("input map does not have a CRS. Therefore the crs of the reference map is assumed")
+        current_crs = ref_profile['crs']
+
+    new_map = np.ndarray(shape, dtype=dtype)
+
+    print("start reprojecting")
+    reproject(data, new_map,
+              src_transform=current_transform,
+              src_crs=current_crs,
+              dst_transform=ref_transform,
+              dst_crs=ref_crs,
+              src_nodata=src_profile['nodata'],
+              dst_nodata=nodata,
+              resampling=resampling)
 
     print("writing file")
-    profile.update({"dtype": str(new_map.dtype),
-                    "driver": "GTiff",
-                    "count": 1,
-                    "nodata": nodata})
+    ref_profile.update({"dtype": str(new_map.dtype),
+                        "driver": "GTiff",
+                        "count": shape[0],
+                        "nodata": nodata,
+                        "compress": "lzw"})
 
-    with rio.open(output_map, "w", **profile) as dst:
-        dst.write(new_map, 1)
+    with rio.open(output_map, "w", **ref_profile) as dst:
+        dst.write(new_map, list(range(1, shape[0] + 1)))
+
     print("reprojection completed")
-
-
-def export_map_like(m, ref_map=None, output_map=None):
-    """
-    Exporting a map, taking the needed parameters from a reference_map
-
-    Parameters
-    ----------
-    m : :obj:`~numpy.ndarray`
-        2D input map
-    ref_map : str
-        Path of the reference map
-        todo; make the direct insertion of a rasterio profile possible
-    output_map : str
-        Path where the data will be written to. If extension is not given it will be added (.tif)
-
-    Raises
-    ------
-    TypeError
-        if no input data is given
-    ValueError
-        if data is not 2D
-    IOError
-        if output_map location already exists
-    """
-    if type(m) != np.ndarray:
-        raise TypeError("Input data should be a ndarray")
-    if m.ndim != 2:
-        raise ValueError("map should be a 2D ndarray")
-
-    # reference map
-    with rio.open(ref_map) as src:
-        ref_transform = src.transform
-        ref_crs = src.crs
-        shape = (src.height, src.width)
-
-    # todo; create functionality to overwrite the file if needed
-    if os.path.isfile(output_map):
-        raise IOError("Output location already exists")
-
-    # if file extension is not given or is not tif, it will be added
-    if output_map[-4:] != ".tif":
-        output_map = output_map.strip() + ".tif"
-
-    # create the new file
-    with rio.open(output_map, "w", driver="GTiff", dtype=str(m.dtype), height=shape[0], width=shape[1],
-                  crs=ref_crs, count=1, transform=ref_transform) as src:
-        # todo; more than one layer
-        src.write(m, 1)
 
 
 def grid_from_corners(v, shape):

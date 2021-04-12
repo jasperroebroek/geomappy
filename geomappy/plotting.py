@@ -491,9 +491,9 @@ class ClassifiedPlotParams(PlotParams):
             colors = np.array(colors)
         else:
             if isinstance(cmap, type(None)):
-                if len(bins) <= 9:
-                    raise TypeError("More than 9 classes are present, in which case cmap or colors not to be set "
-                                    "explicitly")
+                if len(bins) > 9:
+                    raise IndexError("More than 9 classes are present, in which case cmap or colors needs to be set "
+                                     "explicitly")
                 colors = cmap_discrete(cmap="Set1", n=9, return_type="list")[:len(bins)]
             else:
                 colors = cmap_discrete(cmap=cmap, n=len(bins), return_type='list')

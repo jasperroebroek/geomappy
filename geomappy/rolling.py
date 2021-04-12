@@ -91,7 +91,9 @@ def rolling_window(a, window_size, *, flatten=False, reduce=False):
     
     if flatten:
         strided_a = strided_a.reshape((*output_shape[:-a.ndim], -1))
-    
+
+    strided_a.flags.writeable = False
+
     return strided_a
 
 
