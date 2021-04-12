@@ -5,7 +5,7 @@ code_base_expansion/
 scratch/
 data/
 geomappy.egg-info/
-examples/geomappy
+build
 
 .DS_Store
 thesis.py
@@ -13,3 +13,5 @@ thesis.py
 *dask-worker-space*
 *plotting_routine_variables.xlsx
 *.tif
+*.so
+*.c

@@ -7,7 +7,8 @@ from geomappy.utils import overlapping_arrays
 from geomappy.rolling import rolling_window, rolling_sum
 from geomappy.raster import Raster
 from geomappy.focal_statistics import focal_mean, focal_statistics
-from geomappy.focal_statistics.focal_correlation import correlate_maps_base, correlate_maps_njit
+from geomappy.focal_statistics import correlate_maps_base
+from geomappy.focal_statistics import correlate_maps as correlate_maps_cython
 
 
 def correlate_maps_simple(map1, map2, window_size=5, fraction_accepted=0.7):
@@ -41,7 +42,7 @@ def correlate_maps_simple(map1, map2, window_size=5, fraction_accepted=0.7):
         for j in range(fringe, map1.shape[1] - fringe):
             ind = s_[i - fringe:i + fringe + 1, j - fringe:j + fringe + 1]
 
-            if np.isnan(map1[i, j]):
+            if np.isnan(map1[i, j]) or np.isnan(map2[i, j]):
                 continue
 
             d1 = map1[ind].flatten()
@@ -113,43 +114,48 @@ class TestCorrelateRastersNumba(unittest.TestCase):
     def test_assumptions(self):
         with self.assertRaises((ValueError, IndexError)):
             # Only 2D is supported
-            correlate_maps_njit(np.random.rand(10, 10, 10), np.random.rand(10, 10, 10))
+            correlate_maps_cython(np.random.rand(10, 10, 10), np.random.rand(10, 10, 10))
         with self.assertRaises((ValueError, IndexError)):
             # Only 2D is supported
-            correlate_maps_njit(np.random.rand(10), np.random.rand(10))
+            correlate_maps_cython(np.random.rand(10), np.random.rand(10))
         with self.assertRaises(ValueError):
             # fraction accepted needs to be in range 0-1
-            correlate_maps_njit(self.map1, self.map2, fraction_accepted=-0.1)
+            correlate_maps_cython(self.map1, self.map2, fraction_accepted=-0.1)
         with self.assertRaises(ValueError):
             # fraction accepted needs to be in range 0-1
-            correlate_maps_njit(self.map1, self.map2, fraction_accepted=1.1)
+            correlate_maps_cython(self.map1, self.map2, fraction_accepted=1.1)
         with self.assertRaises(ValueError):
             # window_size should be bigger than 1
-            correlate_maps_njit(self.map1, self.map2, window_size=1)
+            correlate_maps_cython(self.map1, self.map2, window_size=1)
         with self.assertRaises(ValueError):
             # window_size can't be even
-            correlate_maps_njit(self.map1, self.map2, window_size=4)
+            correlate_maps_cython(self.map1, self.map2, window_size=4)
         # window_size can't be even except when reduce=True
-        correlate_maps_njit(self.map1, self.map2, window_size=4, reduce=True)
+        correlate_maps_cython(self.map1, self.map2, window_size=4, reduce=True)
 
     def test_correlation(self):
         # fraction_accepted 0.7 and window_size 5
-        c1 = correlate_maps_njit(self.map1, self.map2)
+        c1 = correlate_maps_cython(self.map1, self.map2)
         c2 = correlate_maps_simple(self.map1, self.map2)
         self.assertTrue(np.allclose(c1, c2, equal_nan=True))
 
     def test_correlation_fraction_accepted_0(self):
-        c1 = correlate_maps_njit(self.map1, self.map2, fraction_accepted=0)
+        c1 = correlate_maps_cython(self.map1, self.map2, fraction_accepted=0)
         c2 = correlate_maps_simple(self.map1, self.map2, fraction_accepted=0)
         self.assertTrue(np.allclose(c1, c2, equal_nan=True))
 
+    def test_correlation_fraction_accepted_025(self):
+        c1 = correlate_maps_cython(self.map1, self.map2, fraction_accepted=0.25)
+        c2 = correlate_maps_simple(self.map1, self.map2, fraction_accepted=0.25)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
     def test_correlation_fraction_accepted_1(self):
-        c1 = correlate_maps_njit(self.map1, self.map2, fraction_accepted=1)
+        c1 = correlate_maps_cython(self.map1, self.map2, fraction_accepted=1)
         c2 = correlate_maps_simple(self.map1, self.map2, fraction_accepted=1)
         self.assertTrue(np.allclose(c1, c2, equal_nan=True))
 
     def test_correlation_window_size_15(self):
-        c1 = correlate_maps_njit(self.map1, self.map2, window_size=15)
+        c1 = correlate_maps_cython(self.map1, self.map2, window_size=15)
         c2 = correlate_maps_simple(self.map1, self.map2, window_size=15)
         self.assertTrue(np.allclose(c1, c2, equal_nan=True))
 
@@ -159,17 +165,17 @@ class TestCorrelateRastersNumba(unittest.TestCase):
         c1 = np.random.rand(5, 5)
         c2 = np.random.rand(5, 5)
         self.assertTrue(np.allclose(pearsonr(c1.flatten(), c2.flatten())[0],
-                                    correlate_maps_njit(c1, c2, window_size=5)[2, 2]))
+                                    correlate_maps_cython(c1, c2, window_size=5)[2, 2]))
 
     def test_reduce(self):
         # Test if the right shape comes out
-        self.assertTrue(correlate_maps_njit(self.map1, self.map2, window_size=4, reduce=True).shape == (5, 5))
+        self.assertTrue(correlate_maps_cython(self.map1, self.map2, window_size=4, reduce=True).shape == (5, 5))
         # Test if the right value comes out
         c1 = self.map1[:4, :4].flatten()
         c2 = self.map2[:4, :4].flatten()
-        # print(correlate_maps_njit(self.map1, self.map2, window_size=4, reduce=True))
+        # print(correlate_maps_cython(self.map1, self.map2, window_size=4, reduce=True))
         # print(pearsonr(c1, c2))
-        self.assertTrue(np.allclose(correlate_maps_njit(self.map1, self.map2, window_size=4, reduce=True)[0, 0],
+        self.assertTrue(np.allclose(correlate_maps_cython(self.map1, self.map2, window_size=4, reduce=True)[0, 0],
                                     pearsonr(c1, c2)[0]))
 
 
@@ -209,6 +215,11 @@ class TestCorrelateRastersNumpy(unittest.TestCase):
     def test_correlation_fraction_accepted_0(self):
         c1 = correlate_maps_base(self.map1, self.map2, fraction_accepted=0)
         c2 = correlate_maps_simple(self.map1, self.map2, fraction_accepted=0)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
+    def test_correlation_fraction_accepted_025(self):
+        c1 = correlate_maps_base(self.map1, self.map2, fraction_accepted=0.25)
+        c2 = correlate_maps_simple(self.map1, self.map2, fraction_accepted=0.25)
         self.assertTrue(np.allclose(c1, c2, equal_nan=True))
 
     def test_correlation_fraction_accepted_1(self):
@@ -373,7 +384,7 @@ class TestRaster(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestRaster, self).__init__(*args, **kwargs)
         self.map1 = Raster("../data/wtd.tif", tiles=(8, 8))
-        self.map2 = Raster("../data/tree_height.asc", tiles=(8, 8), epsg=4326)
+        self.map2 = Raster("../data/tree_height.asc", tiles=(8, 8))
 
     def test_tile_correlation(self):
         loc = "test.tif"
@@ -383,7 +394,7 @@ class TestRaster(unittest.TestCase):
         t = Raster(loc)
         c1 = t[0]
         t.close(verbose=False)
-        c2 = correlate_maps_njit(self.map1[32], self.map2[32], window_size=5)
+        c2 = correlate_maps_cython(self.map1[32], self.map2[32], window_size=5)
         self.assertTrue(np.allclose(c1, c2, equal_nan=True))
 
     # This should be tested once in a while to make sure everything works okay, but it takes a couple of minutes
@@ -393,7 +404,7 @@ class TestRaster(unittest.TestCase):
         t = Raster(loc)
         c1 = t[0]
         t.close(verbose=False)
-        c2 = correlate_maps_njit(self.map1.get_file_data(), self.map2.get_file_data(), window_size=5)
+        c2 = correlate_maps_cython(self.map1.get_file_data(), self.map2.get_file_data(), window_size=5)
         self.assertTrue(np.allclose(c1[self.map1.ind_inner], c2[self.map1.ind_inner], equal_nan=True))
 
     def test_tile_focal_stats(self):

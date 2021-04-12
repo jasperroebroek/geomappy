@@ -52,6 +52,7 @@ ax[1].imshow(a > 0.5, cmap=ListedColormap(["Lightgrey", "Red"]))
 plt.show()
 
 b = np.ones((10, 10))
-b[4,4] = 2
-mp.plot_classified_map(b, [1,2], ['Red', "Green"])
+b[4, 4] = 2
+b[5, 5] = 5
+mp.plot_classified_map(b, [1, 2, 5], ['Red', "Green", "Blue"])
 plt.show()
