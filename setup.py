@@ -1,4 +1,6 @@
 from setuptools import setup
+from Cython.Build import cythonize
+import numpy
 
 setup(
     name='geomappy',
@@ -10,5 +12,7 @@ setup(
     author_email='roebroek.jasper@gmail.com',
     description='Plot maps on a basemap, with data in raster and polygon formats',
     install_requires=["cartopy>=0.18", "rasterio", "geopandas", "descartes", "packaging"],
-    extra_require={"develop": "numba"}
+    extra_require={"develop": ["numba", "cython"]},
+    ext_modules=cythonize("geomappy/focal_statistics/c_focal_correlation.pyx"),
+    include_dirs=[numpy.get_include()]
 )
