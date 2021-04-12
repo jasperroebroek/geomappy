@@ -269,7 +269,7 @@ def focal_statistics(a, window_size, *, func=None, fraction_accepted=0.7, verbos
         r = _focal_std(a, window_size, fraction_accepted, reduce, std_df, r, ind_inner, values)
 
     if verbose:
-        print(f"- mean: {time.time() - start}")
+        print(f"- focal {func}: {time.time() - start}")
 
     return r
 
