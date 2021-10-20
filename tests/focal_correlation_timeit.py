@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 map1 = mp.Raster("data/wtd.tif").values
-map2 = mp.Raster("data/tree_height.asc").values
+map2 = mp.Raster("data/tree_height.asc", fill_value=0).values
 print("data loaded")
 
 # %timeit correlate_maps_cython(map1, map2, window_size=5, fraction_accepted=0.25, verbose=True, reduce=False)

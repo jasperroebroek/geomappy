@@ -263,7 +263,6 @@ def correlate_maps_base(map1, map2, *, window_size=5, fraction_accepted=0.7, red
     # insert the correlation (r_num/r_den) into the predefined correlation map
     corr_inner = np.divide(r_num, r_den, where=np.logical_and(valid_cells, r_den != 0), out=corr[ind_inner])
 
-    # todo; this likely is referencing nan values because it is written to the same memory space
     corr_inner[np.where(r_den == 0)] = 0
 
     # End main calculation

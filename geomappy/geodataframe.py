@@ -60,6 +60,9 @@ def _plot_combined_shapes(classified, *, df=None, values=None, basemap=False, fi
     To have a more fine-grained control over the projections of the both the data and the plot a cartopy transform
     object can be passed to kwargs (data, as `transform`) and basemap_kwargs (plot, as `projection`).
     """
+    # todo; remove log
+    # todo; check CRS -> make similar to Raster
+
     if isinstance(df, type(None)):
         raise TypeError("Internal error: df not received")
 

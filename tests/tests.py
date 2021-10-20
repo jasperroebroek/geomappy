@@ -2,13 +2,22 @@ import unittest
 import numpy as np
 from numpy import s_
 from scipy.stats import pearsonr
+import geomappy as mp
+import matplotlib.pyplot as plt
 
+from geomappy.raster._write import RasterWriter
 from geomappy.utils import overlapping_arrays
 from geomappy.rolling import rolling_window, rolling_sum
 from geomappy.raster import Raster
 from geomappy.focal_statistics import focal_mean, focal_statistics
 from geomappy.focal_statistics import correlate_maps_base
+from geomappy.focal_statistics import correlate_maps_njit as correlate_maps_numba
 from geomappy.focal_statistics import correlate_maps as correlate_maps_cython
+
+
+# todo; write tests for RasterBase parameters
+# todo; write tests for RasterReaderSet
+# todo; write tests for reproject_map_like
 
 
 def correlate_maps_simple(map1, map2, window_size=5, fraction_accepted=0.7):
@@ -104,9 +113,9 @@ class TestRollingSum(unittest.TestCase):
             rolling_sum(np.array([1, 2, 3]), 5)
 
 
-class TestCorrelateRastersNumba(unittest.TestCase):
+class TestCorrelateRastersCython(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestCorrelateRastersNumba, self).__init__(*args, **kwargs)
+        super(TestCorrelateRastersCython, self).__init__(*args, **kwargs)
         np.random.seed(0)
         self.map1 = np.random.rand(20, 20)
         self.map2 = np.random.rand(20, 20)
@@ -176,6 +185,81 @@ class TestCorrelateRastersNumba(unittest.TestCase):
         # print(correlate_maps_cython(self.map1, self.map2, window_size=4, reduce=True))
         # print(pearsonr(c1, c2))
         self.assertTrue(np.allclose(correlate_maps_cython(self.map1, self.map2, window_size=4, reduce=True)[0, 0],
+                                    pearsonr(c1, c2)[0]))
+
+
+class TestCorrelateRastersNumba(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super(TestCorrelateRastersNumba, self).__init__(*args, **kwargs)
+        np.random.seed(0)
+        self.map1 = np.random.rand(20, 20)
+        self.map2 = np.random.rand(20, 20)
+
+    def test_assumptions(self):
+        with self.assertRaises((ValueError, IndexError)):
+            # Only 2D is supported
+            correlate_maps_numba(np.random.rand(10, 10, 10), np.random.rand(10, 10, 10))
+        with self.assertRaises((ValueError, IndexError)):
+            # Only 2D is supported
+            correlate_maps_numba(np.random.rand(10), np.random.rand(10))
+        with self.assertRaises(ValueError):
+            # fraction accepted needs to be in range 0-1
+            correlate_maps_numba(self.map1, self.map2, fraction_accepted=-0.1)
+        with self.assertRaises(ValueError):
+            # fraction accepted needs to be in range 0-1
+            correlate_maps_numba(self.map1, self.map2, fraction_accepted=1.1)
+        with self.assertRaises(ValueError):
+            # window_size should be bigger than 1
+            correlate_maps_numba(self.map1, self.map2, window_size=1)
+        with self.assertRaises(ValueError):
+            # window_size can't be even
+            correlate_maps_numba(self.map1, self.map2, window_size=4)
+        # window_size can't be even except when reduce=True
+        correlate_maps_numba(self.map1, self.map2, window_size=4, reduce=True)
+
+    def test_correlation(self):
+        # fraction_accepted 0.7 and window_size 5
+        c1 = correlate_maps_numba(self.map1, self.map2)
+        c2 = correlate_maps_simple(self.map1, self.map2)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
+    def test_correlation_fraction_accepted_0(self):
+        c1 = correlate_maps_numba(self.map1, self.map2, fraction_accepted=0)
+        c2 = correlate_maps_simple(self.map1, self.map2, fraction_accepted=0)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
+    def test_correlation_fraction_accepted_025(self):
+        c1 = correlate_maps_numba(self.map1, self.map2, fraction_accepted=0.25)
+        c2 = correlate_maps_simple(self.map1, self.map2, fraction_accepted=0.25)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
+    def test_correlation_fraction_accepted_1(self):
+        c1 = correlate_maps_numba(self.map1, self.map2, fraction_accepted=1)
+        c2 = correlate_maps_simple(self.map1, self.map2, fraction_accepted=1)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
+    def test_correlation_window_size_15(self):
+        c1 = correlate_maps_numba(self.map1, self.map2, window_size=15)
+        c2 = correlate_maps_simple(self.map1, self.map2, window_size=15)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
+    def test_correlation_value(self):
+        # test the value of the correlation against scipys implementation
+        np.random.seed(0)
+        c1 = np.random.rand(5, 5)
+        c2 = np.random.rand(5, 5)
+        self.assertTrue(np.allclose(pearsonr(c1.flatten(), c2.flatten())[0],
+                                    correlate_maps_numba(c1, c2, window_size=5)[2, 2]))
+
+    def test_reduce(self):
+        # Test if the right shape comes out
+        self.assertTrue(correlate_maps_numba(self.map1, self.map2, window_size=4, reduce=True).shape == (5, 5))
+        # Test if the right value comes out
+        c1 = self.map1[:4, :4].flatten()
+        c2 = self.map2[:4, :4].flatten()
+        # print(correlate_maps_cython(self.map1, self.map2, window_size=4, reduce=True))
+        # print(pearsonr(c1, c2))
+        self.assertTrue(np.allclose(correlate_maps_numba(self.map1, self.map2, window_size=4, reduce=True)[0, 0],
                                     pearsonr(c1, c2)[0]))
 
 
@@ -380,34 +464,79 @@ class TestFocalStatistics(unittest.TestCase):
     # todo; test majority with its different modes
 
 
-class TestRaster(unittest.TestCase):
+class TestRasterCorrelation(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestRaster, self).__init__(*args, **kwargs)
+        super(TestRasterCorrelation, self).__init__(*args, **kwargs)
         self.map1 = Raster("../data/wtd.tif", tiles=(8, 8))
-        self.map2 = Raster("../data/tree_height.asc", tiles=(8, 8))
+        self.map2 = Raster("../data/tree_height.asc", tiles=(8, 8), fill_value=0)
 
     def test_tile_correlation(self):
-        loc = "test.tif"
         self.map1.window_size = 5
         self.map2.window_size = 5
+        loc = "test.tif"
         self.map1.correlate(self.map2, output_file=loc, window_size=5, ind=32, overwrite=True)
         t = Raster(loc)
         c1 = t[0]
         t.close(verbose=False)
         c2 = correlate_maps_cython(self.map1[32], self.map2[32], window_size=5)
         self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+        c2 = correlate_maps_cython(self.map1[32], self.map2[32], window_size=15)
+        self.assertFalse(np.allclose(c1, c2, equal_nan=True))
 
-    # This should be tested once in a while to make sure everything works okay, but it takes a couple of minutes
+    def test_tile_correlation_reduce(self):
+        self.map1.window_size = 1
+        self.map2.window_size = 1
+        loc = "test.tif"
+        self.map1.correlate(self.map2, output_file=loc, window_size=5, ind=32, overwrite=True, reduce=True)
+        t = Raster(loc)
+        c1 = t[0]
+        t.close(verbose=False)
+        c2 = correlate_maps_cython(self.map1[32], self.map2[32], window_size=5, reduce=True)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
     def test_correlation(self):
+        self.map1.window_size = 5
+        self.map2.window_size = 5
         loc = "test.tif"
         self.map1.correlate(self.map2, output_file=loc, window_size=5, overwrite=True)
         t = Raster(loc)
         c1 = t[0]
         t.close(verbose=False)
         c2 = correlate_maps_cython(self.map1.get_file_data(), self.map2.get_file_data(), window_size=5)
+        self.assertTrue(c1[self.map1.ind_inner].size > 0)
         self.assertTrue(np.allclose(c1[self.map1.ind_inner], c2[self.map1.ind_inner], equal_nan=True))
 
+    def test_correlation_reduce(self):
+        self.map1.window_size = 1
+        self.map2.window_size = 1
+        loc = "test.tif"
+        self.map1.correlate(self.map2, output_file=loc, window_size=5, overwrite=True, reduce=True)
+        t = Raster(loc)
+        c1 = t[0]
+        t.close(verbose=False)
+        c2 = correlate_maps_cython(self.map1.get_file_data(), self.map2.get_file_data(), window_size=5, reduce=True)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
+
+class TestRasterFocalStats(unittest.TestCase):
+    def __init__(self, *args, **kwargs):
+        super(TestRasterFocalStats, self).__init__(*args, **kwargs)
+        self.map1 = Raster("../data/wtd.tif", tiles=(8, 8))
+
     def test_tile_focal_stats(self):
+        self.map1.window_size = 5
+        loc = "test.tif"
+        self.map1.focal_mean(ind=32, window_size=5, output_file=loc, overwrite=True)
+        t = Raster(loc)
+        c1 = t[0]
+        t.close(verbose=False)
+        c2 = focal_mean(self.map1[32], window_size=5)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+        c2 = focal_mean(self.map1[32], window_size=15)
+        self.assertFalse(np.allclose(c1, c2, equal_nan=True))
+
+    def test_tile_focal_stats_reduce(self):
+        self.map1.window_size = 1
         loc = "test.tif"
         self.map1.focal_mean(ind=32, window_size=5, output_file=loc, overwrite=True, reduce=True)
         t = Raster(loc)
@@ -416,13 +545,42 @@ class TestRaster(unittest.TestCase):
         c2 = focal_mean(self.map1[32], window_size=5, reduce=True)
         self.assertTrue(np.allclose(c1, c2, equal_nan=True))
 
-    def test_focal_stats(self):
+    def test_focal_stats_reduce(self):
+        self.map1.window_size = 1
         loc = "test.tif"
         self.map1.focal_mean(window_size=5, output_file=loc, overwrite=True, reduce=True)
         t = Raster(loc)
         c1 = t[0]
         t.close(verbose=False)
-        c2 = focal_mean(self.map1.get_file_data(), window_size=5, reduce=True)
+        c2 = focal_mean(self.map1.values, window_size=5, reduce=True)
+        self.assertTrue(np.allclose(c1, c2, equal_nan=True))
+
+    def test_focal_stats(self):
+        self.map1.window_size = 5
+        loc = "test.tif"
+        self.map1.focal_mean(window_size=5, output_file=loc, overwrite=True)
+        t = Raster(loc)
+        c1 = t[0]
+        t.close(verbose=False)
+        c2 = focal_mean(self.map1.values, window_size=5)
+        self.assertTrue(np.allclose(c1[self.map1.ind_inner], c2[self.map1.ind_inner], equal_nan=True))
+        c2 = focal_mean(self.map1.values, window_size=15)
+        self.assertFalse(np.allclose(c1[self.map1.ind_inner], c2[self.map1.ind_inner], equal_nan=True))
+
+    def test_focal_stats_manual(self):
+        self.map1.window_size = 5
+        loc = "test.tif"
+        profile = self.map1.profile
+        profile['dtype'] = np.float64
+        f = RasterWriter(location=loc, profile=profile, tiles=self.map1.tiles, overwrite=True,
+                         force_equal_tiles=self.map1._force_equal_tiles, window_size=self.map1.window_size)
+        for i in self.map1:
+            f[i] = focal_mean(self.map1[i], window_size=5, reduce=False)
+        f.close()
+        f = Raster(loc)
+        c1 = f[0]
+        f.close(verbose=False)
+        c2 = focal_mean(self.map1.values, window_size=5, reduce=False)
         self.assertTrue(np.allclose(c1[self.map1.ind_inner], c2[self.map1.ind_inner], equal_nan=True))
 
 

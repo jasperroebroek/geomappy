@@ -386,7 +386,7 @@ def add_colorbar(im=None, ax=None, cax=None, aspect=30, pad_fraction=0.6, positi
         if shrink < 1:
             length = 1 / (aspect / shrink)
             pad = pad_fraction * length
-            create_colorbar_axes(ax=ax, aspect=aspect/2, pad_fraction=pad_fraction, position=position).axis("off")
+            create_colorbar_axes(ax=ax, aspect=aspect/2, pad_fraction=0, position=position).axis("off")
 
             if position == "left":
                 bbox = [-pad - length, (1 - shrink)/2, length, shrink]

@@ -13,7 +13,7 @@ from rasterio.enums import Resampling
 from rasterio.warp import reproject
 
 
-def progress_bar(s, frac=True, line=True, width=20, prefix="", silent=True):
+def progress_bar(s, frac=True, line=True, width=20, prefix=""):
     """
     Taking either a percentage or a fraction and prints a progress bar that updates the line every time the function
     is called.
@@ -30,9 +30,6 @@ def progress_bar(s, frac=True, line=True, width=20, prefix="", silent=True):
         Width of the line of #. The default is 20
     prefix : str, optional
         String to be placed in front of the progress bar. The default is empty.
-    silent : bool, optional
-        If True this function doesn't return anything, which is the default. If false the print statement is returned to
-        be able to add something before printing it.
         
     Returns
     -------        
@@ -60,8 +57,8 @@ def progress_bar(s, frac=True, line=True, width=20, prefix="", silent=True):
     s = int(s)
     width = int(width)
     
-    f = 100//width
-    w = 100//f
+    f = 100 // width
+    w = 100 // f
 
     # \r will put the cursor back at the beginning of the previous
     # print statement, if no carriage return has passed
@@ -73,9 +70,8 @@ def progress_bar(s, frac=True, line=True, width=20, prefix="", silent=True):
     string += f"{s:3}%"
     
     print(string, end="")
-    
-    if not silent:
-        return string
+
+    return string
 
 
 def update_line(w_str):
@@ -96,7 +92,7 @@ def update_line(w_str):
 
 
 def reproject_map_like(input_map=None, ref_map=None, output_map=None, resampling=Resampling.bilinear, dtype=None,
-                       nodata=None):
+                       nodata=None, verbose=True):
     """
     Reprojecting a map like a reference map.
 
@@ -121,32 +117,39 @@ def reproject_map_like(input_map=None, ref_map=None, output_map=None, resampling
     IOError
         Output_map already exists
     """
-    # todo; create a new function to adjust for a different resolution
-    from .raster import _RasterBase
+    # todo; write tests for this function
+    # todo; create a new function to adjust for a different resolution (adapt direclty from rasterio/gdal)
+    # todo; create overwrite parameter
+
+    from .raster._base import RasterBase
     if os.path.isfile(output_map):
         raise IOError("output file name already exists")
 
-    if isinstance(input_map, (str, _RasterBase)):
+    if isinstance(input_map, (str, RasterBase)):
         if isinstance(input_map, str):
             src = rio.open(input_map)
             input_map_flag = True
-        elif isinstance(input_map, _RasterBase):
-            src = input_map._file
+            src_profile = src.profile
+        elif isinstance(input_map, RasterBase):
+            src = input_map._fp
             input_map_flag = False
-        print("loading data")
+            src_profile = input_map.profile
+        if verbose:
+            print("loading data")
         data = src.read()
-        src_profile = src.profile
         if input_map_flag:
             src.close()
     elif isinstance(input_map, tuple):
         data, src_profile = input_map
+    else:
+        raise TypeError("Input type needs to be {str, tuple, Raster}")
 
     if isinstance(ref_map, str):
         ref_file = rio.open(ref_map)
         ref_profile = ref_file.profile
         ref_file.close()
-    elif isinstance(ref_map, _RasterBase):
-        ref_profile = ref_map._file.profile
+    elif isinstance(ref_map, RasterBase):
+        ref_profile = ref_map._fp.profile
     elif isinstance(ref_map, rio.profiles.Profile):
         ref_profile = ref_map
 
@@ -167,7 +170,8 @@ def reproject_map_like(input_map=None, ref_map=None, output_map=None, resampling
 
     new_map = np.ndarray(shape, dtype=dtype)
 
-    print("start reprojecting")
+    if verbose:
+        print("start reprojecting")
     reproject(data, new_map,
               src_transform=current_transform,
               src_crs=current_crs,
@@ -177,7 +181,8 @@ def reproject_map_like(input_map=None, ref_map=None, output_map=None, resampling
               dst_nodata=nodata,
               resampling=resampling)
 
-    print("writing file")
+    if verbose:
+        print("writing file")
     ref_profile.update({"dtype": str(new_map.dtype),
                         "driver": "GTiff",
                         "count": shape[0],
@@ -187,7 +192,8 @@ def reproject_map_like(input_map=None, ref_map=None, output_map=None, resampling
     with rio.open(output_map, "w", **ref_profile) as dst:
         dst.write(new_map, list(range(1, shape[0] + 1)))
 
-    print("reprojection completed")
+    if verbose:
+        print("reprojection completed")
 
 
 def grid_from_corners(v, shape):

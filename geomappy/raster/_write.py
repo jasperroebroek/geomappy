@@ -49,11 +49,9 @@ class RasterWriter(RasterBase):
 
     def __init__(self, location, *, tiles=1, force_equal_tiles=False, window_size=1, ref_map=None, overwrite=False,
                  compress=False, dtype=np.float64, nodata=np.nan, count=-1, profile=None):
-        self._location = location
         self._mode = "w"
 
         # todo; check logic
-        # todo; don't write profile to self here
         # todo; remove ref_map
         if profile is None:
             # load the rasterio profile either from a reference map or the location itself if it already exists
@@ -95,7 +93,8 @@ class RasterWriter(RasterBase):
 
         # todo; create **kwargs that feed into the rio.open function
 
-        self._fp = rio.open(location, "w", **self._profile, BIGTIFF="YES")
+        self._fp = rio.open(location, "w+", **self._profile, BIGTIFF="YES")
+        self._location = self._fp.name
 
         # setting parameters by calling property functions
         self.window_size = window_size

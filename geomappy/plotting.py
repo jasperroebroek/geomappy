@@ -587,6 +587,8 @@ class Colorbar(Legend):
         Fontsize for the legend
     kwargs : dict
         Keyword arguments for ``cbar_decorater function``
+
+    todo; move all parameters from cbar_decorator to __init__
     """
     def __init__(self, aspect=30, pad_fraction=0.6, legend_ax=None, fontsize=None, **kwargs):
         self._aspect = aspect

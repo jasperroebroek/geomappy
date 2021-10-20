@@ -244,7 +244,6 @@ def focal_statistics(a, window_size, *, func=None, fraction_accepted=0.7, verbos
         nan_flag = False
     else:
         nan_flag = True
-        # todo; remove for numba
         a = a.copy()
 
     if func == "majority":
@@ -266,6 +265,7 @@ def focal_statistics(a, window_size, *, func=None, fraction_accepted=0.7, verbos
             r[ind_inner] = rolling_window(a, window_size, reduce=reduce).min(axis=(2, 3))
 
     elif func == "std":
+        # todo; implement Cython version
         r = _focal_std(a, window_size, fraction_accepted, reduce, std_df, r, ind_inner, values)
 
     if verbose:
