@@ -1,4 +1,6 @@
+import copy
 import os
+import warnings
 
 import geopandas as gpd
 import numpy as np
@@ -38,11 +40,10 @@ class RasterReader(RasterBase):
     values : ndarray
         all data of the file
     """
-
     def __init__(self, fp, *, tiles=1, force_equal_tiles=False, window_size=1, fill_value=None):
 
-        self._fp = rio.open(fp)
-
+        self._fp = rio.open(fp, mode='r')
+        self._profile = copy.deepcopy(self._fp.profile)
         self._location = self._fp.name
         self._mode = "r"
 
@@ -51,9 +52,12 @@ class RasterReader(RasterBase):
             if np.issubdtype(dtype, np.floating):
                 self._fill_value = np.nan
             else:
-                print("The raster contains integer data and no fill_value. This results in the data "
+                warnings.warn("The raster contains integer data and no fill_value. This results in the data "
                       "being returned without removing `nodata`")
                 self._fill_value = self.profile['nodata']
+                if self._fill_value is None:
+                    raise ValueError("no fill_value was given and the file does not have a nodata value to "
+                                     "use as a backup")
         else:
             self._fill_value = dtype.type(fill_value)
 
@@ -64,6 +68,7 @@ class RasterReader(RasterBase):
 
         # collector of the base class. This list contains all files opened with the Raster classes
         self.collector.append(self)
+        self.mmap_collector = {}
 
     def get_data(self, ind=-1, indexes=None):
         """
@@ -82,8 +87,30 @@ class RasterReader(RasterBase):
         numpy.ndarray of shape self.get_shape()
         """
         ind = self.get_pointer(ind)
+        if ind < self._c_tiles:
+            if isinstance(indexes, int):
+                c = 1
+            elif indexes is None:
+                c = len(self.indexes)
+            else:
+                c = len(indexes)
 
-        data = self.read(indexes=indexes, window=self._tiles[ind], boundless=True, fill_value=self._fill_value)
+            data = np.full((c, self.get_height(ind), self.get_width(ind)),
+                           fill_value=self._fill_value, dtype=self.dtype)
+
+            window = self._tiles[ind]
+            pad_height = -window.row_off if window.row_off < 0 else 0
+            pad_width = -window.col_off if window.col_off < 0 else 0
+            window = rio.windows.Window(row_off=window.row_off + pad_height,
+                                        col_off=window.col_off + pad_width,
+                                        height=window.height - pad_height,
+                                        width=window.width - pad_width)
+
+            data[:, pad_height:, pad_width:] = \
+                self.read(indexes=indexes, window=window, boundless=True, fill_value=self._fill_value)
+
+        else:
+            data = self.read(indexes=indexes, window=self._tiles[ind], boundless=True, fill_value=self._fill_value)
 
         if data.shape[0] == 1:
             return data[0]
@@ -173,8 +200,8 @@ class RasterReader(RasterBase):
         points = np.linspace(c1, c2, num=n).tolist()
         return self.sample_raster(points=points, indexes=indexes)
 
-    def _focal_stat_iter(self, output_file=None, ind=None, indexes=1, *, func=None, overwrite=False, compress=False,
-                         p_bar=True, verbose=False, reduce=False, window_size=None, dtype=None, majority_mode="nan",
+    def _focal_stat_iter(self, func=None, *, output_file=None, ind=None, indexes=1, overwrite=False, compress=True,
+                         p_bar=True, reduce=False, window_size=None, dtype=None, majority_mode="nan", parallel=False,
                          **kwargs):
         """
         Function that calculates focal statistics, in tiled fashion if self.c_tiles is bigger than 1. The result is
@@ -184,9 +211,9 @@ class RasterReader(RasterBase):
         ----------
         func : {"mean", "min", "max", "std", "majority"}
             function to be applied to the map in a windowed fashion.
-        output_file : str
-            location of output file.
-            todo; should have a default behaviour that is slightly more functional
+        output_file : str, optional
+            location of output file. By default it is 'focal_func_x' with x a number that has not been used
+            in the current directory.
         ind : . , optional
             see self.get_pointer(). If set, no tiled behaviour occurs.
         indexes : int, optional
@@ -194,11 +221,9 @@ class RasterReader(RasterBase):
         overwrite : bool, optional
             If allowed to overwrite the output_file. The default is False.
         compress : bool, optional
-            Compress output data, the default is False
+            Compress output data, the default is True.
         p_bar : bool, optional
-            Show the progress bar. If verbose is True p_bar will be False. The default behaviour is True.
-        verbose : bool, optional
-            Verbosity; the default is False
+            Show the progress bar. Default is True.
         reduce : bool, optional
             If True, the dimensions of the output map are divided by `window_size`. If False the resulting file has the
             same shape as the input, which is the default.
@@ -220,82 +245,76 @@ class RasterReader(RasterBase):
             Fraction of the window that has to contain not-nans for the function to calculate the correlation.
             The default is 0.7.
         """
-        if isinstance(func, type(None)):
+        if func is None:
             raise TypeError("No function given")
-        if not isinstance(output_file, str):
-            raise TypeError("Filename not understood")
-
-        if not overwrite and os.path.isfile(output_file):
-            print(f"\n{output_file}:\nOutput file already exists. Can only overwrite this file if explicitly stated "
-                  f"with the overwrite' parameter. Continuing without performing operation ...\n")
-            return None
-
         if not isinstance(reduce, bool):
             raise TypeError("reduce parameter needs to be a boolean")
+        if output_file is None:
+            i = 0
+            while True:
+                output_file = f"focal_{func}_{i}.tif"
+                if not os.path.isfile(output_file):
+                    break
+                i += 1
 
-        self_old_window_size = self.window_size
+        reset_window_size = self.window_size
 
         if not reduce:
-            if isinstance(window_size, type(None)):
-                if self.window_size < 3:
-                    raise ValueError("Can't run focal statistics with a window size of 1, unless 'reduce' is True")
+            if window_size is None:
                 window_size = self.window_size
-            else:
-                if window_size < 3:
-                    raise ValueError("Can't run focal statistics with a window size of 1")
-                self.window_size = window_size
+            if window_size < 3:
+                raise ValueError("Can't run focal statistics with a window lower than 3, unless 'reduce' is True")
+            self.window_size = window_size
             profile = self.profile
         else:
-            self.window_size = 1
-            if isinstance(window_size, type(None)):
-                raise TypeError("Window_size needs to be provided in reduction mode")
+            if window_size is None:
+                raise TypeError("window_size needs to be provided when `reduce=True`")
             if window_size < 2:
                 raise ValueError("Window_size needs to be bigger than 1 in reduction mode")
+            self.window_size = 1
             profile = resample_profile(self.profile, 1 / window_size)
 
-        if not isinstance(dtype, type(None)):
+        if dtype is not None:
             profile['dtype'] = dtype
         if func == "majority" and majority_mode == "nan":
             profile['dtype'] = np.float64
-        if not isinstance(compress, type(None)):
-            profile.update({'compress': compress})
+        if compress:
+            profile.update({'compress': "LZW"})
         profile.update({'count': 1, 'driver': "GTiff"})
 
-        if isinstance(ind, type(None)):
+        if ind is None:
             with RasterWriter(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
-                              overwrite=overwrite, profile=profile) as f:
+                              force_equal_tiles=self._force_equal_tiles, overwrite=overwrite, profile=profile) as f:
+
                 for i in self:
-                    if verbose:
-                        print(f"\nTILE: {i + 1}/{self._c_tiles}")
-                    elif p_bar:
+                    if p_bar:
                         progress_bar((i + 1) / self._c_tiles)
 
                     data = self[i, indexes]
+
                     # if data is empty, write directly
-                    if ~np.isnan(self[i]).sum() == 0:
-                        f[i] = np.full(f.get_shape(), np.nan)
+                    if (~np.isnan(data)).sum() == 0:
+                        f[i] = np.full(f.get_shape(i), np.nan)
                     else:
-                        f[i] = focal_statistics(data, func=func, window_size=window_size, verbose=verbose,
-                                                reduce=reduce, majority_mode=majority_mode, **kwargs)
+                        f[i] = focal_statistics(data, func=func, window_size=window_size, reduce=reduce,
+                                                majority_mode=majority_mode, **kwargs)
 
                 if p_bar:
                     print()
+
+
         else:
-            index_profile = self.get_profile(ind)
-            height = index_profile['height']
-            width = index_profile['width']
-            transform = index_profile['transform']
-
-            profile.update({'height': height, 'width': width, 'transform': transform})
-
+            profile.update({'height': self.get_height(ind),
+                            'width': self.get_width(ind),
+                            'transform': self.get_transform(ind)})
             if reduce:
                 profile = resample_profile(profile, 1 / window_size)
 
             with RasterWriter(output_file, overwrite=overwrite, profile=profile) as f:
-                f[0] = focal_statistics(self[ind, indexes], func=func, window_size=window_size, verbose=verbose,
+                f[0] = focal_statistics(self[ind, indexes], func=func, window_size=window_size,
                                         reduce=reduce, majority_mode=majority_mode, **kwargs)
 
-        self.window_size = self_old_window_size
+        self.window_size = reset_window_size
 
     def focal_mean(self, **kwargs):
         """
@@ -332,8 +351,8 @@ class RasterReader(RasterBase):
         """
         return self._focal_stat_iter(func="majority", **kwargs)
 
-    def correlate(self, other=None, ind=None, self_indexes=1, other_indexes=1, *, output_file=None, window_size=None,
-                  fraction_accepted=0.7, verbose=False, overwrite=False, compress=False, p_bar=True, parallel=False):
+    def correlate(self, other=None, *, ind=None, self_indexes=1, other_indexes=1, output_file=None, window_size=None,
+                  overwrite=False, compress=True, p_bar=True, reduce=False, parallel=False, **kwargs):
         """
         Correlate self and other and output the result to output_file.
 
@@ -350,88 +369,111 @@ class RasterReader(RasterBase):
         window_size : int, optional
             Size of the window used for the correlation calculations. It should be bigger than 1, the default is the
             window_size set on self (`_RasterReader`).
-        fraction_accepted : float, optional
-            Fraction of the window that has to contain not-nans for the function to calculate the correlation.
-            The default is 0.7.
-        verbose : bool, optional
-            Verbosity, default is False
         overwrite : bool, optional
             If allowed to overwrite the output_file, default is False
         compress : bool, optional
-            Compress calculated data, default is False.
+            Compress calculated data, default is True.
         p_bar : bool, optional
             Show the progress bar. If verbose is True p_bar will be False. Default value is True.
+        reduce : bool, optional
+            If True, the dimensions of the output map are divided by `window_size`. If False the resulting file has the
+            same shape as the input, which is the default.
 
-        Raises
-        ------
-        TypeError
-            Other is not of type _RasterReader
+        Notes
+        -----
+        the following parameter will be passed on directly to the focal_statistics calculation through **kwargs
+
+        fraction_accepted : float, optional
+            Fraction of the window that has to contain not-nans for the function to calculate the correlation.
+            The default is 0.7.
         """
-        # todo; implement reduce
-        # todo; implement parallel
-
         if not isinstance(other, RasterReader):
             raise TypeError("Other not correctly passed")
+        if not isinstance(self_indexes, int) or not isinstance(other_indexes, int):
+            raise TypeError("Indexes can only be an integer for correlation calculations")
 
+        # todo; move to Raster/RasterBase
         if self._v_tiles != other._v_tiles:
             raise ValueError("v_tiles don't match")
         if self._h_tiles != other._h_tiles:
             raise ValueError("h_tiles don't match")
-
-        if not isinstance(self_indexes, int) or not isinstance(other_indexes, int):
-            raise TypeError("Indexes can only be an integer for correlation calculations")
-
+        if self._force_equal_tiles != other._force_equal_tiles:
+            raise ValueError("force_equal_tiles needs to be set equally on both Rasters")
         if self.shape != other.shape:
             raise ValueError("Shapes  of the files don't match")
         if not np.allclose(self.bounds, other.bounds):
             raise ValueError(f"Bounds don't match:\n{self.bounds}\n{other.bounds}")
 
-        self_old_window_size = self.window_size
-        other_old_window_size = other.window_size
-        if not isinstance(window_size, type(None)):
+        if output_file is None:
+            i = 0
+            while True:
+                output_file = f"focal_correlate_{i}.tif"
+                if not os.path.isfile(output_file):
+                    break
+                i += 1
+
+        reset_window_size = self.window_size, other.window_size
+
+        if not reduce:
+            if window_size is None:
+                window_size = self.window_size
+            if window_size < 3:
+                raise ValueError("Can't run focal statistics with a window lower than 3, unless 'reduce' is True")
             self.window_size = window_size
             other.window_size = window_size
+            profile = self.profile
+        else:
+            if window_size is None:
+                raise TypeError("window_size needs to be provided when `reduce=True`")
+            if window_size < 2:
+                raise ValueError("window_size needs to be bigger than 1 in reduction mode")
+            self.window_size = 1
+            other.window_size = 1
+            profile = resample_profile(self.profile, 1 / window_size)
 
-        if self.window_size != other.window_size:
-            raise ValueError("window sizes don't match")
-        if self.window_size < 3:
-            raise ValueError("Can't run correlation with a window size of 1")
+        profile['dtype'] = np.float64
+        if compress:
+            profile.update({'compress': "LZW"})
+        profile.update({'count': 1, 'driver': "GTiff"})
 
-        if not overwrite:
-            if os.path.isfile(output_file):
-                print(f"Output file already exists. Can only overwrite this file if explicitly stated with the "
-                      f"'overwrite' parameter. \n{output_file}\nContinuing without performing operation ...\n")
-                return None
-
-        if isinstance(ind, type(None)):
+        if ind is None:
             with RasterWriter(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
-                              ref_map=self._location, overwrite=overwrite, compress=compress, dtype=np.float64,
-                              count=1) as f:
+                              force_equal_tiles=self._force_equal_tiles, overwrite=overwrite, profile=profile) as f:
+
                 for i in self:
-                    if verbose:
-                        print(f"\nTILE: {i + 1}/{self._c_tiles}")
-                    elif p_bar:
+                    if p_bar:
                         progress_bar((i + 1) / self._c_tiles)
 
-                    f[i] = correlate_maps(self[i, self_indexes], other[i, other_indexes], window_size=self.window_size,
-                                          fraction_accepted=fraction_accepted, verbose=verbose)
+                    self_data = self[i, self_indexes]
+                    other_data = other[i, other_indexes]
+
+                    # if data is empty, write directly
+                    if (~np.isnan(self_data)).sum() == 0 or (~np.isnan(other_data)).sum() == 0:
+                        f[i] = np.full(f.get_shape(i), np.nan)
+                    else:
+                        f[i] = correlate_maps(self_data, other_data, window_size=window_size, reduce=reduce,
+                                              **kwargs)
 
                 if p_bar:
                     print()
+
         else:
-            profile = self.get_profile(ind=ind)
-            profile.update({'driver': "GTiff", 'count': 1, 'dtype': 'float64'})
-            if not isinstance(compress, type(None)):
-                profile.update({'compress': compress})
+            profile.update({'height': self.get_height(ind),
+                            'width': self.get_width(ind),
+                            'transform': self.get_transform(ind)})
+            if reduce:
+                profile = resample_profile(profile, 1 / window_size)
 
-            with RasterWriter(output_file, overwrite=overwrite, profile=profile, window_size=self.window_size) as f:
-                f[0] = correlate_maps(self[ind, self_indexes], other[ind, other_indexes], window_size=self.window_size,
-                                      fraction_accepted=fraction_accepted, verbose=verbose)
+            with RasterWriter(output_file, overwrite=overwrite, profile=profile) as f:
+                f[0] = correlate_maps(self[ind, self_indexes], other[ind, other_indexes], window_size=window_size,
+                                      reduce=reduce, **kwargs)
 
-        self.window_size = self_old_window_size
-        other.window_size = other_old_window_size
+        self.window_size = reset_window_size[0]
+        other.window_size = reset_window_size[1]
 
-    def export_tile(self, ind, output_file, indexes=None, compress=None):
+    focal_correlate = correlate
+
+    def export_tile(self, ind, output_file, indexes=None, compress=True):
         """
         exports a tile of the currently opened map.
 
@@ -447,15 +489,15 @@ class RasterReader(RasterBase):
         indexes : int or tuple, optional
             the layer that is exported. If a tuple is provided several indexes are exported, None means all indexes by
             default.
-        compress : str, optional
+        compress : bool, optional
             rasterio compression parameter
         """
         data = self.get_data(ind, indexes=indexes)
         profile = self.get_profile(ind)
 
         profile.update({'driver': "GTiff", 'count': data.shape[0]})
-        if not isinstance(compress, type(None)):
-            profile.update({'compress': compress})
+        if compress:
+            profile.update({'compress': "LZW"})
         with rio.open(output_file, mode="w", **profile) as dst:
             dst.write(data)
 

@@ -1,4 +1,5 @@
 import copy
+import os
 from abc import abstractmethod
 
 import numpy as np
@@ -106,6 +107,8 @@ class RasterBase:
             "This class can't be used directly.")
         self._mode = None
         self._fp = None
+        self._profile = {}
+        self._location = ""
         self._current_ind = 0
         self._c_tiles = 1
         self._h_tiles = 1
@@ -120,6 +123,7 @@ class RasterBase:
         self._tiles = []
         self._data_proj = None
         self._data_projection = None
+        self.mmap_collector = {}
 
     @property
     def rio(self):
@@ -159,9 +163,13 @@ class RasterBase:
 
         self._window_size = window_size
         self._fringe = window_size // 2
-        self._ind_inner = np.s_[self._fringe:-self._fringe, self._fringe:-self._fringe]
 
-        if hasattr(self, "_force_equal_tiles"):
+        if window_size == 1:
+            self._ind_inner = np.s_[:, :]
+        else:
+            self._ind_inner = np.s_[self._fringe:-self._fringe, self._fringe:-self._fringe]
+
+        if hasattr(self, "_force_equal_tiles") and self._force_equal_tiles is not None:
             self.set_tiles(self.tiles, self._force_equal_tiles)
 
     def get_tiles(self):
@@ -189,11 +197,11 @@ class RasterBase:
             If set to True the tiles will be adapted untill a perfect fit is created, which
             causes the tiles to be approximate.
         """
-        if type(tiles) in (tuple, list):
+        if isinstance(tiles, (tuple, list)):
             if len(tiles) != 2:
                 raise ValueError("If a tuple is passed to window_size it needs "
                                  "to be of length 2; horizontal and vertical bin count.")
-            if type(tiles[0]) != int or type(tiles[1]) != int:
+            if not isinstance(tiles[0], int) or not isinstance(tiles[1], int):
                 raise TypeError("Tiles need to be passed as integers")
             if tiles[0] < 1 or tiles[1] < 1:
                 raise ValueError("Tiles have to be positive integers")
@@ -409,16 +417,7 @@ class RasterBase:
                 ind = rio.coords.BoundingBox(np.min(x), np.min(y), np.max(x), np.max(y))
 
             # add window object to self._tiles list
-            temporary_window = rio.windows.from_bounds(*ind, self.transform)
-
-            # round the entries and create the window
-            col_off = np.round(temporary_window.col_off).astype(int)
-            row_off = np.round(temporary_window.row_off).astype(int)
-            width = np.round(temporary_window.width).astype(int)
-            height = np.round(temporary_window.height).astype(int)
-
-            self._tiles[self._c_tiles] = rio.windows.Window(col_off=col_off, row_off=row_off,
-                                                            width=width, height=height)
+            self._tiles[self._c_tiles] = rio.windows.from_bounds(*ind, self.transform).round_shape()
             ind = self.c_tiles
 
         if isinstance(ind, tuple) and len(ind) == 2:
@@ -739,6 +738,30 @@ class RasterBase:
 
         return ax
 
+    def generate_memmap(self, ind=None, indexes=None):
+        ind = self.get_pointer(ind)
+        if indexes is None:
+            indexes = self.indexes
+
+        c = 100000000
+        if not os.path.exists("_tmp_memmap"):
+            os.mkdir("_tmp_memmap")
+
+        while True:
+            if os.path.isfile(f"_tmp_memmap/{c}.npy"):
+                c += 1
+            else:
+                break
+
+        path = f"_tmp_memmap/{c}.npy"
+        memmap = np.memmap(path, dtype=self.dtype, mode='w+', offset=0, shape=self.get_shape(ind, indexes))
+
+        if self.mode == "r":
+            memmap[:] = self.get_data(ind, indexes)
+
+        self.mmap_collector[path] = memmap
+        return memmap
+
     def close(self, clean=True, verbose=True):
         """
         Function to close the pointer to the file and delete the handle
@@ -760,13 +783,22 @@ class RasterBase:
                 RasterBase.collector.remove(self)
             if verbose:
                 print(f"close file: '{self._location}'")
+            if len(self.mmap_collector) > 0:
+                for mmap_loc in list(self.mmap_collector):
+                    del self.mmap_collector[mmap_loc]
+                    os.remove(mmap_loc)
+                try:
+                    if len(os.listdir("_tmp_memmap")) == 0:
+                        os.rmdir("_tmp_memmap")
+                except OSError:
+                    pass
             del self
+
         except (AttributeError, ValueError) as error:
             # if this happens, the file has been removed before the object,
             # which already made sure that file connections were closed properly
             # so no need to worry about it
-            print(f"test: {error}")
-            raise AttributeError("test")
+            print(error)
 
     def __repr__(self):
         return f"Raster at '{self.location}'"

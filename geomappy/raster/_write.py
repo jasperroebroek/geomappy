@@ -103,6 +103,7 @@ class RasterWriter(RasterBase):
         self._current_ind = 0
 
         self.collector.append(self)
+        self.mmap_collector = {}
 
     def __setitem__(self, i, data):
         """

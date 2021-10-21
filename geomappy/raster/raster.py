@@ -10,6 +10,7 @@ tile to be able to calculate values on the border. By setting the same window_si
 object trims this border without values before writing it to the file as if everything happened in
 one calculation.
 """
+import os
 
 import numpy as np
 import rasterio as rio
@@ -141,6 +142,7 @@ class Raster:
         equality : [bool]
         """
         # todo; test this function
+        # todo; check remove
         if isinstance(m1, RasterWriter) or isinstance(m2, RasterWriter):
             print("One of the objects is not readable")
             return False
