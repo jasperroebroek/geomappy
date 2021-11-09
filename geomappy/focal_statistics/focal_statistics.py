@@ -7,17 +7,14 @@ from ..rolling import rolling_window, rolling_sum
 
 
 def _focal_majority(a, window_size, fraction_accepted, reduce, r, ind_inner, majority_mode):
-    if not np.issubdtype(a.dtype, np.floating):
-        a = a.astype(np.float64)
-
     values = np.unique(a)
     values = values[~np.isnan(values)]
     if values.size == 0:
         return r
 
-    count_values = rolling_sum(a, window_size, reduce=reduce)
+    count_values = rolling_sum(~np.isnan(a), window_size, reduce=reduce)
     if not reduce:
-        count_values[~a[ind_inner]] = 0
+        count_values[np.isnan(a[ind_inner])] = 0
     count_values[count_values < fraction_accepted * (window_size ** 2)] = 0
 
     # highest digit corresponds to nan
@@ -117,16 +114,17 @@ def _focal_std(a, window_size, fraction_accepted, reduce, std_df, r, ind_inner, 
     return r
 
 
-def focal_statistics(a, window_size, *, func=None, fraction_accepted=0.7, verbose=False, std_df=1, reduce=False,
+def focal_statistics(a, *, window_size=5, func=None, fraction_accepted=0.7, verbose=False, std_df=0, reduce=False,
                      majority_mode="nan"):
     """
     Focal statistics wrapper.
-    
+
+    # todo; preserve dtype of min, max and majority
+
     Parameters
     ----------
     a : :obj:`~numpy.ndarray`
-        Input array (2D). If not np.float64 it will be converted internally, except when the majority function is called
-        in which case the input array's dtype is preserved.
+        Input array (2D). If not np.float64 it will be converted internally.
     window_size : int
         Window size for focal statistics. Should be bigger than 1.
     func : {"mean","min","max","std","majority"}
@@ -139,7 +137,7 @@ def focal_statistics(a, window_size, *, func=None, fraction_accepted=0.7, verbos
     verbose : bool, optional
         Verbosity with timing. False by default
     std_df : {1,0}, optional
-        Only for nanstd and std calculations. Degrees of freedom; meaning if the function is divided by the count of
+        Only for std calculations. Degrees of freedom; meaning if the function is divided by the count of
         observations or the count of observations minus one. Should be 0 or 1.
     reduce : bool, optional
         The way in which the windowed array is created. If true, all values are used exactly once. If False (which is
@@ -184,8 +182,7 @@ def focal_statistics(a, window_size, *, func=None, fraction_accepted=0.7, verbos
     if func not in list_of_functions:
         raise KeyError("Function not available")
 
-    if not np.issubdtype(a.dtype, np.floating) and func != "majority":
-        # print("input array converted to float")
+    if not np.issubdtype(a.dtype, np.floating):
         a = a.astype(np.float64)
 
     if std_df not in (0, 1):
@@ -197,7 +194,7 @@ def focal_statistics(a, window_size, *, func=None, fraction_accepted=0.7, verbos
         raise TypeError("reduce is a boolean variable")
 
     if a.ndim != 2:
-        raise ValueError("Only 2D data is supported")
+        raise IndexError("Only 2D data is supported")
 
     if not isinstance(window_size, int):
         raise TypeError("window_size should be an integer")
@@ -205,7 +202,7 @@ def focal_statistics(a, window_size, *, func=None, fraction_accepted=0.7, verbos
         raise ValueError("window_size should be uneven and bigger than or equal to 2")
 
     if np.any(np.array(a.shape) < window_size):
-        raise IndexError("window is bigger than the input array on at least one of the dimensions")
+        raise ValueError("window is bigger than the input array on at least one of the dimensions")
 
     if reduce:
         if ~np.all(np.array(a.shape) % window_size == 0):
@@ -274,21 +271,21 @@ def focal_statistics(a, window_size, *, func=None, fraction_accepted=0.7, verbos
     return r
 
 
-def focal_min(a, window_size, **kwargs):
-    return focal_statistics(a, window_size, func="min", **kwargs)
+def focal_min(a, **kwargs):
+    return focal_statistics(a, func="min", **kwargs)
 
 
-def focal_max(a, window_size, **kwargs):
-    return focal_statistics(a, window_size, func="max", **kwargs)
+def focal_max(a, **kwargs):
+    return focal_statistics(a, func="max", **kwargs)
 
 
-def focal_mean(a, window_size, **kwargs):
-    return focal_statistics(a, window_size, func="mean", **kwargs)
+def focal_mean(a, **kwargs):
+    return focal_statistics(a, func="mean", **kwargs)
 
 
-def focal_std(a, window_size, **kwargs):
-    return focal_statistics(a, window_size, func="std", **kwargs)
+def focal_std(a, **kwargs):
+    return focal_statistics(a, func="std", **kwargs)
 
 
-def focal_majority(a, window_size, **kwargs):
-    return focal_statistics(a, window_size, func="majority", **kwargs)
+def focal_majority(a, **kwargs):
+    return focal_statistics(a, func="majority", **kwargs)

@@ -26,13 +26,13 @@ class Raster:
     Creating a an interface to raster data. Depending on the `mode` a ``RasterReader`` or
     ``RasterWriter`` object will be returned. If reading the data and several subdatasets
     are present a RasterReaderSet will be created, which mimics a dictionary of ``RasterReader``
-    objects, but implements the same properties as the ``RasterReads`` (e.g. set.shape returns
+    objects, but implements the same properties as the ``RasterReader`` (e.g. set.shape returns
     a dictionary of shapes of the subdatasets).
 
     Parameters
     ----------
     fp : str, file object or pathlib.Path object
-        A filename or URL, a file object opened in binary ('rb') mode,
+        A filename, URL, a file object opened in binary ('rb') mode,
         or a Path object (see rasterio documentation).
     mode : {'r', 'w'}
         Mode of opening the file. Corresponds  with standard rasterio functionality
@@ -120,10 +120,9 @@ class Raster:
             m.window_size = window_size
 
     @staticmethod
-    def maps():
+    def get_rasters(self):
         """
         Returns a list of all open maps
-        todo; rename
         """
         return RasterBase.collector
 
@@ -141,31 +140,23 @@ class Raster:
         -------
         equality : [bool]
         """
-        # todo; test this function
-        # todo; check remove
-        if isinstance(m1, RasterWriter) or isinstance(m2, RasterWriter):
-            print("One of the objects is not readable")
+        if not isinstance(m1, RasterReader) or not isinstance(m1, RasterReader):
+            raise TypeError("Only RasterReader objects can be compared in this manner")
+
+        if not m1.params == m2.params:
             return False
-        if m1.tiles != m2.tiles:
-            print("Tiles don't match")
-            return False
-        if m1.window_size != m2.window_size:
-            print("Window size doesn't match")
-            return False
-        if m1.shape != m2.shape:
-            print("File shape doesn't match")
-            return False
-        if not np.allclose(m1.bounds, m2.bounds):
-            print("Bounds don't match")
+        if not m1.profile == m2.profile:
             return False
 
-        for i in m1:
-            try:
-                d = np.allclose(m1[i], m2[i], equal_nan=True)
-                if not d:
+        params = [m1.params, m2.params]
+        m1.set_tiles_as_chunks()
+        m2.set_tiles_as_chunks()
+
+        try:
+            for i in m1:
+                if not np.allclose(m1.iloc[i], m2.iloc[i], equal_nan=True):
                     return False
-            except (ValueError, IndexError):
-                return False
+        finally:
+            m1.params, m2.params = params
 
         return True
-

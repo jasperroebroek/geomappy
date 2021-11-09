@@ -144,7 +144,7 @@ def rolling_sum(a, window_size, reduce=False):
         to buffer the window size on the edges:
             shape : [s - window_size + 1 for s in a.shape]
     """
-    if window_size < 2:
+    if window_size <= 1:
         raise ValueError("window_size should be bigger than 2")
 
     if ~np.all(np.array(a.shape) >= window_size):
@@ -173,7 +173,6 @@ def rolling_sum(a, window_size, reduce=False):
         return r
 
     elif a.ndim == 3 and not reduce:
-        # todo; check if this is actually faster than the backup solution
         if np.issubdtype(a.dtype, np.bool_):
             dtype = np.int
         else:

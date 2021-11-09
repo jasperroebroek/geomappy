@@ -59,6 +59,10 @@ def bounds_to_polygons(bounds_list, max_bounds=None):
 
 
 def bounds_to_platecarree(proj, bounds):
+    """This functionality is deprecated: likely switch to
+    >>> transformer = Transform.from_proj(proj, PROJ_LAT_LON, always_xy=True)
+    >>> return transformer(bounds[0], bounds[1]), transformer(bounds[2], bounds[3])
+    """
     return (*transform(proj, PROJ_LAT_LON, bounds[0], bounds[1], always_xy=True),
             *transform(proj, PROJ_LAT_LON, bounds[2], bounds[3], always_xy=True))
 

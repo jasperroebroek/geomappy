@@ -18,8 +18,8 @@ def resample_profile(m, scale):
     rasterio profile
     """
     if isinstance(m, str):
-        with rio.open(m) as ref_map:
-            profile = ref_map.profile
+        with rio.open(m) as f:
+            profile = f.profile
     elif isinstance(m, rio.profiles.Profile):
         profile = copy.deepcopy(m)
     else:

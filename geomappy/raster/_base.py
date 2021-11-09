@@ -7,9 +7,12 @@ import pyproj
 import rasterio as rio
 from cartopy import crs as ccrs
 from pyproj import Proj
+from rasterio.coords import BoundingBox
 
+from .locators import GeoLocator, TileLocator, IdxLocator
 from ..basemap import basemap as basemap_function
 from ..bounds import bounds_to_data_projection, bounds_to_polygons
+from ..utils import progress_bar as progress_bar_func
 
 
 class RasterBase:
@@ -125,6 +128,22 @@ class RasterBase:
         self._data_projection = None
         self.mmap_collector = {}
 
+    def _init(self, window_size, tiles, force_equal_tiles):
+        self.window_size = window_size
+        self.set_tiles(tiles, force_equal_tiles)
+        self._current_ind = 0
+        self._location = self._fp.name
+        self._profile = copy.deepcopy(self._fp.profile)
+
+        # collector of the base class. This list contains all files opened with the Raster classes
+        self.collector.append(self)
+        self.mmap_collector = {}
+
+        # initialise locators
+        self.geo = GeoLocator(raster=self)
+        self.iloc = TileLocator(raster=self)
+        self.idx = IdxLocator(raster=self)
+
     @property
     def rio(self):
         return self._fp
@@ -136,15 +155,13 @@ class RasterBase:
         """
         return self.rio.name
 
-    @property
-    def window_size(self):
+    def get_window_size(self):
         """
         gives the current window size
         """
         return self._window_size
 
-    @window_size.setter
-    def window_size(self, window_size=1):
+    def set_window_size(self, window_size=1):
         """
         Sets the window_size and fringe parameters.
 
@@ -171,6 +188,8 @@ class RasterBase:
 
         if hasattr(self, "_force_equal_tiles") and self._force_equal_tiles is not None:
             self.set_tiles(self.tiles, self._force_equal_tiles)
+
+    window_size = property(get_window_size, set_window_size)
 
     def get_tiles(self):
         """
@@ -282,6 +301,21 @@ class RasterBase:
 
     tiles = property(get_tiles, set_tiles)
 
+    def set_tiles_as_chunks(self):
+        self.window_size = 1
+        self._tiles = [w[1] for w in self._fp.block_windows()]
+        self._tiles.append(None)
+        self._c_tiles = len(self._tiles) - 1
+        self._force_equal_tiles = False
+        self._current_ind = 0
+
+        self._h_tiles = self.width // self._tiles[0].width
+        self._v_tiles = self.height // self._tiles[0].height
+        self._horizontal_bins = list(np.linspace(0, self.width, self._h_tiles + 1, dtype=np.int, endpoint=True))
+        self._vertical_bins = list(np.linspace(0, self.height, self._v_tiles + 1, dtype=np.int, endpoint=True))
+
+        self._iter = [(x, y) for x in range(1, self._v_tiles + 1) for y in range(1, self._h_tiles + 1)]
+
     @property
     def ind_inner(self):
         """
@@ -372,6 +406,9 @@ class RasterBase:
                 A pair of slices in row, column order
             int
                 Index of self._tiles range(0,self._c_tiles)
+            tile selection -> [int, int]
+                Two ints, in the bounds of vertical and horizontal tiles. Are converted
+                internally to int.
             None
                 Can be used to access the file as a whole
 
@@ -391,7 +428,7 @@ class RasterBase:
 
         to access the slice capability in other fuctions than __getitem__:
         1: pass a slice directly -> slice(1,2)
-        2: use numpy -> s_[1:2]
+        2: use numpy -> np.s_[1:2]
         """
         if ind is None:
             ind = self.bounds
@@ -420,13 +457,8 @@ class RasterBase:
             self._tiles[self._c_tiles] = rio.windows.from_bounds(*ind, self.transform).round_shape()
             ind = self.c_tiles
 
-        if isinstance(ind, tuple) and len(ind) == 2:
+        if isinstance(ind, tuple) and len(ind) == 2 and isinstance(ind[0], slice) and isinstance(ind[1], slice):
             ind = list(ind)
-
-            if not isinstance(ind[0], slice):
-                ind[0] = slice(ind[0], ind[0]+1)
-            if not isinstance(ind[1], slice):
-                ind[1] = slice(ind[1], ind[1]+1)
 
             if ind[0].start is None:
                 ind[0] = slice(0, ind[0].stop)
@@ -442,6 +474,14 @@ class RasterBase:
                                                             height=ind[0].stop - ind[0].start,
                                                             width=ind[1].stop - ind[1].start)
             ind = self.c_tiles
+
+        if isinstance(ind, (list, tuple)) and len(ind) == 2 and isinstance(ind[0], int) and isinstance(ind[1], int):
+            if ind[0] > self._v_tiles-1 or ind[0] < 0:
+                raise IndexError("Vertical index out of bounds")
+            if ind[1] > self._h_tiles-1 or ind[1] < 0:
+                raise IndexError("Horizontal tiles out of bounds")
+
+            ind = self._h_tiles * ind[0] + ind[1]
 
         elif isinstance(ind, int):
             if ind not in list(range(-1, self._c_tiles + 1)):
@@ -575,7 +615,7 @@ class RasterBase:
             return self.bounds
 
         ind = self.get_pointer(ind)
-        return self.window_bounds(self._tiles[ind])
+        return BoundingBox(*self.window_bounds(self._tiles[ind]))
 
     def get_shape(self, ind=-1, indexes=None):
         """
@@ -739,6 +779,11 @@ class RasterBase:
         return ax
 
     def generate_memmap(self, ind=None, indexes=None):
+        if ind is None:
+            all_flag = True
+        else:
+            all_flag = False
+
         ind = self.get_pointer(ind)
         if indexes is None:
             indexes = self.indexes
@@ -757,10 +802,31 @@ class RasterBase:
         memmap = np.memmap(path, dtype=self.dtype, mode='w+', offset=0, shape=self.get_shape(ind, indexes))
 
         if self.mode == "r":
-            memmap[:] = self.get_data(ind, indexes)
+            if all_flag:
+                params = self.get_params()
+                self.set_tiles_as_chunks()
+                for i in self:
+                    slices = self._tiles[i].toslices()
+                    if memmap.ndim == 3:
+                        memmap[:, slices[0], slices[1]] = self.get_data(i, indexes)
+                    else:
+                        memmap[slices[0], slices[1]] = self.get_data(i, indexes)
+                self.set_params(params)
+            else:
+                memmap[:] = self.get_data(ind, indexes)
 
         self.mmap_collector[path] = memmap
         return memmap
+
+    def close_memmap(self):
+        for mmap_loc in list(self.mmap_collector):
+            del self.mmap_collector[mmap_loc]
+            os.remove(mmap_loc)
+        try:
+            if len(os.listdir("_tmp_memmap")) == 0:
+                os.rmdir("_tmp_memmap")
+        except OSError:
+            pass
 
     def close(self, clean=True, verbose=True):
         """
@@ -784,14 +850,7 @@ class RasterBase:
             if verbose:
                 print(f"close file: '{self._location}'")
             if len(self.mmap_collector) > 0:
-                for mmap_loc in list(self.mmap_collector):
-                    del self.mmap_collector[mmap_loc]
-                    os.remove(mmap_loc)
-                try:
-                    if len(os.listdir("_tmp_memmap")) == 0:
-                        os.rmdir("_tmp_memmap")
-                except OSError:
-                    pass
+                self.close_memmap()
             del self
 
         except (AttributeError, ValueError) as error:
@@ -800,8 +859,44 @@ class RasterBase:
             # so no need to worry about it
             print(error)
 
+    def get_params(self):
+        return (self.window_size, self.tiles, self._force_equal_tiles)
+
+    def set_params(self, params):
+        window_size, tiles, force_equal_tiles = params
+        self._init(window_size=window_size, tiles=tiles, force_equal_tiles=force_equal_tiles)
+
+    params = property(get_params, set_params)
+
+    def __getstate__(self):
+        return (self.location, *self.get_params(), self._profile)
+
+    def __setstate__(self, state):
+        location, window_size, tiles, force_equal_tiles, profile = state
+        if self._mode == 'w':
+            kwargs = {'overwrite': True, 'profile': profile}
+        else:
+            kwargs = {}
+        self.__init__(fp=location, window_size=window_size, tiles=tiles, force_equal_tiles=force_equal_tiles,
+                      **kwargs)
+
+    def __eq__(self, other):
+        if not type(self) == type(other):
+            return False
+        elif not self.__getstate__() == other.__getstate__():
+            return False
+        else:
+            return True
+
     def __repr__(self):
         return f"Raster at '{self.location}'"
+
+    def iter(self, progress_bar=True):
+        """Same function as standard iterator functionality, but has the possibility to plot a progress bar"""
+        for i in range(self.c_tiles):
+            if progress_bar:
+                progress_bar_func((i+1) / self.c_tiles)
+            yield i
 
     def __iter__(self):
         """
@@ -809,18 +904,19 @@ class RasterBase:
 
         Examples
         --------
-        1: The following example loops over a created map. In a for loop the object returns
-           the indices of the tiles that were created. These indices can be used to both
-           read (M_loc[i]) and write (M_loc[i] = np.ndarray) data.
+        The following example loops over a created map. In a for loop the object returns
+        the indices of the tiles that were created. These indices can be used to both
+        read (M_loc[i]) and write (M_loc[i] = np.ndarray) data.
 
-            >>> loc = "/Users/Downloads/...."
-            >>> M_loc = map(loc, tiles = 3)
-            >>> for i in M_loc:
-                    print(i)
+        >>> loc = "/Users/Downloads/...."
+        >>> M_loc = mp.Raster(loc, tiles = 4)
+        >>> for i in M_loc:
+                print(i)
 
-            0
-            1
-            2
+        0
+        1
+        2
+        3
 
         Yields
         ------
@@ -839,11 +935,11 @@ class RasterBase:
         """
         function is used at the end of a "with" statement to close the open file
         """
-        self.close()
+        self.close(verbose=False)
 
     def __getattr__(self, attr):
         if '_fp' in dir(self):
             if attr in dir(self._fp):
                 return getattr(self._fp, attr)
             else:
-                raise AttributeError(f"rasterio.reader does not have {attr}")
+                raise AttributeError(f"Raster does not have {attr}")

@@ -7,7 +7,11 @@ from .colors import add_colorbar
 
 import matplotlib
 
+# Import 'show' and 'savefig' for convenience. This should be avoided in production code.
+show = matplotlib.pyplot.show
+savefig = matplotlib.pyplot.savefig
+
 import warnings
-warnings.filterwarnings("ignore", category=FutureWarning)
-warnings.filterwarnings("ignore", category=matplotlib.MatplotlibDeprecationWarning)
+warnings.filterwarnings("once", category=FutureWarning)
+warnings.filterwarnings("once", category=matplotlib.MatplotlibDeprecationWarning)
 matplotlib.rcParams["image.interpolation"] = 'none'

@@ -11,7 +11,6 @@ from ..basemap import basemap as basemap_function
 from ..plotting import plot_classified_map, plot_map
 from ..focal_statistics import focal_statistics, correlate_maps
 from ..profile import resample_profile
-from ..utils import progress_bar
 from ._base import RasterBase
 from ._write import RasterWriter
 
@@ -27,7 +26,7 @@ class RasterReader(RasterBase):
     tiles : int or tuple of ints, optional
         See tiles property in RasterBase
     force_equal_tiles : bool, optional
-        Force tiles of equal size. This defaults to False, which last the last tiles be slightly larger.
+        Force tiles of equal size. This defaults to False, which lets the last tiles be slightly larger.
     window_size : int, optional
         Window size to be set on the map. See property in RasterBase
     fill_value : numeric, optional
@@ -43,34 +42,55 @@ class RasterReader(RasterBase):
     def __init__(self, fp, *, tiles=1, force_equal_tiles=False, window_size=1, fill_value=None):
 
         self._fp = rio.open(fp, mode='r')
-        self._profile = copy.deepcopy(self._fp.profile)
-        self._location = self._fp.name
         self._mode = "r"
 
         dtype = np.dtype(self.profile['dtype'])
         if fill_value is None:
             if np.issubdtype(dtype, np.floating):
                 self._fill_value = np.nan
+            elif self.profile['nodata'] is None:
+                raise ValueError("no fill_value was given and the file does not have a nodata value to "
+                                 "use as a backup")
             else:
-                warnings.warn("The raster contains integer data and no fill_value. This results in the data "
-                      "being returned without removing `nodata`")
+                warnings.warn("The raster contains integer data and no fill_value. \n"
+                              "This results in the nodata value in the raster profile to be used")
                 self._fill_value = self.profile['nodata']
-                if self._fill_value is None:
-                    raise ValueError("no fill_value was given and the file does not have a nodata value to "
-                                     "use as a backup")
         else:
             self._fill_value = dtype.type(fill_value)
 
-        self.window_size = window_size
-        self.set_tiles(tiles, force_equal_tiles)
+        self._init(window_size, tiles, force_equal_tiles)
 
-        self._current_ind = 0
+    def _get_data(self, window, indexes, dtype=None):
+        if isinstance(indexes, int):
+            c = 1
+        elif indexes is None:
+            c = len(self.indexes)
+        else:
+            c = len(indexes)
 
-        # collector of the base class. This list contains all files opened with the Raster classes
-        self.collector.append(self)
-        self.mmap_collector = {}
+        if dtype is None:
+            dtype = self.dtype
 
-    def get_data(self, ind=-1, indexes=None):
+        height = round(window.height)
+        width = round(window.width)
+        data = np.full((c, height, width), fill_value=self._fill_value, dtype=dtype)
+
+        pad_height = round(-window.row_off if window.row_off < 0 else 0)
+        pad_width = round(-window.col_off if window.col_off < 0 else 0)
+        window = rio.windows.Window(row_off=window.row_off + pad_height,
+                                    col_off=window.col_off + pad_width,
+                                    height=window.height - pad_height,
+                                    width=window.width - pad_width)
+
+        data[:, pad_height:, pad_width:] = \
+            self.read(indexes=indexes, window=window, boundless=True, fill_value=self._fill_value, out_dtype=dtype)
+
+        if data.shape[0] == 1:
+            return data[0]
+        else:
+            return data
+
+    def get_data(self, ind=-1, indexes=None, dtype=None):
         """
         Returns the data associated with the index of the tile. Layers are set on the first axis.
 
@@ -87,35 +107,8 @@ class RasterReader(RasterBase):
         numpy.ndarray of shape self.get_shape()
         """
         ind = self.get_pointer(ind)
-        if ind < self._c_tiles:
-            if isinstance(indexes, int):
-                c = 1
-            elif indexes is None:
-                c = len(self.indexes)
-            else:
-                c = len(indexes)
-
-            data = np.full((c, self.get_height(ind), self.get_width(ind)),
-                           fill_value=self._fill_value, dtype=self.dtype)
-
-            window = self._tiles[ind]
-            pad_height = -window.row_off if window.row_off < 0 else 0
-            pad_width = -window.col_off if window.col_off < 0 else 0
-            window = rio.windows.Window(row_off=window.row_off + pad_height,
-                                        col_off=window.col_off + pad_width,
-                                        height=window.height - pad_height,
-                                        width=window.width - pad_width)
-
-            data[:, pad_height:, pad_width:] = \
-                self.read(indexes=indexes, window=window, boundless=True, fill_value=self._fill_value)
-
-        else:
-            data = self.read(indexes=indexes, window=self._tiles[ind], boundless=True, fill_value=self._fill_value)
-
-        if data.shape[0] == 1:
-            return data[0]
-        else:
-            return data
+        window = self._tiles[ind]
+        return self._get_data(window, indexes, dtype)
 
     def get_file_data(self, indexes=None):
         """
@@ -201,8 +194,8 @@ class RasterReader(RasterBase):
         return self.sample_raster(points=points, indexes=indexes)
 
     def _focal_stat_iter(self, func=None, *, output_file=None, ind=None, indexes=1, overwrite=False, compress=True,
-                         p_bar=True, reduce=False, window_size=None, dtype=None, majority_mode="nan", parallel=False,
-                         **kwargs):
+                         progress_bar=True, reduce=False, window_size=None, dtype=None, majority_mode="nan",
+                         parallel=False, **kwargs):
         """
         Function that calculates focal statistics, in tiled fashion if self.c_tiles is bigger than 1. The result is
         outputted to `output_file`
@@ -222,7 +215,7 @@ class RasterReader(RasterBase):
             If allowed to overwrite the output_file. The default is False.
         compress : bool, optional
             Compress output data, the default is True.
-        p_bar : bool, optional
+        progress_bar : bool, optional
             Show the progress bar. Default is True.
         reduce : bool, optional
             If True, the dimensions of the output map are divided by `window_size`. If False the resulting file has the
@@ -257,7 +250,7 @@ class RasterReader(RasterBase):
                     break
                 i += 1
 
-        reset_window_size = self.window_size
+        params = self.get_params()
 
         if not reduce:
             if window_size is None:
@@ -286,9 +279,7 @@ class RasterReader(RasterBase):
             with RasterWriter(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
                               force_equal_tiles=self._force_equal_tiles, overwrite=overwrite, profile=profile) as f:
 
-                for i in self:
-                    if p_bar:
-                        progress_bar((i + 1) / self._c_tiles)
+                for i in self.iter(progress_bar=progress_bar):
 
                     data = self[i, indexes]
 
@@ -299,9 +290,8 @@ class RasterReader(RasterBase):
                         f[i] = focal_statistics(data, func=func, window_size=window_size, reduce=reduce,
                                                 majority_mode=majority_mode, **kwargs)
 
-                if p_bar:
+                if progress_bar:
                     print()
-
 
         else:
             profile.update({'height': self.get_height(ind),
@@ -314,7 +304,7 @@ class RasterReader(RasterBase):
                 f[0] = focal_statistics(self[ind, indexes], func=func, window_size=window_size,
                                         reduce=reduce, majority_mode=majority_mode, **kwargs)
 
-        self.window_size = reset_window_size
+        self.set_params(params)
 
     def focal_mean(self, **kwargs):
         """
@@ -352,7 +342,7 @@ class RasterReader(RasterBase):
         return self._focal_stat_iter(func="majority", **kwargs)
 
     def correlate(self, other=None, *, ind=None, self_indexes=1, other_indexes=1, output_file=None, window_size=None,
-                  overwrite=False, compress=True, p_bar=True, reduce=False, parallel=False, **kwargs):
+                  overwrite=False, compress=True, progress_bar=True, reduce=False, parallel=False, **kwargs):
         """
         Correlate self and other and output the result to output_file.
 
@@ -373,7 +363,7 @@ class RasterReader(RasterBase):
             If allowed to overwrite the output_file, default is False
         compress : bool, optional
             Compress calculated data, default is True.
-        p_bar : bool, optional
+        progress_bar : bool, optional
             Show the progress bar. If verbose is True p_bar will be False. Default value is True.
         reduce : bool, optional
             If True, the dimensions of the output map are divided by `window_size`. If False the resulting file has the
@@ -412,7 +402,7 @@ class RasterReader(RasterBase):
                     break
                 i += 1
 
-        reset_window_size = self.window_size, other.window_size
+        params = (self.get_params(), other.get_params())
 
         if not reduce:
             if window_size is None:
@@ -440,9 +430,7 @@ class RasterReader(RasterBase):
             with RasterWriter(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
                               force_equal_tiles=self._force_equal_tiles, overwrite=overwrite, profile=profile) as f:
 
-                for i in self:
-                    if p_bar:
-                        progress_bar((i + 1) / self._c_tiles)
+                for i in self.iter(progress_bar=progress_bar):
 
                     self_data = self[i, self_indexes]
                     other_data = other[i, other_indexes]
@@ -454,7 +442,7 @@ class RasterReader(RasterBase):
                         f[i] = correlate_maps(self_data, other_data, window_size=window_size, reduce=reduce,
                                               **kwargs)
 
-                if p_bar:
+                if progress_bar:
                     print()
 
         else:
@@ -468,8 +456,8 @@ class RasterReader(RasterBase):
                 f[0] = correlate_maps(self[ind, self_indexes], other[ind, other_indexes], window_size=window_size,
                                       reduce=reduce, **kwargs)
 
-        self.window_size = reset_window_size[0]
-        other.window_size = reset_window_size[1]
+        self.set_params(params[0])
+        other.set_params(params[1])
 
     focal_correlate = correlate
 

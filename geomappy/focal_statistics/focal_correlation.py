@@ -17,6 +17,8 @@ correlate_maps_base or correlate_maps_njit based on the
 """
 
 import time
+import warnings
+
 import numpy as np
 from numpy.lib.index_tricks import s_
 from ..rolling import rolling_window, rolling_sum
@@ -153,7 +155,7 @@ def _correlate_maps_input_checks(map1, map2, window_size, fraction_accepted, red
         raise ValueError("window_size should be uneven and bigger than or equal to 2")
 
     if np.any(np.array(map1.shape) < window_size):
-        raise IndexError("window is bigger than the input array on at least one of the dimensions")
+        raise ValueError("window is bigger than the input array on at least one of the dimensions")
 
     if reduce:
         if ~np.all(np.array(map1.shape) % window_size == 0):
@@ -170,14 +172,15 @@ def _correlate_maps_input_checks(map1, map2, window_size, fraction_accepted, red
 
 
 def correlate_maps_base(map1, map2, *, window_size=5, fraction_accepted=0.7, reduce=False, verbose=False):
-    if verbose: print("testing validity of request")
-
     # Input checks
     _correlate_maps_input_checks(map1, map2, window_size, fraction_accepted, reduce, verbose)
 
+    if verbose:
+        print("testing validity of request")
+
     if reduce:
-        raise NotImplementedError("Reduction option is currently not implemented. Install Numba to gain access to this "
-                                  "functionality")
+        raise NotImplementedError("Reduction option is currently not implemented for the numpy function. Compile the "
+                                  "cython version to obtain this functionality")
 
     map1 = map1.astype(np.float64)
     map2 = map2.astype(np.float64)
@@ -305,5 +308,5 @@ around this functionality """
 if numba_present:
     correlate_maps = correlate_maps_njit
 else:
-    print("correlation of maps can be performed faster by installing Numba")
+    warnings.warn("correlation of maps can be performed faster by installing Numba")
     correlate_maps = correlate_maps_base

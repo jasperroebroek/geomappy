@@ -13,16 +13,15 @@ class RasterWriter(RasterBase):
     Parameters
     ----------
     location : str
-        Location of the map
+        Location of the raster. If it already exists the overwrite parameter needs to be set to True or an error
+        is raised. If the profile that is constructed here is the same as the profile of the already existing
+        raster, the raster is opened in 'r+' mode, otherwise the original file is overwritten.
     tiles : int or tuple of ints, optional
         Tiles object. See property
     force_equal_tiles : bool, optional
         Force tiles of equal size. This defaults to False, which last the last tiles be slightly larger.
     window_size : int, optional
         Window size to be set on the map. See property
-    ref_map : str, optional
-        Location of file that a rasterio profile is pulled from and used for the creation of self. The reference map
-        will not do anything if a profile is passed to the 'profile' parameter.
     overwrite : bool, optional
         Allowed to overwrite a file if it already exists. Default is False
     compress : bool, optional
@@ -47,44 +46,40 @@ class RasterWriter(RasterBase):
         - can't overwrite an already existing file if not specified with the 'overwrite' parameter
     """
 
-    def __init__(self, location, *, tiles=1, force_equal_tiles=False, window_size=1, ref_map=None, overwrite=False,
+    def __init__(self, fp, *, tiles=1, force_equal_tiles=False, window_size=1, overwrite=False,
                  compress=False, dtype=np.float64, nodata=np.nan, count=-1, profile=None):
-        self._mode = "w"
 
-        # todo; check logic
-        # todo; remove ref_map
         if profile is None:
-            # load the rasterio profile either from a reference map or the location itself if it already exists
-            if ref_map is None:
-                if not os.path.isfile(location):
-                    raise IOError("Location doesn't exist and no reference map or profile given")
-                with rio.open(location) as f:
-                    self._profile = f.profile
-            else:
-                if not os.path.isfile(ref_map):
-                    raise IOError("Reference map can't be found")
-                with rio.open(ref_map) as f:
-                    self._profile = f.profile
+            # Attempt reading rasterio profile from existing file
+            if not os.path.isfile(fp):
+                raise IOError("Location doesn't exist and no reference map or profile given")
+            with rio.open(fp) as f:
+                profile = f.profile
 
             # todo; create folder if non - existent!!
-            self._profile['dtype'] = dtype
-            self._profile['nodata'] = np.array((nodata,)).astype(dtype)[0]
-            self._profile['driver'] = "GTiff"
+            profile['dtype'] = dtype
+            profile['nodata'] = np.asarray((nodata,), dtype=dtype)[0]
+            profile['driver'] = "GTiff"
             if compress:
-                self._profile['compress'] = 'lzw'
+                profile['compress'] = 'lzw'
             if count != -1:
-                if not isinstance(count, int):
-                    raise TypeError("count should be an integer")
-                if count < 1:
-                    raise ValueError("count should be a positive integer")
-                self._profile['count'] = count
+                profile['count'] = count
         else:
-            self._profile = profile
+            profile = profile
 
         # check if file exists and if the object is allowed to overwrite data
-        if os.path.isfile(location):
+        if os.path.isfile(fp):
             if not overwrite:
-                raise IOError(f"Can't overwrite if not explicitly stated with overwrite parameter\n{location}")
+                raise IOError(f"Can't overwrite if not explicitly stated with overwrite parameter\n{fp}")
+            with rio.open(fp) as f:
+                test_profile = f.profile
+
+            if profile == test_profile:
+                mode = 'r+'
+            else:
+                mode = 'w+'
+        else:
+            mode = 'w+'
 
         # todo; work on APPROXIMATE_STATISTICS
         #   https://gdal.org/doxygen/classGDALRasterBand.html#a48883c1dae195b21b37b51b10e910f9b
@@ -93,17 +88,12 @@ class RasterWriter(RasterBase):
 
         # todo; create **kwargs that feed into the rio.open function
 
-        self._fp = rio.open(location, "w+", **self._profile, BIGTIFF="YES")
-        self._location = self._fp.name
+        self._fp = rio.open(fp, mode, **profile, BIGTIFF="YES")
+        self._mode = "w"
+        self._init(window_size, tiles, force_equal_tiles)
 
-        # setting parameters by calling property functions
-        self.window_size = window_size
-        self.set_tiles(tiles, force_equal_tiles)
-
-        self._current_ind = 0
-
-        self.collector.append(self)
-        self.mmap_collector = {}
+    def _set_data(self, window, indexes, data):
+        self.write(data, indexes=indexes, window=window)
 
     def __setitem__(self, i, data):
         """
@@ -117,4 +107,4 @@ class RasterWriter(RasterBase):
         if data.shape[-2:] != (self.get_height(ind), self.get_width(ind)):
             data = data[:, self.ind_inner[0], self.ind_inner[1]]
 
-        self.write(data, indexes=indexes, window=self._tiles[ind])
+        self._set_data(self._tiles[ind], indexes, data)

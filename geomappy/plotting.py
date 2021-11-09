@@ -21,7 +21,7 @@ class Plot:
     """
     def __init__(self, ax, figsize, legend, params, **kwargs):
         """Sets the parameters and creates the Axes if not provided"""
-        if isinstance(ax, type(None)):
+        if ax is None:
             _, ax = plt.subplots(figsize=figsize)
 
         self.ax = ax

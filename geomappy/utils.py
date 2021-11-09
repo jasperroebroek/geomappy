@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Progress bar
+Utilities used in geomappy. Interesting functions to use outside the internal scope are
+progress_bar and reproject_map_like
 """
 import os
 import sys
+import warnings
 from functools import wraps
 
 import numpy as np
@@ -91,109 +93,111 @@ def update_line(w_str):
     sys.stdout.flush()
 
 
-def reproject_map_like(input_map=None, ref_map=None, output_map=None, resampling=Resampling.bilinear, dtype=None,
-                       nodata=None, verbose=True):
+def reproject_like(source, destination, output=None, resampling=Resampling.bilinear, dtype=None,
+                   nodata=None, overwrite=False):
     """
     Reprojecting a map like a reference map.
 
     Parameters
     ----------
-    input_map : str, tuple, Raster
-        Path to the input map or a Raster object. If a tuple is passed, it is assumed that it is of the form
+    source : str, tuple, Raster
+        Path to the input raster or a RasterReader object. If a tuple is passed, it is assumed that it is of the form
         (data, `rio.Profile`). In this case data should contain layer information on the third axis.
-    ref_map : str, Raster, `rio.Profile`
+    destination : str, Raster, `rio.Profile`
         Path to the reference map where the profile is pulled from
-    output_map : str
-        Path to the location where the transformed map is written to.
+    output : str
+        Path to the location where the transformed raster is written to.
     resampling : `rio.Resampling`
         Resampling strategy
     dtype : `numpy.dtype`, optional
         export dtype. If not given it defaults to the dtype of the input data
     nodata : numeric, optional
         export nodata values. If not given it defaults to the input nodata value.
-
-    Raises
-    ------
-    IOError
-        Output_map already exists
+    overwrite : bool, optional
+        If output file path already exists, this switch determines if the file can be overwritten
     """
     # todo; write tests for this function
-    # todo; create a new function to adjust for a different resolution (adapt direclty from rasterio/gdal)
-    # todo; create overwrite parameter
-
+    from .raster._read import RasterReader
     from .raster._base import RasterBase
-    if os.path.isfile(output_map):
+
+    if os.path.isfile(output) and not overwrite:
         raise IOError("output file name already exists")
 
-    if isinstance(input_map, (str, RasterBase)):
-        if isinstance(input_map, str):
-            src = rio.open(input_map)
-            input_map_flag = True
-            src_profile = src.profile
-        elif isinstance(input_map, RasterBase):
-            src = input_map._fp
-            input_map_flag = False
-            src_profile = input_map.profile
-        if verbose:
-            print("loading data")
-        data = src.read()
-        if input_map_flag:
-            src.close()
-    elif isinstance(input_map, tuple):
-        data, src_profile = input_map
+    if isinstance(source, str):
+        src = rio.open(source)
+        input_raster_flag = True
+        src_profile = src.profile
+    elif isinstance(source, RasterReader):
+        src = source._fp
+        input_raster_flag = False
+        src_profile = source.profile
+    elif isinstance(source, tuple):
+        src, src_profile = source
+        input_raster_flag = False
     else:
         raise TypeError("Input type needs to be {str, tuple, Raster}")
 
-    if isinstance(ref_map, str):
-        ref_file = rio.open(ref_map)
-        ref_profile = ref_file.profile
-        ref_file.close()
-    elif isinstance(ref_map, RasterBase):
-        ref_profile = ref_map._fp.profile
-    elif isinstance(ref_map, rio.profiles.Profile):
-        ref_profile = ref_map
+    src_transform = src_profile['transform']
+    src_crs = src_profile['crs']
 
-    ref_transform = ref_profile['transform']
-    ref_crs = ref_profile['crs']
-    shape = (src_profile['count'], ref_profile['height'], ref_profile['width'])
+    if isinstance(destination, str):
+        f = rio.open(destination)
+        dst_profile = f.profile
+        f.close()
+    elif isinstance(destination, RasterBase):
+        dst_profile = destination._fp.profile
+    elif isinstance(destination, rio.profiles.Profile):
+        dst_profile = destination
 
-    current_transform = src_profile['transform']
-    current_crs = src_profile['crs']
+    dst_transform = dst_profile['transform']
+    dst_crs = dst_profile['crs']
 
-    if isinstance(nodata, type(None)):
+    shape = (src_profile['count'], dst_profile['height'], dst_profile['width'])
+
+    if nodata is None:
+        if src_profile['nodata'] is None:
+            raise ValueError("Nodata is not set and is not present in the source profile")
         nodata = src_profile['nodata']
-    if isinstance(dtype, type(None)):
+    if dtype is None:
         dtype = src_profile['dtype']
-    if isinstance(current_crs, type(None)):
-        print("input map does not have a CRS. Therefore the crs of the reference map is assumed")
-        current_crs = ref_profile['crs']
+    if src_crs is None:
+        if dst_crs is None:
+            raise ValueError("CRS is not found in either source or destination")
+        else:
+            warnings.warn("Source raster does not have a CRS. Therefore the CRS of the destination raster is assumed")
+            src_crs = dst_crs
 
-    new_map = np.ndarray(shape, dtype=dtype)
-
-    if verbose:
-        print("start reprojecting")
-    reproject(data, new_map,
-              src_transform=current_transform,
-              src_crs=current_crs,
-              dst_transform=ref_transform,
-              dst_crs=ref_crs,
-              src_nodata=src_profile['nodata'],
-              dst_nodata=nodata,
-              resampling=resampling)
-
-    if verbose:
-        print("writing file")
-    ref_profile.update({"dtype": str(new_map.dtype),
+    dst_profile.update({"dtype": dtype,
                         "driver": "GTiff",
                         "count": shape[0],
                         "nodata": nodata,
                         "compress": "lzw"})
 
-    with rio.open(output_map, "w", **ref_profile) as dst:
-        dst.write(new_map, list(range(1, shape[0] + 1)))
+    dst = rio.open(output, mode='w', **dst_profile)
 
-    if verbose:
-        print("reprojection completed")
+    if isinstance(src, np.ndarray):
+        s = src
+    else:
+        s = rio.band(src, src.indexes)
+
+    reproject(s, rio.band(dst, dst.indexes),
+              src_transform=src_transform,
+              src_crs=src_crs,
+              dst_transform=dst_transform,
+              dst_crs=dst_crs,
+              src_nodata=src_profile['nodata'],
+              dst_nodata=nodata,
+              resampling=resampling)
+
+    if input_raster_flag:
+        src.close()
+
+    dst.close()
+
+
+def reproject_map_like(*args, **kwargs):
+    warnings.warn("This function will be deprecated for 'reproject_like'")
+    return reproject_like(*args, **kwargs)
 
 
 def grid_from_corners(v, shape):
@@ -262,11 +266,15 @@ def overlapping_arrays(m, preserve_input=True):
     if not np.all([a.shape == m[0].shape for a in m]):
         raise ValueError("arrays are not of the same size")
 
+    m_new = []
     for a in m:
         if a.dtype != np.float64:
-            a = a.astype(np.float64)
+            m_new.append(a.astype(np.float64))
         elif preserve_input:
-            a = a.copy()
+            m_new.append(a.copy())
+        else:
+            m_new.append(a)
+    m = m_new
 
     valid_cells = np.logical_and.reduce([~np.isnan(a) for a in m])
 

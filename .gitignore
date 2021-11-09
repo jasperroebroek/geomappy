@@ -1,17 +1,14 @@
 .idea/
-__pycache__/
 .ipynb_checkpoints/
-code_base_expansion/
-scratch/
 data/
 geomappy.egg-info/
-build
-
+build/
+*__pycache__/
 .DS_Store
-thesis.py
 
-*dask-worker-space*
-*plotting_routine_variables.xlsx
 *.tif
 *.so
 *.c
+
+setup_fc.py
+geomappy/focal_statistics/c_focal_correlation.html
