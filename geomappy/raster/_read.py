@@ -5,6 +5,7 @@ import warnings
 import geopandas as gpd
 import numpy as np
 import rasterio as rio
+from joblib import Parallel, delayed
 from shapely.geometry import Polygon, Point
 
 from ..basemap import basemap as basemap_function
@@ -13,6 +14,19 @@ from ..focal_statistics import focal_statistics, correlate_maps
 from ..profile import resample_profile
 from ._base import RasterBase
 from ._write import RasterWriter
+
+
+def _focal_stats_parallel(src, dst_raster, dst_memmap, i, func, window_size, reduce, majority_mode, **kwargs):
+    dst_slices = dst_raster._tiles[i].toslices()
+    dst_memmap[dst_slices[0], dst_slices[1]] = \
+        focal_statistics(src.iloc[i], func=func, window_size=window_size, reduce=reduce, majority_mode=majority_mode,
+                         **kwargs)[src.ind_inner]
+
+
+def _focal_correlation_parallel(src1, src2, dst_raster, dst_memmap, i, window_size, reduce, **kwargs):
+    dst_slices = dst_raster._tiles[i].toslices()
+    dst_memmap[dst_slices[0], dst_slices[1]] = \
+        correlate_maps(src1.iloc[i], src2.iloc[i], window_size=window_size, reduce=reduce, **kwargs)[src1.ind_inner]
 
 
 class RasterReader(RasterBase):
@@ -279,19 +293,31 @@ class RasterReader(RasterBase):
             with RasterWriter(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
                               force_equal_tiles=self._force_equal_tiles, overwrite=overwrite, profile=profile) as f:
 
-                for i in self.iter(progress_bar=progress_bar):
+                if parallel:
+                    dst = f.generate_memmap()
+                    Parallel(n_jobs=-1, prefer='threads', verbose=progress_bar)(delayed(
+                        _focal_stats_parallel)(self, f, dst, i, func=func, window_size=window_size, reduce=reduce,
+                                      majority_mode=majority_mode, **kwargs)
+                        for i in self)
 
-                    data = self[i, indexes]
+                    for i in self:
+                        slices = f._tiles[i].toslices()
+                        f.idx[slices[0], slices[1]] = dst[slices[0], slices[1]]
 
-                    # if data is empty, write directly
-                    if (~np.isnan(data)).sum() == 0:
-                        f[i] = np.full(f.get_shape(i), np.nan)
-                    else:
-                        f[i] = focal_statistics(data, func=func, window_size=window_size, reduce=reduce,
-                                                majority_mode=majority_mode, **kwargs)
+                else:
+                    for i in self.iter(progress_bar=progress_bar):
 
-                if progress_bar:
-                    print()
+                        data = self.iloc[i, indexes]
+
+                        # if data is empty, write directly
+                        if (~np.isnan(data)).sum() == 0:
+                            f[i] = np.full(f.get_shape(i), np.nan)
+                        else:
+                            f[i] = focal_statistics(data, func=func, window_size=window_size, reduce=reduce,
+                                                    majority_mode=majority_mode, **kwargs)
+
+                    if progress_bar:
+                        print()
 
         else:
             profile.update({'height': self.get_height(ind),
@@ -383,14 +409,10 @@ class RasterReader(RasterBase):
             raise TypeError("Indexes can only be an integer for correlation calculations")
 
         # todo; move to Raster/RasterBase
-        if self._v_tiles != other._v_tiles:
-            raise ValueError("v_tiles don't match")
-        if self._h_tiles != other._h_tiles:
-            raise ValueError("h_tiles don't match")
-        if self._force_equal_tiles != other._force_equal_tiles:
-            raise ValueError("force_equal_tiles needs to be set equally on both Rasters")
+        if self.params != other.params:
+            raise ValueError("Params of the rasters don't match")
         if self.shape != other.shape:
-            raise ValueError("Shapes  of the files don't match")
+            raise ValueError("Shape  of the rasters doesn't match")
         if not np.allclose(self.bounds, other.bounds):
             raise ValueError(f"Bounds don't match:\n{self.bounds}\n{other.bounds}")
 
@@ -430,20 +452,32 @@ class RasterReader(RasterBase):
             with RasterWriter(output_file, tiles=(self._v_tiles, self._h_tiles), window_size=self.window_size,
                               force_equal_tiles=self._force_equal_tiles, overwrite=overwrite, profile=profile) as f:
 
-                for i in self.iter(progress_bar=progress_bar):
+                if parallel:
+                    dst = f.generate_memmap()
+                    Parallel(n_jobs=-1, prefer='threads', verbose=progress_bar)(delayed(
+                        _focal_correlation_parallel)(self, other, f, dst, i, window_size=window_size, reduce=reduce,
+                                                     **kwargs)
+                        for i in self)
 
-                    self_data = self[i, self_indexes]
-                    other_data = other[i, other_indexes]
+                    for i in self:
+                        slices = f._tiles[i].toslices()
+                        f.idx[slices[0], slices[1]] = dst[slices[0], slices[1]]
 
-                    # if data is empty, write directly
-                    if (~np.isnan(self_data)).sum() == 0 or (~np.isnan(other_data)).sum() == 0:
-                        f[i] = np.full(f.get_shape(i), np.nan)
-                    else:
-                        f[i] = correlate_maps(self_data, other_data, window_size=window_size, reduce=reduce,
-                                              **kwargs)
+                else:
+                    for i in self.iter(progress_bar=progress_bar):
 
-                if progress_bar:
-                    print()
+                        self_data = self.iloc[i, self_indexes]
+                        other_data = other.iloc[i, other_indexes]
+
+                        # if data is empty, write directly
+                        if (~np.isnan(self_data)).sum() == 0 or (~np.isnan(other_data)).sum() == 0:
+                            f[i] = np.full(f.get_shape(i), np.nan)
+                        else:
+                            f[i] = correlate_maps(self_data, other_data, window_size=window_size, reduce=reduce,
+                                                  **kwargs)
+
+                    if progress_bar:
+                        print()
 
         else:
             profile.update({'height': self.get_height(ind),
@@ -453,13 +487,12 @@ class RasterReader(RasterBase):
                 profile = resample_profile(profile, 1 / window_size)
 
             with RasterWriter(output_file, overwrite=overwrite, profile=profile) as f:
-                f[0] = correlate_maps(self[ind, self_indexes], other[ind, other_indexes], window_size=window_size,
-                                      reduce=reduce, **kwargs)
+                f.iloc[0] = correlate_maps(self[ind, self_indexes], other[ind, other_indexes], window_size=window_size,
+                                           reduce=reduce, **kwargs)
 
-        self.set_params(params[0])
-        other.set_params(params[1])
+        self.params, other.params = params
 
-    focal_correlate = correlate
+    focal_correlation = correlate
 
     def export_tile(self, ind, output_file, indexes=None, compress=True):
         """

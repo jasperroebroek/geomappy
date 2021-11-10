@@ -15,13 +15,16 @@ y = mp.Raster(f"{prefix}data/tree_height.asc", fill_value=0)
 z = mp.Raster(f"{prefix}data/temp_and_precipitation.nc").tp
 
 
-@pytest.mark.parametrize("tiles,reduce", [(1, False), (25, False), (1, True), (4, True)])
-def test_focal_correlation(tiles, reduce):
+@pytest.mark.parametrize("tiles,reduce,parallel", [(1, False, False), (25, False, False), (1, True, False),
+                                                   (4, True, False), (1, False, True), (25, False, True),
+                                                   (1, True, True), (4, True, True)])
+def test_focal_correlation(tiles, reduce, parallel):
     with TestRaster():
         x.set_tiles(tiles)
         y.set_tiles(tiles)
         loc = "_test_rasters/test_focal_mean.tif"
-        x.focal_correlate(y, window_size=5, output_file=loc, overwrite=True, progress_bar=False, reduce=reduce)
+        x.focal_correlation(y, window_size=5, output_file=loc, overwrite=True, progress_bar=False, reduce=reduce,
+                            parallel=parallel)
         t = mp.Raster(loc)
         c1 = t.values
         t.close(verbose=False)
@@ -43,7 +46,7 @@ def test_tile_focal_correlation(reduce):
             mp.Raster.set_window_size(5)
 
         loc = "_test_rasters/test_focal_correlation.tif"
-        x.focal_correlate(y, ind=32, window_size=5, output_file=loc, overwrite=True, progress_bar=False, reduce=reduce)
+        x.focal_correlation(y, ind=32, window_size=5, output_file=loc, overwrite=True, progress_bar=False, reduce=reduce)
         t = mp.Raster(loc)
         c1 = t.values
         t.close(verbose=False)

@@ -149,6 +149,8 @@ def test_tilelocator():
     assert np.allclose(x.iloc[0, 1], x[0], equal_nan=True)
     assert np.allclose(x.iloc[0, (1,)], x[0], equal_nan=True)
     assert x.iloc[0, (1, 1)].shape == (2, 1080, 1350)
+    x.set_window_size(5)
+    assert x.iloc[0].shape == (1084, 1354)
     x.set_tiles(1)
 
 

@@ -64,9 +64,6 @@ def test_correlation_values():
     # Cython implementation
     assert np.allclose(pearsonr(a.flatten(), b.flatten())[0],
                        mp.focal_statistics.correlate_maps(a, b, window_size=5, reduce=True))
-    # Numba implementation
-    assert np.allclose(pearsonr(a.flatten(), b.flatten())[0],
-                       mp.focal_statistics.correlate_maps_njit(a, b, window_size=5, reduce=True))
     # Numpy implementation
     assert np.allclose(pearsonr(a.flatten(), b.flatten())[0],
                        mp.focal_statistics.correlate_maps_base(a, b, window_size=5)[2, 2])
@@ -79,19 +76,14 @@ def test_correlation_shape():
     a = np.random.rand(10, 10)
     b = np.random.rand(10, 10)
 
-    for cm in [mp.focal_statistics.correlate_maps,
-               mp.focal_statistics.correlate_maps_njit]:
-
-        assert a.shape == cm(a, b, window_size=3).shape
-        assert cm(a, b, window_size=10, reduce=True).shape == (1, 1)
-
+    assert mp.focal_statistics.correlate_maps(a, b, window_size=3).shape == a.shape
+    assert mp.focal_statistics.correlate_maps(a, b, window_size=10, reduce=True).shape == (1, 1)
     assert mp.focal_statistics.correlate_maps_base(a, b).shape == a.shape
 
 
 def test_correlation_errors():
     for cm in [mp.focal_statistics.correlate_maps,
-               mp.focal_statistics.correlate_maps_base,
-               mp.focal_statistics.correlate_maps_njit]:
+               mp.focal_statistics.correlate_maps_base]:
 
         with pytest.raises(TypeError):
             cm(np.random.rand(10, 10), np.random.rand(10, 10), window_size=5, verbose=1)
@@ -152,7 +144,6 @@ def test_correlation_errors():
 def test_nan_behaviour():
     for cm in [mp.focal_statistics.correlate_maps,
                mp.focal_statistics.correlate_maps_base,
-               mp.focal_statistics.correlate_maps_njit,
                correlate_maps_simple]:
 
         a = np.random.rand(5, 5)
@@ -173,7 +164,6 @@ def test_nan_behaviour():
 def test_correlation_dtype():
     for cm in [mp.focal_statistics.correlate_maps,
                mp.focal_statistics.correlate_maps_base,
-               mp.focal_statistics.correlate_maps_njit,
                correlate_maps_simple]:
 
         a = np.random.rand(5, 5).astype(np.int)

@@ -283,12 +283,14 @@ class RasterBase:
                       self._vertical_bins[i] + self._fringe),
                      (self._horizontal_bins[j - 1] - self._fringe,
                       self._horizontal_bins[j] + self._fringe))
-            if self._mode == "w":
+            elif self._mode == "w":
                 # in writing the buffer is not needed
                 s = ((self._vertical_bins[i - 1],
                       self._vertical_bins[i]),
                      (self._horizontal_bins[j - 1],
                       self._horizontal_bins[j]))
+            else:
+                raise ValueError(f"Mode is unrecognisable: {self._mode}")
 
             # rasterio window object is stored in self._tiles
             self._tiles.append(rio.windows.Window.from_slices(*s, boundless=True))

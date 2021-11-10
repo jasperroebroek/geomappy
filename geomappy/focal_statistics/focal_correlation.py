@@ -1,19 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Algorithm to correlate two arrays (2D) with each other. All implementations here should yield an equal result.
-The different functions have different scopes:
-- correlate_maps_base: numpy implementation, very memory intensive as the whole rolling window array will be cast into
-  memory. Use with care
-- _correlate_maps_full: numba implementation. Is not meant to be called directly.
-  It returns an output with the same size as the inputs (shape)
-- _correlate_maps_reduce: numba implementation. Is not meant to be called directly.
-  It reduces the output (shape/window_size)
-- _correlate_maps_input_checks: function that reuses the input checks
-- correlate_maps_njit: calls _correlate_maps_full and _correlate_maps_reduce and wraps the input checks and timing
-
-The Numba implementation is preferred. The user will be able to call ``correlate_maps`` which will either invoke
-correlate_maps_base or correlate_maps_njit based on the
+Algorithm to correlate two arrays (2D) with each other.
 """
 
 import time
@@ -23,118 +11,10 @@ import numpy as np
 from numpy.lib.index_tricks import s_
 from ..rolling import rolling_window, rolling_sum
 
-try:
-    from numba import njit
-    numba_present = True
-except ModuleNotFoundError:
-    numba_present = False
-    # create empty decorator
-    def njit(func):
-        return func
-
-docstring = """
-Takes two maps and returning the local correlation between them with the same dimensions as the input maps.
-Correlation calculated in a rolling window with the size `window_size`. If either of the input maps contains
-a NaN value on a location, the output map will also have a NaN on that location. 
-
-Parameters
-----------
-map1, map2 : array-like
-    Input arrays that will be correlated. If not present in dtype `np.float64` it will be converted internally. They
-    have exatly the same shape and have two dimensions.
-window_size : int, optional
-    Size of the window used for the correlation calculations. It should be bigger than 1, the default is 5.
-fraction_accepted : float, optional
-    Fraction of the window that has to contain not-nans for the function to calculate the correlation. The default
-    is 0.7.
-reduce : bool, optional
-    Reuse all cells exactly once by setting a stepsize of the same size as window_size. The resulting map will have
-    the shape: shape/window_size
-verbose ; bool, optional
-    Times the correlation calculations
-
-Returns
--------
-corr : :obj:`~numpy.ndarray`
-    numpy array of the local correlation. If reduce is set to False, the output has the same shape as the input maps,
-    while if reduce is True, the output is reduce by the window size: shape//window_size.
-"""
-
-@njit()
-def _correlate_maps_reduce(map1, map2, window_size=5, fraction_accepted=0.7, reduce=False, verbose=False):
-    shape = (map1.shape[0] // window_size, map2.shape[1] // window_size)
-    corr = np.full(shape, np.nan)
-
-    for i in range(0, map1.shape[0], window_size):
-        for j in range(0, map1.shape[1], window_size):
-            ind = (slice(i, i + window_size), slice(j, j + window_size))
-
-            d1 = map1[ind].ravel()
-            d2 = map2[ind].ravel()
-
-            mask = np.logical_and(~np.isnan(d1), ~np.isnan(d2))
-            d1 = d1[mask]
-            d2 = d2[mask]
-
-            if d1.size < fraction_accepted * window_size ** 2:
-                continue
-
-            if np.all(d1 == d1[0]) or np.all(d2 == d2[0]):
-                corr[i // window_size, j // window_size] = 0
-                continue
-
-            d1_mean = d1.mean()
-            d2_mean = d2.mean()
-
-            d1_dist = d1 - d1_mean
-            d2_dist = d2 - d2_mean
-
-            corr[i // window_size, j // window_size] = \
-                np.sum(d1_dist * d2_dist) / np.sqrt(np.sum(d1_dist ** 2) * np.sum(d2_dist ** 2))
-
-    return corr
-
-
-@njit()
-def _correlate_maps_full(map1, map2, window_size=5, fraction_accepted=0.7, reduce=False, verbose=False):
-    fringe = window_size // 2
-    corr = np.full(map1.shape, np.nan)
-
-    for i in range(fringe, map1.shape[0] - fringe):
-        for j in range(fringe, map1.shape[1] - fringe):
-            ind = (slice(i - fringe, i + fringe + 1), slice(j - fringe, j + fringe + 1))
-
-            if np.isnan(map1[i, j]) or np.isnan(map2[i, j]):
-                continue
-
-            d1 = map1[ind].ravel()
-            d2 = map2[ind].ravel()
-
-            mask = np.logical_and(~np.isnan(d1), ~np.isnan(d2))
-            d1 = d1[mask]
-            d2 = d2[mask]
-
-            if d1.size < fraction_accepted * window_size ** 2:
-                continue
-
-            if np.all(d1 == d1[0]) or np.all(d2 == d2[0]):
-                corr[i, j] = 0
-                continue
-
-            d1_mean = d1.mean()
-            d2_mean = d2.mean()
-
-            d1_dist = d1 - d1_mean
-            d2_dist = d2 - d2_mean
-
-            corr[i, j] = np.sum(d1_dist * d2_dist) / np.sqrt(np.sum(d1_dist ** 2) * np.sum(d2_dist ** 2))
-
-    return corr
-
 
 def _correlate_maps_input_checks(map1, map2, window_size, fraction_accepted, reduce, verbose):
     """
-    Input checks for correlate_maps_base and correlate_maps_njit. Check their docstring for input requirements.
+    Input checks for correlate_maps. Check their docstring for input requirements.
     """
     if not isinstance(verbose, bool):
         raise TypeError("verbose is a boolean variable")
@@ -172,6 +52,34 @@ def _correlate_maps_input_checks(map1, map2, window_size, fraction_accepted, red
 
 
 def correlate_maps_base(map1, map2, *, window_size=5, fraction_accepted=0.7, reduce=False, verbose=False):
+    """
+    Takes two rasters and returning the local correlation between them. Correlation is calculated in a rolling window with
+    the size `window_size`. If either of the input rasters contains NaN value on a location, the output raster will also
+    have a NaN on that location. Fraction_accepted is used to define a minimum necessary fraction of values in a window for
+    the calculation to be done.
+
+    Parameters
+    ----------
+    a, b : array-like
+        Input arrays that will be correlated. If not present in dtype `np.float64` it will be converted internally. They
+        have exatly the same shape and have two dimensions.
+    window_size : int, optional
+        Size of the window used for the correlation calculations. It should be bigger than 1, the default is 5.
+    fraction_accepted : float, optional
+        Fraction of the window that has to contain not-nans for the function to calculate the correlation. The default
+        is 0.7.
+    reduce : bool, optional
+        Reuse all cells exactly once by setting a stepsize of the same size as window_size. The resulting raster will have
+        the shape: shape/window_size
+    verbose ; bool, optional
+        Times the correlation calculations
+
+    Returns
+    -------
+    corr : :obj:`~numpy.ndarray`
+        numpy array of the local correlation. If reduce is set to False, the output has the same shape as the input raster,
+        while if reduce is True, the output is reduce by the window size: shape // window_size.
+    """
     # Input checks
     _correlate_maps_input_checks(map1, map2, window_size, fraction_accepted, reduce, verbose)
 
@@ -273,40 +181,3 @@ def correlate_maps_base(map1, map2, *, window_size=5, fraction_accepted=0.7, red
         print(f"- correlation: {time.time() - start}")
 
     return corr
-
-
-def correlate_maps_njit(map1, map2, window_size=5, fraction_accepted=0.7, reduce=False, verbose=False):
-    start = time.time()
-
-    # Input checks
-    _correlate_maps_input_checks(map1, map2, window_size, fraction_accepted, reduce, verbose)
-
-    if reduce:
-        corr = _correlate_maps_reduce(map1=map1, map2=map2,
-                                      window_size=window_size,
-                                      fraction_accepted=fraction_accepted)
-    else:
-        corr = _correlate_maps_full(map1=map1, map2=map2,
-                                    window_size=window_size,
-                                    fraction_accepted=fraction_accepted)
-
-    if verbose:
-        print(f"- correlation: {time.time() - start}")
-
-    return corr
-
-
-correlate_maps_base.__doc__ = docstring
-correlate_maps_njit.__doc__ = docstring
-_correlate_maps_full.__doc__ = docstring + """
-\n\n Note that this function is not performing any input checks. Use the function correlate_maps_njit for a wrapper
-around this functionality """
-_correlate_maps_reduce.__doc__ = docstring + """
-\n\n Note that this function is not performing any input checks. Use the function correlate_maps_njit for a wrapper
-around this functionality """
-
-if numba_present:
-    correlate_maps = correlate_maps_njit
-else:
-    warnings.warn("correlation of maps can be performed faster by installing Numba")
-    correlate_maps = correlate_maps_base

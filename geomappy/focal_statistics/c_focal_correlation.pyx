@@ -3,18 +3,12 @@
 # cython: wraparound=False
 
 """
-Algorithm to correlate two arrays (2D) with each other. All implementations here should yield an equal result.
-The different functions have different scopes:
-- correlate_maps_base: numpy implementation, very memory intensive as the whole rolling window array will be cast into
-  memory. Use with care
-- _correlate_maps: numba implementation. Is not meant to be called directly.
-- _correlate_maps_input_checks: function that reuses the input checks
-- correlate_maps: calls _correlate_maps and wraps the input checks and timing
+Algorithm to correlate two arrays (2D) with each other
 """
 
 import time
 import numpy as np
-from .focal_correlation import _correlate_maps_input_checks
+from .focal_correlation import _correlate_maps_input_checks, correlate_maps_base
 
 cimport numpy as np
 from libc.math cimport isnan, sqrt
@@ -121,33 +115,6 @@ cdef double[:, ::1] _correlate_maps(double[:, ::1] map1,
 
 
 def correlate_maps(map1, map2, window_size=5, fraction_accepted=0.7, reduce=False, verbose=False):
-    """
-    Takes two maps and returning the local correlation between them with the same dimensions as the input maps.
-    Correlation calculated in a rolling window with the size `window_size`. If either of the input maps contains
-    a NaN value on a location, the output map will also have a NaN on that location.
-
-    Parameters
-    ----------
-    map1, map2 : array-like
-        Input arrays that will be correlated. If not present in dtype `np.float64` it will be converted internally. They
-        have exatly the same shape and have two dimensions.
-    window_size : int, optional
-        Size of the window used for the correlation calculations. It should be bigger than 1, the default is 5.
-    fraction_accepted : float, optional
-        Fraction of the window that has to contain not-nans for the function to calculate the correlation. The default
-        is 0.7.
-    reduce : bool, optional
-        Reuse all cells exactly once by setting a stepsize of the same size as window_size. The resulting map will have
-        the shape: shape/window_size
-    verbose ; bool, optional
-        Times the correlation calculations
-
-    Returns
-    -------
-    corr : :obj:`~numpy.ndarray`
-        numpy array of the local correlation. If reduce is set to False, the output has the same shape as the input maps,
-        while if reduce is True, the output is reduce by the window size: shape//window_size.
-    """
     start = time.time()
     map1 = np.asarray(map1, dtype=np.float64)
     map2 = np.asarray(map2, dtype=np.float64)
@@ -162,3 +129,5 @@ def correlate_maps(map1, map2, window_size=5, fraction_accepted=0.7, reduce=Fals
         print(f"- correlation: {time.time() - start}")
 
     return np.asarray(corr)
+
+correlate_maps.__doc__ = correlate_maps_base.__doc__

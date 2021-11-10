@@ -12,6 +12,8 @@ def _focal_majority(a, window_size, fraction_accepted, reduce, r, ind_inner, maj
     if values.size == 0:
         return r
 
+    t = r[ind_inner]
+
     count_values = rolling_sum(~np.isnan(a), window_size, reduce=reduce)
     if not reduce:
         count_values[np.isnan(a[ind_inner])] = 0
@@ -25,17 +27,16 @@ def _focal_majority(a, window_size, fraction_accepted, reduce, r, ind_inner, maj
     value_count = np.apply_along_axis(lambda p: np.bincount(p, minlength=len(values)+1), axis=2, arr=digitized_a_view)
 
     if majority_mode == "ascending":
-        t = values[value_count[:, :, :-1].argmax(axis=2)]
+        t[:] = values[value_count[:, :, :-1].argmax(axis=2)]
     elif majority_mode == "descending":
-        t = values[::-1][value_count[:, :, :-1][:, :, ::-1].argmax(axis=2)]
+        t[:] = values[::-1][value_count[:, :, :-1][:, :, ::-1].argmax(axis=2)]
     elif majority_mode == "nan":
-        t = values[value_count[:, :, :-1].argmax(axis=2)]
+        t[:] = values[value_count[:, :, :-1].argmax(axis=2)]
         occurrence_maximum = value_count[:, :, :-1].max(axis=2)
         mask_two_maxima = (value_count[:, :, :-1] == occurrence_maximum[:, :, np.newaxis]).sum(axis=2) > 1
         t[mask_two_maxima] = np.nan
 
     t[count_values == 0] = np.nan
-    r[ind_inner] = t
     return r
 
 
@@ -60,10 +61,11 @@ def _focal_nanmax(a, window_size, fraction_accepted, reduce, r, ind_inner, value
 
     a[np.isnan(a)] = -np.inf
     a_view = rolling_window(a, window_size, reduce=reduce)
-    r[ind_inner] = np.max(a_view, axis=(2, 3), out=r[ind_inner])
+    m = np.max(a_view, axis=(2, 3), out=r[ind_inner])
 
+    m[count_values == 0] = np.nan
     r[np.isinf(r)] = np.nan
-    r[ind_inner][count_values == 0] = np.nan
+
     return r
 
 
@@ -75,10 +77,11 @@ def _focal_nanmin(a, window_size, fraction_accepted, reduce, r, ind_inner, value
 
     a[np.isnan(a)] = np.inf
     a_view = rolling_window(a, window_size, reduce=reduce)
-    r[ind_inner] = np.min(a_view, axis=(2, 3), out=r[ind_inner])
+    m = np.min(a_view, axis=(2, 3), out=r[ind_inner])
 
+    m[count_values == 0] = np.nan
     r[np.isinf(r)] = np.nan
-    r[ind_inner][count_values == 0] = np.nan
+
     return r
 
 
@@ -117,16 +120,14 @@ def _focal_std(a, window_size, fraction_accepted, reduce, std_df, r, ind_inner, 
 def focal_statistics(a, *, window_size=5, func=None, fraction_accepted=0.7, verbose=False, std_df=0, reduce=False,
                      majority_mode="nan"):
     """
-    Focal statistics wrapper.
-
-    # todo; preserve dtype of min, max and majority
+    Focal statistics.
 
     Parameters
     ----------
     a : :obj:`~numpy.ndarray`
         Input array (2D). If not np.float64 it will be converted internally.
     window_size : int
-        Window size for focal statistics. Should be bigger than 1.
+        Window size for focal statistics. Should be bigger than 1 and uneven when 'reduce' is False.
     func : {"mean","min","max","std","majority"}
         Function to be applied on the windows
     fraction_accepted : float, optional
@@ -173,14 +174,14 @@ def focal_statistics(a, *, window_size=5, func=None, fraction_accepted=0.7, verb
             
     Raises
     ------
-    KeyError
-        Function not in the list of allowed functions
     ValueError
-        If data is not a 2D array
+        Function not in the list of allowed functions
     """
+    # todo; preserve dtype of min, max and majority
+
     list_of_functions = ["mean", "majority", "min", "max", "std"]
     if func not in list_of_functions:
-        raise KeyError("Function not available")
+        raise ValueError("Function not available")
 
     if not np.issubdtype(a.dtype, np.floating):
         a = a.astype(np.float64)
@@ -241,6 +242,7 @@ def focal_statistics(a, *, window_size=5, func=None, fraction_accepted=0.7, verb
         nan_flag = False
     else:
         nan_flag = True
+        # todo; check redundancy of this
         a = a.copy()
 
     if func == "majority":
