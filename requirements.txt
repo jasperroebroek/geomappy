@@ -1,0 +1,8 @@
+cartopy>=0.2
+geopandas
+rioxarray
+sphinx
+sphinx_rtd_theme
+numpydoc
+jupyter
+pytest
