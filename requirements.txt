@@ -1,4 +1,4 @@
-cartopy>=0.20.0
+Cartopy>=0.20.0
 geopandas
 rioxarray
 sphinx
