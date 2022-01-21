@@ -12,7 +12,7 @@ def bounds_to_polygons(bounds_list, max_bounds=None):
     Parameters
     ----------
     bounds_list : list
-        List of rasterio bounds objects (or a list with the same order).
+        List of rasterio BoundingBox objects (or a list with the same order).
     max_bounds : list, optional
         Rasterio bounds object containing the maximum bounds that are enforced. By default it is None, which means no
         type checking is done. They keyword global gives: [-180,-90,180,90].
@@ -23,13 +23,12 @@ def bounds_to_polygons(bounds_list, max_bounds=None):
         Geodataframe containing the polygons corresponding to the bounds that were given
     """
     # todo; this function can be optimised super much by vectorizing the rational
-    # rename bounds_list to bounds
 
     if max_bounds == "global":
         max_bounds = [-180, -90, 180, 90]
 
-    # todo; rewrite
-    assert type(bounds_list) in (list, tuple), "List of bounds not iterable"
+    if not isinstance(bounds_list, (list, tuple)):
+        raise TypeError("List of bounds not iterable")
 
     # create geodataframe with columns to store the bounds and the polygons
     gdf = gpd.GeoDataFrame(columns=("bounds", "geometry"))
@@ -56,17 +55,3 @@ def bounds_to_polygons(bounds_list, max_bounds=None):
         gdf.loc[i] = [bounds, polygon]
 
     return gdf
-
-
-def bounds_to_platecarree(proj, bounds):
-    """This functionality is deprecated: likely switch to
-    >>> transformer = Transform.from_proj(proj, PROJ_LAT_LON, always_xy=True)
-    >>> return transformer(bounds[0], bounds[1]), transformer(bounds[2], bounds[3])
-    """
-    return (*transform(proj, PROJ_LAT_LON, bounds[0], bounds[1], always_xy=True),
-            *transform(proj, PROJ_LAT_LON, bounds[2], bounds[3], always_xy=True))
-
-
-def bounds_to_data_projection(proj, bounds):
-    return (*transform(PROJ_LAT_LON, proj, bounds[0], bounds[1], always_xy=True),
-            *transform(PROJ_LAT_LON, proj, bounds[2], bounds[3], always_xy=True))

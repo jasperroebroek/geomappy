@@ -1,14 +1,13 @@
 .idea/
 .ipynb_checkpoints/
-data/
 geomappy.egg-info/
 build/
 *__pycache__/
 .DS_Store
+dask-worker-space
 
 *.tif
 *.so
 *.c
 
-setup_fc.py
-geomappy/focal_statistics/c_focal_correlation.html
+todo

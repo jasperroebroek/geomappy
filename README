@@ -1,13 +1,2 @@
-This project was created to interface raster and shape files and facilitate plotting them in a homogeneous way. See the
-examples notebook for visual examples of the interfacing and plotting functionality.
-
-Beside this the project contains:
- - Both reading and writing files through the same Raster interface, making it convenient to pull a file, do some
-    calculations and store the result back in a file. This also works with the tiling behaviour displayed in the
-    notebook. This helps in breaking up the calculations, needing much less memory to work with huge files.
- - focal statistics through the Raster interface (geomappy.focal_statistics)
- - functions to extend the rasterio functionality, such as reprojecting a file based on the profile of another file
-    (geomappy.utils)
- - several handy functions for color mixing (geomappy.colors)
- - a progress bar function (geomappy.utils)
- - ND rolling functions (geomappy.rolling)
+This package aims to provide a quick interface to create publication quality maps. It combines the plotting of both
+raster and polygon data on a basemap (based on cartopy) and integrates its functionality into geopandas and rioxarray.

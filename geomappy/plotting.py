@@ -1,3 +1,4 @@
+import copy
 import cartopy
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
@@ -9,7 +10,6 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Colormap, BoundaryNorm, Normalize, ListedColormap, NoNorm
 from shapely.geometry import Point
 
-from .utils import nandigitize
 from .colors import cmap_discrete, create_colorbar_axes, add_colorbar, legend_patches
 
 
@@ -251,6 +251,7 @@ class PlotParams:
         else:
             raise TypeError("cmap not recognized")
 
+        self._cmap = copy.copy(self._cmap)
         self._cmap.set_bad(nan_color)
         self._nan_color = nan_color
         self._colors = colors
@@ -751,9 +752,9 @@ class LegendPatches(Legend):
 
 
 # Plotting functions
-def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, legend="colorbar", clip_legend=False,
-             ax=None, figsize=None, legend_ax=None, legend_kwargs=None, fontsize=None, aspect=30,
-             pad_fraction=0.6, force_equal_figsize=False, nan_color="White", **kwargs):
+def plot_raster(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, legend="colorbar", clip_legend=False,
+                ax=None, figsize=None, legend_ax=None, legend_kwargs=None, fontsize=None, aspect=30,
+                pad_fraction=0.6, force_equal_figsize=False, nan_color="White", **kwargs):
     """
     Plot a scalar raster
 
@@ -808,9 +809,11 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
 
     Returns
     -------
-    (Axes or GeoAxes, legend)
-    legend depends on the `legend` parameter
+    (:obj:`~matplotlib.axes.Axes`, legend)
+        Axes and legend. The legend depends on the `legend` parameter and can be None.
     """
+    # todo; use masked arrays for plotting
+
     if m.ndim not in (2, 3):
         raise ValueError("Input data needs to be 2D or present RGB(A) values on the third axis.")
     if m.ndim == 3 and (m.shape[-1] not in (3, 4) or np.issubdtype(m.dtype, np.bool_)):
@@ -853,10 +856,10 @@ def plot_map(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, leg
     return ax, legend
 
 
-def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legend="legend", clip_legend=False,
-                        ax=None, figsize=None, suppress_warnings=False, legend_ax=None, legend_kwargs=None,
-                        fontsize=None, aspect=30, pad_fraction=0.6, force_equal_figsize=False, nan_color="White",
-                        **kwargs):
+def plot_classified_raster(m, bins=None, colors=None, cmap=None, labels=None, legend="legend", clip_legend=False,
+                           ax=None, figsize=None, suppress_warnings=False, legend_ax=None, legend_kwargs=None,
+                           fontsize=None, aspect=30, pad_fraction=0.6, force_equal_figsize=False, nan_color="White",
+                           **kwargs):
     """
     Plot a classified raster
 
@@ -913,8 +916,8 @@ def plot_classified_map(m, bins=None, colors=None, cmap=None, labels=None, legen
 
     Returns
     -------
-    (Axes or GeoAxes, legend)
-    legend depends on the `legend` parameter
+    (:obj:`~matplotlib.axes.Axes`, legend)
+        Axes and legend. The legend depends on the `legend` parameter and can be None.
     """
     plot_params = ClassifiedPlotParams(values=m, bins=bins, labels=labels, colors=colors, cmap=cmap,
                                        nan_color=nan_color, clip_legend=clip_legend, suppress_warnings=suppress_warnings)
@@ -951,7 +954,7 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
         holding the values.
     s : array-like, optional
         Size values for each pair of latitude and longitude entries if list like. A single numeric value will be cast
-        to all geometries. If `df` is set a string will be interpreted as the name of the column holding the sizes. If
+        to all geometries. If `df` is set, a string will be interpreted as the name of the column holding the sizes. If
         None is set no sizes will be set.
     df : GeoDataFrame, optional
         Optional GeoDataframe which can be used to plot different shapes than points. A geometry column is expected
@@ -990,7 +993,7 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
     force_equal_figsize : bool, optional
         when plotting with a colorbar the figure is going be slightly smaller than when you are using `legend` or non
         at all. This parameter can be used to force equal sizes, meaning that the version with a `legend` is going to
-        be slightly reduced. This depdends on equal values for `aspect` and `pad_fraction` being provided.
+        be slightly reduced. This depends on equal values for `aspect` and `pad_fraction` being provided.
     nan_color : matplotlib color, optional
         Color used for shapes with NaN value. The default is 'white'
     **kwargs
@@ -1007,8 +1010,8 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
 
     Returns
     -------
-    (Axes or GeoAxes, legend)
-    legend depends on the `legend` parameter
+    (:obj:`~matplotlib.axes.Axes`, legend)
+        Axes and legend. The legend depends on the `legend` parameter and can be None.
     """
     if isinstance(values, type(None)):
         if 'facecolor' not in kwargs:
@@ -1065,11 +1068,11 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
         Latitude and Longitude
     values : array-like or numeric or str
         Values at each pair of latitude and longitude entries if list like. A single numeric value will be cast to all
-        geometries. If `df` is set a string can be passed to values which will be interpreted as the name of the column
+        geometries. If `df` is set, a string can be passed to values which will be interpreted as the name of the column
         holding the values.
     s : array-like, optional
         Size values for each pair of latitude and longitude entries if list like. A single numeric value will be cast
-        to all geometries. If `df` is set a string will be interpreted as the name of the column holding the sizes. If
+        to all geometries. If `df` is set, a string will be interpreted as the name of the column holding the sizes. If
         None is set no sizes will be set.
     df : GeoDataFrame, optional
         Optional GeoDataframe which can be used to plot different shapes than points.
@@ -1110,7 +1113,7 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
     force_equal_figsize : bool, optional
         when plotting with a colorbar the figure is going be slightly smaller than when you are using `legend` or non
         at all. This parameter can be used to force equal sizes, meaning that the version with a `legend` is going to
-        be slightly reduced. This depdends on equal values for `aspect` and `pad_fraction` being provided.
+        be slightly reduced. This depends on equal values for `aspect` and `pad_fraction` being provided.
     nan_color : matplotlib color, optional
         Color used for shapes with NaN value. The default is 'white'
     **kwargs : dict, optional
@@ -1127,8 +1130,8 @@ def plot_classified_shapes(lat=None, lon=None, values=None, s=None, df=None, bin
 
     Returns
     -------
-    (Axes or GeoAxes, legend)
-    legend depends on the `legend` parameter
+    (:obj:`~matplotlib.axes.Axes`, legend)
+        Axes and legend. The legend depends on the `legend` parameter and can be None.
     """
     if isinstance(values, type(None)):
         if 'facecolor' not in kwargs:

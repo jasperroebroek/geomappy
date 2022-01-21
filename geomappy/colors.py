@@ -404,8 +404,3 @@ def add_colorbar(im=None, ax=None, cax=None, aspect=30, pad_fraction=0.6, positi
         raise ValueError("Shrink can only be set if no colorbar axes is provided")
 
     return ax.figure.colorbar(im, orientation=orientation, cax=cax, **kwargs)
-
-
-if __name__ == "__main__":
-    plot_colors(plt.get_cmap("viridis", 20), ticks=True)
-    plt.show()
