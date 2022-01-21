@@ -1,8 +1,0 @@
-Cartopy @ file:///home/conda/feedstock_root/build_artifacts/cartopy_1642606613324/work
-geopandas
-rioxarray
-sphinx
-sphinx_rtd_theme
-numpydoc
-jupyter
-pytest
