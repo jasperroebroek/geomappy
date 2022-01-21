@@ -1,4 +1,4 @@
-Cartopy @ file:///home/conda/feedstock_root/build_artifacts/cartopy_1642606613324/work
+Cartopy
 geopandas
 rioxarray
 sphinx
