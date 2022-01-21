@@ -10,7 +10,7 @@ setup(
     author='jasperroebroek',
     author_email='roebroek.jasper@gmail.com',
     description='Plot maps on a basemap',
-    install_requires=["cartopy>=0.2", "geopandas", "rioxarray"],
+    install_requires=["cartopy>=0.20", "geopandas", "rioxarray"],
     extras_require={
         'develop': ['sphinx', 'sphinx_rtd_theme', 'numpydoc', 'jupyter', 'pytest']
     },
