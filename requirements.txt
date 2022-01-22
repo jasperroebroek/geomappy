@@ -1,4 +1,2 @@
 numpydoc
 jupyter
-rioxarray
-geopandas

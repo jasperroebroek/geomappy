@@ -41,7 +41,6 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
-    "sphinx.ext.autodoc",
     "numpydoc",
     "IPython.sphinxext.ipython_directive",
     "IPython.sphinxext.ipython_console_highlighting",
@@ -57,6 +56,8 @@ napoleon_type_aliases = {
 
 numpydoc_class_members_toctree = True
 numpydoc_show_class_members = False
+
+autodoc_mock_imports = ['cartopy', 'rioxarray', 'geopandas']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -220,36 +221,36 @@ notebooks = ("notebooks/basemap", "notebooks/plotting_raster", "notebooks/plotti
              "notebooks/plotting_shapes", "notebooks/plotting_classified_shapes",
              "notebooks/rioxarray_integration", "notebooks/geopandas_integration")
 
-print("\nBuilding notebooks:")
-for nb in notebooks:
-
-    # only render notebooks if necessary
-    f1 = os.path.getmtime(nb + ".ipynb")
-    try:
-        f2 = os.path.getmtime(nb + ".rst")
-
-        if f2 > f1:
-            print(f" --- skipping: {nb}")
-            continue
-    except FileNotFoundError:
-        pass
-
-    call(
-        (
-            "jupyter nbconvert"
-            " --to rst"
-            " --template-file notebooks/tutorial_rst.tpl"
-            " --ExecutePreprocessor.timeout=60"
-            " --execute " + nb
-        ),
-        shell=True,
-
-
-    )
-
-    with open(f"{nb}.rst") as f:
-        text = f.readlines()
-    text[0] = ".. currentmodule:: geomappy"
-
-    with open(f"{nb}.rst", mode='w') as f:
-        f.writelines(text)
+# print("\nBuilding notebooks:")
+# for nb in notebooks:
+#
+#     # only render notebooks if necessary
+#     f1 = os.path.getmtime(nb + ".ipynb")
+#     try:
+#         f2 = os.path.getmtime(nb + ".rst")
+#
+#         if f2 > f1:
+#             print(f" --- skipping: {nb}")
+#             continue
+#     except FileNotFoundError:
+#         pass
+#
+#     call(
+#         (
+#             "jupyter nbconvert"
+#             " --to rst"
+#             " --template-file notebooks/tutorial_rst.tpl"
+#             " --ExecutePreprocessor.timeout=60"
+#             " --execute " + nb
+#         ),
+#         shell=True,
+#
+#
+#     )
+#
+#     with open(f"{nb}.rst") as f:
+#         text = f.readlines()
+#     text[0] = ".. currentmodule:: geomappy"
+#
+#     with open(f"{nb}.rst", mode='w') as f:
+#         f.writelines(text)
