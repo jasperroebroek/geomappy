@@ -16,7 +16,7 @@ import os
 import sys  # NOQA
 import warnings
 from subprocess import call
-# sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('../..'))
 
 
 # -- Project information -----------------------------------------------------
