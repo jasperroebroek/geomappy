@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-import numpy
 
 setup(
     name='geomappy',
@@ -13,6 +12,5 @@ setup(
     install_requires=["cartopy>=0.20", "geopandas", "rioxarray"],
     extras_require={
         'develop': ['sphinx', 'sphinx_rtd_theme', 'numpydoc', 'jupyter', 'pytest']
-    },
-    include_dirs=[numpy.get_include()]
+    }
 )
