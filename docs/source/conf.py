@@ -57,7 +57,8 @@ napoleon_type_aliases = {
 numpydoc_class_members_toctree = True
 numpydoc_show_class_members = False
 
-autodoc_mock_imports = ['cartopy', 'rioxarray', 'geopandas']
+autodoc_mock_imports = ['cartopy', 'rioxarray', 'geopandas', 'numpy', 'pyproj', 'matplotlib', 'shapely', 'pandas',
+                        'mpl_toolkits', 'xarray', 'rasterio']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
