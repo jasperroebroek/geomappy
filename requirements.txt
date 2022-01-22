@@ -1,2 +1,4 @@
 numpydoc
-IPython
+jupyter
+rioxarray
+geopandas

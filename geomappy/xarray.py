@@ -150,7 +150,7 @@ def xarray_plot_raster(self=None, *, ax=None, **kwargs):
 @add_method("plot_classified_raster", xr.core.dataarray.DataArray)
 def xarray_plot_classified_raster(self=None, *, ax=None, **kwargs):
     """
-    Plot data from an DataArray. This function is exposed as ``plot_raster`` in a ``DataArray``.
+    Plot data from an DataArray. This function is exposed as ``plot_classified_raster`` in a ``DataArray``.
 
     Parameters
     ----------

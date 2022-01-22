@@ -134,7 +134,7 @@ def gpd_plot_shapes(self=None, *, ax=None, **kwargs):
 @add_method("plot_classified_shapes", gpd.GeoDataFrame, gpd.GeoSeries)
 def gpd_plot_classified_shapes(self=None, *, ax=None, **kwargs):
     """
-    Plot data from a GeoDataFrame. This function is exposed as ``plot_shapes`` in a ``GeoDataFrame``.
+    Plot data from a GeoDataFrame. This function is exposed as ``plot_classified_shapes`` in a ``GeoDataFrame``.
 
     Parameters
     ----------
