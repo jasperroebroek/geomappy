@@ -1,5 +1,3 @@
-.. currentmodule:: geomappy
-
 #############
 API reference
 #############
@@ -10,7 +8,7 @@ Basemap
 .. autosummary::
     :toctree: generated/
 
-    basemap
+    geomappy.basemap
 
 Plotting functions
 ==================
@@ -21,8 +19,8 @@ Plotting rasters
 .. autosummary::
     :toctree: generated/
 
-    plot_raster
-    plot_classified_raster
+    geomappy.plot_raster
+    geomappy.plot_classified_raster
 
 Plotting shapes
 ***************
@@ -30,8 +28,8 @@ Plotting shapes
 .. autosummary::
     :toctree: generated/
 
-    plot_shapes
-    plot_classified_shapes
+    geomappy.plot_shapes
+    geomappy.plot_classified_shapes
 
 Integrated plotting functions
 =============================
@@ -42,10 +40,10 @@ Rioxarray
 .. autosummary::
     :toctree: generated/xarray
 
-    xarray_plot_raster
-    xarray_plot_classified_raster
-    xarray_plot_world
-    xarray_plot_file
+    geomappy.xarray_plot_raster
+    geomappy.xarray_plot_classified_raster
+    geomappy.xarray_plot_world
+    geomappy.xarray_plot_file
 
 Geopandas
 *********
@@ -53,7 +51,7 @@ Geopandas
 .. autosummary::
     :toctree: generated/geodataframe
 
-    gpd_plot_shapes
-    gpd_plot_classified_shapes
-    gpd_plot_world
-    gpd_plot_file
+    geomappy.gpd_plot_shapes
+    geomappy.gpd_plot_classified_shapes
+    geomappy.gpd_plot_world
+    geomappy.gpd_plot_file
