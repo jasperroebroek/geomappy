@@ -214,6 +214,7 @@ man_pages = [("index")]
 
 # list conda packages
 call("conda list", shell=True)
+print(os.getcwd())
 
 # disable warnings
 warnings.filterwarnings("ignore")
