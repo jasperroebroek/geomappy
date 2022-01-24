@@ -3,11 +3,11 @@ import xarray as xr
 import cartopy.crs as ccrs
 import numpy as np
 from rasterio.enums import Resampling
-from .bounds import bounds_to_polygons
-from .plotting import plot_raster
-from .plotting import plot_classified_raster
-from .basemap import basemap as basemap_function
-from .utils import add_method
+from geomappy.bounds import bounds_to_polygons
+from geomappy.plotting import plot_raster
+from geomappy.plotting import plot_classified_raster
+from geomappy.basemap import basemap as basemap_function
+from geomappy.utils import add_method
 
 # TODO; make a geo_clip function supporting lon_lat
 # TODO; clip -> reproject -> clip (Transformer().transform_bounds())

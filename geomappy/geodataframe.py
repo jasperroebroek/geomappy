@@ -3,10 +3,10 @@ import cartopy.crs as ccrs
 import numpy as np
 from shapely.geometry import Polygon
 
-from .bounds import bounds_to_polygons
-from .plotting import plot_shapes as plot_shapes, plot_classified_shapes
-from .basemap import basemap as basemap_function
-from .utils import add_method
+from geomappy.bounds import bounds_to_polygons
+from geomappy.plotting import plot_shapes as plot_shapes, plot_classified_shapes
+from geomappy.basemap import basemap as basemap_function
+from geomappy.utils import add_method
 
 # TODO; geo_clip
 

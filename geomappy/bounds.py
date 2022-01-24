@@ -1,5 +1,5 @@
 import geopandas as gpd
-from pyproj import Proj, transform
+from pyproj import Proj
 from shapely.geometry import Polygon
 
 PROJ_LAT_LON = Proj(4326, preserve_units=False)

@@ -14,7 +14,7 @@ from matplotlib.patches import Patch
 import numpy as np
 from mpl_toolkits.axes_grid1.inset_locator import InsetPosition
 
-from .utils import grid_from_corners
+from geomappy.utils import grid_from_corners
 import colorsys
 from matplotlib.colorbar import ColorbarBase
 

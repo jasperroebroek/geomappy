@@ -10,7 +10,7 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Colormap, BoundaryNorm, Normalize, ListedColormap, NoNorm
 from shapely.geometry import Point
 
-from .colors import cmap_discrete, create_colorbar_axes, add_colorbar, legend_patches
+from geomappy.colors import cmap_discrete, create_colorbar_axes, add_colorbar, legend_patches
 
 
 # PLOTTING
