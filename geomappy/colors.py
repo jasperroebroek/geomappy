@@ -248,7 +248,7 @@ def cmap_random(n, color_type='pastel', first_color=None, last_color=None, retur
     https://stackoverflow.com/questions/14720331/how-to-generate-random-colors-in-matplotlib
     """
     if color_type not in ('bright', 'pastel'):
-        print('Please choose "bright" or "soft" for type')
+        print('Please choose "bright" or "pastel" for type')
         return
 
     # Generate color map for bright colors, based on hsv

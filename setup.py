@@ -8,5 +8,9 @@ setup(
     license='GNU GPLv3',
     author='jasperroebroek',
     author_email='roebroek.jasper@gmail.com',
-    description='Plot maps on a basemap'
+    description='Plot maps on a basemap',
+    install_requires=['cartopy>=0.20', 'rioxarray', 'geopandas'],
+    extras_require={
+        'develop': ['sphinx', 'sphinx_rtd_theme', 'numpydoc', 'jupyter', 'pytest']
+    }
 )

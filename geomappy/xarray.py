@@ -11,7 +11,7 @@ from geomappy.utils import add_method
 
 # TODO; make a geo_clip function supporting lon_lat
 # TODO; clip -> reproject -> clip (Transformer().transform_bounds())
-
+# TODO; automatically switch basemap on when a geoaxes is provided
 
 def _plot_combined_raster(classified, *, da=None, basemap=False, figsize=(10, 10), ax=None, projection=None, xticks=30,
                           yticks=30, fontsize=10, extent=None, basemap_kwargs=None, resampling=Resampling.nearest,
@@ -22,6 +22,7 @@ def _plot_combined_raster(classified, *, da=None, basemap=False, figsize=(10, 10
         if da.shape[0] == 1:
             da = da[0]
         elif da.shape[0] == 3:
+            # todo; this does not work
             da = da.transpose(da.rio.y_dim, da.rio.x_dim, '...')
         else:
             raise IndexError("Bands can only be 1 or 3, corresponding to values or RGB")
@@ -184,7 +185,7 @@ def xarray_plot_classified_raster(self=None, *, ax=None, **kwargs):
     basemap_kwargs : dict, optional
         kwargs going to the basemap function
     resampling: Resampling method, optional
-            See rasterio.warp.reproject for more details.
+        See rasterio.warp.reproject for more details.
     kwargs
         kwargs going to the plot_classified_raster() command
 

@@ -152,7 +152,7 @@ def basemap(extent=None, epsg=4326, projection=None, extent_projection=None, ax=
         fig = plt.figure(figsize=figsize)
         ax = fig.add_subplot(projection=projection)
     elif not isinstance(ax, cartopy.mpl.geoaxes.GeoAxesSubplot):
-        position = ax.get_position(original=True)
+        position = ax.get_position(original=False)
         ax.figure.delaxes(ax)
         ax = ax.figure.add_subplot(position=position, projection=projection)
 
@@ -197,7 +197,7 @@ def basemap(extent=None, epsg=4326, projection=None, extent_projection=None, ax=
 
     if xlines is None:
         if len(xtick_locations) == 0:
-            xline_locations = [-180, 180]
+            xline_locations = []
         else:
             xline_locations = xtick_locations
     elif isinstance(xlines, (float, int)):
@@ -212,7 +212,7 @@ def basemap(extent=None, epsg=4326, projection=None, extent_projection=None, ax=
 
     if ylines is None:
         if len(ytick_locations) == 0:
-            yline_locations = [-90, 90]
+            yline_locations = []
         else:
             yline_locations = ytick_locations
     elif isinstance(ylines, (float, int)):
