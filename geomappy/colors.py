@@ -4,72 +4,69 @@
 The functions here implement shortcuts to create different sort of colors/cmap instances for different scenarios. It
 also contains a convenient function to add a colorbar that has the right size for the plots.
 """
-from matplotlib.cm import ScalarMappable
-from matplotlib.lines import Line2D
-from mpl_toolkits import axes_grid1
+import colorsys
+from typing import Iterable, Union, Optional, NewType
+
 import matplotlib.pyplot as plt
-from matplotlib import colors, colorbar
-from matplotlib.colors import LinearSegmentedColormap, to_rgba_array
-from matplotlib.patches import Patch
 import numpy as np
+from matplotlib.cm import ScalarMappable
+from matplotlib.colorbar import ColorbarBase
+from matplotlib.colors import Colormap, LinearSegmentedColormap, ListedColormap, to_rgba_array, BoundaryNorm, to_rgba
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
+from mpl_toolkits import axes_grid1
 from mpl_toolkits.axes_grid1.inset_locator import InsetPosition
 
 from geomappy.utils import grid_from_corners
-import colorsys
-from matplotlib.colorbar import ColorbarBase
+
+Color = NewType('Color', Union[str, Iterable])
+ColorOrMap = NewType('ColorOrMap', Union[str, Iterable, Colormap])
 
 
-def plot_colors(c, figsize=(10, 1), ticks=False, **kwargs):
+def plot_colors(c: ColorOrMap, ticks: bool = False):
     """
     Plot a horizontal colorbar to inspect colors
 
     Parameters
     ----------
     c : array-like or Colormap instance
-        Iterable containing colors. A :obj:`~numpy.ndarray` with 3 dimensions will be interpreted as RBA(A).
-    figsize : tuple, optional
-        Matplotlib figsize parameter
+        Iterable containing matplotlib interpretable colors, matplotlib cmap, or str indicating the cmap.
     ticks : bool, optional
         Add ticks to the figure
-    **kwargs
-        Parameters for `plt.ColorBase`
     """
-    plt.rcParams['savefig.pad_inches'] = 0
+    if isinstance(c, str):
+        c = plt.get_cmap(c)
+    elif not isinstance(c, Colormap):
+        c = ListedColormap(c)
 
-    if isinstance(c, (list, tuple, np.ndarray)):
-        c = np.array(c)
-        N = c.shape[0]
-        cmap = LinearSegmentedColormap.from_list('plot', c, N=N)
-    elif isinstance(c, colors.Colormap):
-        N = c.N
-        cmap = c
+    fig, ax = plt.subplots(figsize=(10, 1))
 
-    fig, ax = plt.subplots(figsize=figsize)
+    bounds = np.linspace(0, 1, c.N + 1)
+    norm = BoundaryNorm(bounds, c.N)
 
-    bounds = np.linspace(0, 1, N + 1)
-    if N < 256:
-        norm = colors.BoundaryNorm(bounds, N)
-
-    cb = ColorbarBase(ax, cmap=cmap, norm=norm, spacing='proportional', ticks=None,
-                      boundaries=bounds, format='%1i', orientation=u'horizontal', **kwargs)
+    cb = ColorbarBase(ax, cmap=c, norm=norm, spacing='proportional', ticks=None,
+                      boundaries=bounds, format='%1i', orientation=u'horizontal')
     ax.patch.set_edgecolor('black')
 
     if not ticks:
-        plt.tick_params(axis='x',  # changes apply to the x-axis
-                        which='both',  # both major and minor ticks are affected
-                        bottom=False,  # ticks along the bottom edge are off
-                        top=False,  # ticks along the top edge are off
-                        labelbottom=False)  # labels along the bottom edge are off
+        # Clear everything around the plot
+        plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
     else:
-        cb.set_ticks(np.linspace(1 / (2 * N), 1 - 1 / (2 * N), N))
-        cb.set_ticklabels(np.arange(N))
+        offset = 1 / (2 * c.N)
+        cb.set_ticks(list(np.linspace(offset, 1 - offset, c.N)), labels=["" for x in range(c.N)])
+        ax.tick_params(width=3, length=8)
+
+    plt.tight_layout()
+    plt.show()
 
 
 def cmap_2d(shape=(1000, 1000), v=None, alpha=0, plotting=False, diverging=False, diverging_alpha=0.5, rotate=0,
             flip=False, ax=None):
     """
     Creates a 2 dimensional legend
-    
+
+    # todo; it would be nice to convert this to a Norm and Cmap like combination
+
     Parameters
     ----------
     shape : list
@@ -161,69 +158,61 @@ def cmap_2d(shape=(1000, 1000), v=None, alpha=0, plotting=False, diverging=False
     return cmap
 
 
-def cmap_discrete(cmap='hsv', n=256, return_type='cmap'):
+def colors_discrete(cmap: Union[str, Colormap] = 'hsv', n: int = 256) -> np.ndarray:
     """
-    Returns a function that maps each index in 0, 1, ..., n-1 to a distinct RGB color as obtained from a matplotlib
-    cmap instance as indicated with the 'cmap' parameter.
+    Returns n sampled colors from Colormap
 
     Parameters
     ----------
-    cmap : str or cmap instance, optional
+    cmap : str or Colormap, optional
         Name of cmap (or cmap itself). If `cmap` is a string it needs to be available in the matplotlib namespace
     n : int
         Number of colors
-    return_type : str, optional
-        'cmap' returns a linearly segmented cmap, 'list' returns a :obj:`~numpy.ndarray` array with the colors. This
-        array will have shape (n, 4).
-
-    Returns
-    -------
-    cmap
-        type depends on return_type parameter
     """
-
     if isinstance(cmap, str):
-        cmap = plt.cm.get_cmap(cmap, n)
-    else:
-        cmap = LinearSegmentedColormap.from_list("new_cmap", cmap(np.linspace(0, 1, n)), n)
+        cmap = plt.get_cmap(cmap)
 
-    if return_type == 'cmap':
-        return cmap
-    elif return_type == 'list':
-        return cmap(np.linspace(0, 1, n))
+    return cmap(np.linspace(0, 1, n))
 
 
-def cmap_from_borders(colors=['white', 'black'], n=256, return_type='cmap'):
+def cmap_discrete(cmap: Union[str, Colormap] = 'hsv', n: int = 256) -> Colormap:
     """
-    Creates a cmap based on two colors
+    Returns a resampled colormap
+
+    Parameters
+    ----------
+    cmap : str or Colormap, optional
+        Name of cmap (or cmap itself). If `cmap` is a string it needs to be available in the matplotlib namespace
+    n : int
+        Number of colors
+    """
+    if isinstance(cmap, str):
+        cmap = plt.get_cmap(cmap)
+
+    return cmap.resampled(n)
+
+
+def cmap_from_borders(colors: Iterable[Color], n: int = 256):
+    """
+    Creates a Colormap based on two colors
 
     Parameters
     ----------
     colors : list
-        List of two colors. Should be in a format accepted by matplotlib to_rgba_array
+        List of two colors, in any matplotlib accepted format
     n : int, optional
-        Can be set if a discrete colormap is needed.  The default is 256 which is the standard for a smooth color
+        Can be set if a discrete colormap is needed. The default is 256 which is the standard for a smooth color
         gradient
-    return_type : str, optional
-        'cmap' returns a cmap object, 'list' returns an ndarray.
-
-    Returns
-    -------
-    cmap or list
-        Behaviour depends on return_type parameter
     """
-    colors = to_rgba_array(colors)[:, :-1]
-    cmap = np.vstack([np.linspace(colors[0][i], colors[1][i], num=n) for i in range(3)]).T
-
-    if return_type == 'list':
-        return cmap
-    if return_type == 'cmap':
-        return LinearSegmentedColormap.from_list("new_cmap", cmap, N=n)
+    return LinearSegmentedColormap.from_list('', colors, n)
 
 
-def cmap_random(n, color_type='pastel', first_color=None, last_color=None, return_type="cmap"):
+def colors_random(n: int,
+                  color_type: str = 'pastel',
+                  first_color: Optional[Color] = None,
+                  last_color: Optional[Color] = None) -> np.ndarray:
     """
-    Creates a random colormap to be used together with matplotlib. Useful for segmentation tasks
+    Creates random RGBA colors
 
     Parameters
     ----------
@@ -235,22 +224,11 @@ def cmap_random(n, color_type='pastel', first_color=None, last_color=None, retur
         Option to set first color if necessary
     last_color : str, optional
         Option to set last color if necessary
-    return_type : str, optional
-        'cmap' returns a cmap object, 'list' returns an ndarray.
-    
-    Returns
-    -------
-    cmap or list
-        Behaviour depends on return_type parameter
 
     Source
     ------
     https://stackoverflow.com/questions/14720331/how-to-generate-random-colors-in-matplotlib
     """
-    if color_type not in ('bright', 'pastel'):
-        print('Please choose "bright" or "pastel" for type')
-        return
-
     # Generate color map for bright colors, based on hsv
     if color_type == 'bright':
         randHSVcolors = [(np.random.uniform(low=0.0, high=1),
@@ -260,44 +238,53 @@ def cmap_random(n, color_type='pastel', first_color=None, last_color=None, retur
         # Convert HSV list to RGB
         randRGBcolors = []
         for HSVcolor in randHSVcolors:
-            randRGBcolors.append(colorsys.hsv_to_rgb(HSVcolor[0], HSVcolor[1], HSVcolor[2]))
-
-        if first_color in ("black", "white"):
-            if first_color == "black":
-                randRGBcolors[0] = [0, 0, 0]
-            if first_color == "white":
-                randRGBcolors[0] = [1, 1, 1]
-        if last_color in ("black", "white"):
-            if last_color == "black":
-                randRGBcolors[-1] = [0, 0, 0]
-            if last_color == "white":
-                randRGBcolors[-1] = [1, 1, 1]
+            randRGBcolors.append(colorsys.hsv_to_rgb(HSVcolor[0], HSVcolor[1], HSVcolor[2]) + (1,))
 
     # Generate soft pastel colors, by limiting the RGB spectrum
-    if color_type == 'pastel':
+    elif color_type == 'pastel':
         low = 0.6
         high = 0.95
         randRGBcolors = [(np.random.uniform(low=low, high=high),
                           np.random.uniform(low=low, high=high),
-                          np.random.uniform(low=low, high=high)) for i in range(n)]
+                          np.random.uniform(low=low, high=high),
+                          1) for i in range(n)]
 
-        if first_color in ("black", "white"):
-            if first_color == "black":
-                randRGBcolors[0] = [0, 0, 0]
-            if first_color == "white":
-                randRGBcolors[0] = [1, 1, 1]
-        if last_color in ("black", "white"):
-            if last_color == "black":
-                randRGBcolors[-1] = [0, 0, 0]
-            if last_color == "white":
-                randRGBcolors[-1] = [1, 1, 1]
+    else:
+        raise ValueError('Please choose "bright" or "pastel" for type')
 
-    random_colormap = LinearSegmentedColormap.from_list('random_cmap', randRGBcolors, N=n)
+    if first_color is not None:
+        randRGBcolors[0] = to_rgba(first_color)
 
-    if return_type == "cmap":
-        return random_colormap
-    if return_type == "list":
-        return randRGBcolors
+    if last_color is not None:
+        randRGBcolors[-1] = to_rgba(last_color)
+
+    return np.asarray(randRGBcolors)
+
+
+def cmap_random(n: int,
+                color_type: str = 'pastel',
+                first_color: Optional[Color] = None,
+                last_color: Optional[Color] = None) -> Colormap:
+    """
+    Creates a random Colormap object
+
+    Parameters
+    ----------
+    n : int
+        Number of labels (size of colormap)
+    color_type : {"bright","pastel"}
+        'bright' for strong colors, 'soft' for pastel colors, which is the default behaviour
+    first_color : str, optional
+        Option to set first color if necessary
+    last_color : str, optional
+        Option to set last color if necessary
+
+    Source
+    ------
+    https://stackoverflow.com/questions/14720331/how-to-generate-random-colors-in-matplotlib
+    """
+    colors = colors_random(n, color_type, first_color, last_color)
+    return LinearSegmentedColormap.from_list('random_cmap', colors, N=n)
 
 
 def legend_patches(colors, labels, type='patch', edgecolor="lightgrey", **kwargs):
@@ -386,14 +373,14 @@ def add_colorbar(im=None, ax=None, cax=None, aspect=30, pad_fraction=0.6, positi
         if shrink < 1:
             length = 1 / (aspect / shrink)
             pad = pad_fraction * length
-            create_colorbar_axes(ax=ax, aspect=aspect/2, pad_fraction=0, position=position).axis("off")
+            create_colorbar_axes(ax=ax, aspect=aspect / 2, pad_fraction=0, position=position).axis("off")
 
             if position == "left":
-                bbox = [-pad - length, (1 - shrink)/2, length, shrink]
+                bbox = [-pad - length, (1 - shrink) / 2, length, shrink]
             elif position == "right":
-                bbox = [1 + pad, (1 - shrink)/2, length, shrink]
+                bbox = [1 + pad, (1 - shrink) / 2, length, shrink]
             elif position == "bottom":
-                bbox = [(1 - shrink)/2, -pad - length, shrink, length]
+                bbox = [(1 - shrink) / 2, -pad - length, shrink, length]
             elif position == "top":
                 bbox = [(1 - shrink) / 2, 1 + pad, shrink, length]
 
