@@ -16,6 +16,7 @@ import os
 import sys  # NOQA
 import warnings
 from subprocess import call
+import geomappy
 sys.path.insert(0, os.path.abspath('../..'))
 
 

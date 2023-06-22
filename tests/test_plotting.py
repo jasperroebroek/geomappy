@@ -1,4 +1,4 @@
-from matplotlib.colors import ListedColormap, BoundaryNorm, from_levels_and_colors
+from matplotlib.colors import ListedColormap, from_levels_and_colors
 import geomappy as mp
 import matplotlib.pyplot as plt
 import matplotlib.testing.compare
@@ -14,7 +14,6 @@ def imshow(*args, **kwargs):
     return ax
 
 
-# todo; port to fixture
 def compare_images(ax1, ax2):
     try:
         os.mkdir("_test_figures")
@@ -28,83 +27,83 @@ def compare_images(ax1, ax2):
     shutil.rmtree("_test_figures")
 
     if r is not None:
-        raise ValueError("Images not equal")
+        return False
+
+    return True
 
 
 def test_figure_base():
     # 3D image data
     x = np.random.rand(10, 10, 3)
-    ax1, cbar = mp.plot_raster(x)
+    ax1, l = mp.plot_raster(x, legend=None)
     ax2 = imshow(x)
-    compare_images(ax1, ax2)
+    assert compare_images(ax1, ax2)
 
     # 2D image data
     x = np.random.rand(10, 10)
-    ax1, cbar = mp.plot_raster(x, legend=None)
+    ax1, l = mp.plot_raster(x, legend=None)
     ax2 = imshow(x)
-    compare_images(ax1, ax2)
+    assert compare_images(ax1, ax2)
 
 
 def test_figure_vmax():
     x = np.random.rand(10, 10)
-    ax1, cbar = mp.plot_raster(x, vmax=0.5, legend=None)
+    ax1, l = mp.plot_raster(x, vmax=0.5, legend=None)
     ax2 = imshow(x, vmax=0.5)
-    compare_images(ax1, ax2)
+    assert compare_images(ax1, ax2)
 
 
 def test_figure_vmin():
     x = np.random.rand(10, 10)
-    ax1, cbar = mp.plot_raster(x, vmin=0.5, legend=None)
+    ax1, l = mp.plot_raster(x, vmin=0.5, legend=None)
     ax2 = imshow(x, vmin=0.5)
-    compare_images(ax1, ax2)
+    assert compare_images(ax1, ax2)
 
 
 def test_figure_binary():
     x = np.random.rand(10, 10)
-    ax1, cbar = mp.plot_raster(x, bins=[0.5], legend=None)
+    ax1, l = mp.plot_raster(x, bins=(0.5,), legend=None)
     ax2 = imshow(x > 0.5, cmap=ListedColormap(["Lightgrey", "Red"]))
-    compare_images(ax1, ax2)
+    assert compare_images(ax1, ax2)
 
 
 def test_figure_classified():
     x = np.ones((10, 10))
     x[4, 4] = 2
     x[5, 5] = 5
-    ax1, cbar = mp.plot_classified_raster(x, [1, 2, 5], ['Red', "Green", "Blue"], legend=None)
-    cmap, norm = from_levels_and_colors([1, 2, 5, 6], ['Red', "Green", "Blue"])
+    ax1, l = mp.plot_classified_raster(x, levels=(1, 2, 5), colors=('Red', "Green", "Blue"), legend=None)
+    cmap, norm = from_levels_and_colors((1, 2, 5, 6), ['Red', "Green", "Blue"])
     ax2 = imshow(x, cmap=cmap, norm=norm)
-    compare_images(ax1, ax2)
+    assert compare_images(ax1, ax2)
 
 
 def test_figure_legend_patches():
     # 3D image data
     # no legend should be plotted
     x = np.random.rand(10, 10, 3)
-    ax1, cbar = mp.plot_raster(x, legend='legend')
-    ax2 = imshow(x)
-    compare_images(ax1, ax2)
+    with pytest.raises(TypeError):
+        ax1, l = mp.plot_raster(x, legend="legend")
 
     # 2D image data, without bins
     # no legend should be plotted
     x = np.random.rand(10, 10)
-    ax1, cbar = mp.plot_raster(x, legend='legend')
-    ax2 = imshow(x)
-    compare_images(ax1, ax2)
+    with pytest.raises(TypeError):
+        ax1, l = mp.plot_raster(x, legend="legend")
 
     # 2D image data, with bins
     # no legend should be plotted, which should raise an error when comparing images
     x = np.random.rand(10, 10)
-    ax1, cbar = mp.plot_raster(x, bins=[0.5], legend='legend')
+    ax1, l = mp.plot_raster(x, bins=(0.5,), legend="legend")
     ax2 = imshow(x > 0.5, cmap=ListedColormap(["Lightgrey", "Red"]))
-    with pytest.raises(ValueError):
-        compare_images(ax1, ax2)
+    assert not compare_images(ax1, ax2)
 
 
-def test_figure_colorbar():
-    # 2D image data, with bins
-    # Legend and colorbar should be different
+def test_figure_legend_and_colorbar_difference():
     x = np.random.rand(10, 10)
-    ax1, cbar = mp.plot_raster(x, bins=[0.5], legend='legend')
-    ax2, cbar = mp.plot_raster(x, bins=[0.5], legend='colorbar')
-    with pytest.raises(ValueError):
-        compare_images(ax1, ax2)
+    ax1, l = mp.plot_raster(x, bins=(0.5,), legend="legend")
+    ax2, l = mp.plot_raster(x, bins=(0.5,), legend="colorbar")
+    assert not compare_images(ax1, ax2)
+
+    ax1, l = mp.plot_raster(x, bins=(0.5, 0.8), legend="legend")
+    ax2, l = mp.plot_raster(x, bins=(0.5, 0.8), legend="colorbar")
+    assert not compare_images(ax1, ax2)

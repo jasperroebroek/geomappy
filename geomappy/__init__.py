@@ -1,7 +1,8 @@
 from geomappy.geodataframe import gpd_plot_shapes, gpd_plot_classified_shapes, gpd_plot_world, gpd_plot_file
 from geomappy.xarray import xarray_plot_raster, xarray_plot_classified_raster, xarray_plot_world, xarray_plot_file
-from geomappy.basemap import basemap
-from geomappy.plotting import plot_raster, plot_classified_raster, plot_shapes, plot_classified_shapes
+from geomappy.basemap import basemap, add_ticks, add_gridlines
+from geomappy.raster import plot_raster, plot_classified_raster
+from geomappy.shapes import plot_shapes, plot_classified_shapes
 
 import matplotlib
 import warnings

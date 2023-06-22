@@ -127,7 +127,7 @@ They are used as parameters in the ``plot_classified_raster`` function
 
 .. code:: python
 
-    mp.plot_classified_raster(a, bins=bins, labels=labels, colors=colors, figsize=(20, 20), suppress_warnings=True)
+    mp.plot_classified_raster(a, levels=bins, labels=labels, colors=colors, figsize=(20, 20), suppress_warnings=True)
     plt.show()
 
 
@@ -135,11 +135,11 @@ They are used as parameters in the ``plot_classified_raster`` function
 .. image:: plotting_classified_raster_files/plotting_classified_raster_13_0.png
 
 
-For a more compact legend, a colorbar can be used
+Also a legend can be used
 
 .. code:: python
 
-    mp.plot_classified_raster(a, bins=bins, labels=labels, colors=colors, figsize=(20, 20), suppress_warnings=True, legend='colorbar')
+    mp.plot_classified_raster(a, levels=bins, labels=labels, colors=colors, figsize=(20, 20), suppress_warnings=True, legend='legend')
     plt.show()
 
 
@@ -151,8 +151,14 @@ Again this can be easily enhanced with a basemap
 
 .. code:: python
 
-    ax = mp.basemap(r.rio.bounds(), figsize=(20, 20))
-    mp.plot_classified_raster(a, bins=bins, labels=labels, colors=colors, suppress_warnings=True, legend='colorbar', ax=ax)
+    ax = mp.basemap(figsize=(20, 20))
+    ax.coastlines()
+    mp.add_gridlines(ax, 30)
+    mp.add_ticks(ax, 30)
+    bounds = r.rio.bounds()
+    extent = bounds[0], bounds[2], bounds[1], bounds[3]
+    mp.plot_classified_raster(a, levels=bins, labels=labels, colors=colors, suppress_warnings=True, legend='colorbar', 
+                              ax=ax, extent=extent)
     plt.show()
 
 

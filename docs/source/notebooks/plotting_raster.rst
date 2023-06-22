@@ -86,14 +86,15 @@ applied here. First the bounds need to be extracted from the raster.
 .. code:: python
 
     bounds = r.rio.bounds()
-    bounds
+    extent = bounds[0], bounds[2], bounds[1], bounds[3]
+    extent
 
 
 
 
 .. parsed-literal::
 
-    (109.999999342, -44.999998545, 155.000000419, -8.999999499)
+    (109.999999342, 155.000000419, -44.999998545, -8.999999499)
 
 
 
@@ -101,29 +102,40 @@ Then a basemap needs to be created
 
 .. code:: python
 
-    ax = mp.basemap(bounds, resolution='10m', xticks=10, yticks=10)
+    ax = mp.basemap(figsize=(6, 6))
+    ax.coastlines()
+    ax.set_extent(extent)
+    mp.add_ticks(ax, 10)
+    mp.add_gridlines(ax, 10)
 
 
 
-.. image:: plotting_raster_files/plotting_raster_15_0.png
+
+.. parsed-literal::
+
+    <cartopy.mpl.gridliner.Gridliner at 0x186c53df0>
+
+
+
+
+.. image:: plotting_raster_files/plotting_raster_15_1.png
 
 
 Then this GeoAxes object needs to be passed to the plotting function.
 
 .. code:: python
 
-    ax = mp.basemap(bounds, resolution='10m', xticks=10, yticks=10)
-    mp.plot_raster(a, ax=ax, cmap="Blues_r", bins=[0,0.1,0.5,1,2,5,10,25])
+    ax = mp.basemap(figsize=(6, 6))
+    ax.coastlines()
+    ax.set_extent(extent)
+    mp.add_ticks(ax, 10)
+    mp.add_gridlines(ax, 10)
+    mp.plot_raster(a, ax=ax, cmap="Blues_r", bins=[0,0.1,0.5,1,2,5,10,25], extent=extent)
     plt.show()
 
 
 
 .. image:: plotting_raster_files/plotting_raster_17_0.png
 
-
-This workflow (and some other handy features) are encapsulated entirely
-within an addition to the rioxarray object. The first thing that one
-might do when opening a raster, is to check where this exactly falls on
-the globe.
 
 

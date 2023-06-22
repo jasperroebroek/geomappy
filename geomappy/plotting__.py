@@ -1,16 +1,18 @@
 import copy
+
 import cartopy
 import cartopy.crs as ccrs
-import matplotlib.pyplot as plt
 import geopandas as gpd
-import pandas as pd
+import matplotlib.pyplot as plt
 import numpy as np
-from geopandas.plotting import plot_polygon_collection, plot_linestring_collection, plot_point_collection
+import pandas as pd
+from geopandas.plotting import _plot_polygon_collection, _plot_linestring_collection, _plot_point_collection
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Colormap, BoundaryNorm, Normalize, ListedColormap, NoNorm
 from shapely.geometry import Point
 
-from geomappy.colors import cmap_discrete, create_colorbar_axes, add_colorbar, legend_patches
+from geomappy.axes_decoration import create_colorbar_axes, add_colorbar, legend_patches
+from geomappy.colors import cmap_discrete
 
 
 # PLOTTING
@@ -19,6 +21,7 @@ class Plot:
     Plot object. Handles the creation of the Axes if none is provided, stores the parameters for plotting and deals
     with the Axes makeup when the plot is drawn.
     """
+
     def __init__(self, ax, figsize, legend, params, **kwargs):
         """Sets the parameters and creates the Axes if not provided"""
         if ax is None:
@@ -48,6 +51,7 @@ class PlotRaster(Plot):
     Plot object for raster data. If a GeoAxes is provided the `extent` and `transform` will be inferred if not provided.
     If this leads to the wrong result they can be passed in directly as keyword arguments.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if isinstance(self.ax, cartopy.mpl.geoaxes.GeoAxes):
@@ -65,6 +69,7 @@ class PlotShapes(Plot):
     Plot object for polygon/point data. If a GeoAxes is provided the `transform` will be inferred if not provided.
     If this leads to the wrong result it can be passed in directly as keyword argument.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if isinstance(self.ax, cartopy.mpl.geoaxes.GeoAxes):
@@ -187,22 +192,22 @@ class PlotShapes(Plot):
         # plot all Polygons and all MultiPolygon components in the same collection
         polys = df.geometry[poly_idx]
         if not polys.empty:
-            plot_polygon_collection(ax, polys, facecolor=facecolor[poly_idx], edgecolor=edgecolor[poly_idx],
-                                    linewidth=linewidth, **kwargs)
+            _plot_polygon_collection(ax, polys, facecolor=facecolor[poly_idx], edgecolor=edgecolor[poly_idx],
+                                     linewidth=linewidth, **kwargs)
 
         # plot all LineStrings and MultiLineString components in same collection
         lines = df.geometry[line_idx]
         if not lines.empty:
-            plot_linestring_collection(ax, lines, facecolor=facecolor[line_idx], edgecolor=edgecolor[line_idx],
-                                       linewidth=linewidth, **kwargs)
+            _plot_linestring_collection(ax, lines, facecolor=facecolor[line_idx], edgecolor=edgecolor[line_idx],
+                                        linewidth=linewidth, **kwargs)
 
         # plot all Points in the same collection
         points = df.geometry[point_idx]
         if not points.empty:
             if isinstance(markersize, np.ndarray):
                 markersize = markersize[point_idx]
-            plot_point_collection(ax, points, facecolor=facecolor[point_idx], edgecolor=edgecolor[point_idx],
-                                  markersize=markersize, linewidth=linewidth, **kwargs)
+            _plot_point_collection(ax, points, facecolor=facecolor[point_idx], edgecolor=edgecolor[point_idx],
+                                   markersize=markersize, linewidth=linewidth, **kwargs)
 
     def _draw(self, geometry, markersize, linewidth):
         """Sets the colors that will be passed on to `PlotShapes._plot_geometries`"""
@@ -240,6 +245,7 @@ class PlotParams:
     extend : {"both", "neither", "max", "min"}, optional
         Extend for the colorbar. The default is 'neither'
     """
+
     def __init__(self, cmap="viridis", norm=None, colors=None, nan_color="White", bins=None, labels=None, extend=None,
                  values=None, labels_overwritten=False):
         if isinstance(cmap, type(None)):
@@ -357,6 +363,7 @@ class ScalarPlotParams(PlotParams):
         If bins are provided that are outside the range of data they will be clipped. The default is False. An Error
         wil be raised if all bins are clipped.
     """
+
     def __init__(self, values, bins=None, labels=None, vmin=None, vmax=None, cmap=None, nan_color='White',
                  clip_legend=False):
         super().__init__(cmap=cmap)
@@ -472,6 +479,7 @@ class ClassifiedPlotParams(PlotParams):
     suppress_warnings : bool, optional
         Only 9 bins will be drawn by default. Set this parameter to True to avoid this limitation
     """
+
     def __init__(self, values, bins=None, labels=None, colors=None, cmap=None, nan_color="White", clip_legend=False,
                  suppress_warnings=False):
         data = values[~np.isnan(values)]
@@ -516,7 +524,7 @@ class ClassifiedPlotParams(PlotParams):
             labels = labels[present]
             colors = colors[present]
 
-        boundaries = np.hstack((bins[0]-1, [(bins[i]+bins[i-1])/2 for i in range(1, len(bins))], bins[-1]+1))
+        boundaries = np.hstack((bins[0] - 1, [(bins[i] + bins[i - 1]) / 2 for i in range(1, len(bins))], bins[-1] + 1))
         self._norm = BoundaryNorm(boundaries, len(bins))
         self._cmap = ListedColormap(colors)
         self._nan_color = nan_color
@@ -532,8 +540,9 @@ class ClassifiedPlotParams(PlotParams):
 class Legend:
     """Parent object for the legends. It contains a method `create` to create a Colorbar or LegendPatches object.
     A custom Legend object can be created, it only needs to expose a `draw` method with parameters `ax` and `params`"""
+
     @staticmethod
-    def create(legend, aspect=30, pad_fraction=0.6, legend_ax=None, fontsize=None,  legend_kwargs=None):
+    def create(legend, aspect=30, pad_fraction=0.6, legend_ax=None, fontsize=None, legend_kwargs=None):
         """
         Creates a Legend object of type Colorbar or LegendPatches
 
@@ -591,6 +600,7 @@ class Colorbar(Legend):
 
     todo; move all parameters from cbar_decorator to __init__
     """
+
     def __init__(self, aspect=30, pad_fraction=0.6, legend_ax=None, fontsize=None, **kwargs):
         self._aspect = aspect
         self._pad_fraction = pad_fraction
@@ -698,6 +708,7 @@ class LegendPatches(Legend):
     kwargs
         Keyword arguments for the `ax.legend` function call.
     """
+
     def __init__(self, legend_ax=None, facecolor='white', edgecolor='lightgrey', fontsize=None, patch_type="patch",
                  patch_edgecolor="lightgrey", title=None, align_left=True, handles_kwargs=None, **kwargs):
         self._facecolor = facecolor
@@ -845,7 +856,8 @@ def plot_raster(m, bins=None, bin_labels=None, cmap=None, vmin=None, vmax=None, 
     legend = Legend.create(legend, aspect=aspect, pad_fraction=pad_fraction, legend_ax=legend_ax, fontsize=fontsize,
                            legend_kwargs=legend_kwargs)
 
-    ax, legend = PlotRaster(ax=ax, figsize=figsize, fontsize=fontsize, params=plot_params, legend=legend, **kwargs).draw()
+    ax, legend = PlotRaster(ax=ax, figsize=figsize, fontsize=fontsize, params=plot_params, legend=legend,
+                            **kwargs).draw()
 
     if force_equal_figsize and legend != 'colorbar':
         if isinstance(legend_kwargs, type(None)):
@@ -920,12 +932,13 @@ def plot_classified_raster(m, bins=None, colors=None, cmap=None, labels=None, le
         Axes and legend. The legend depends on the `legend` parameter and can be None.
     """
     plot_params = ClassifiedPlotParams(values=m, bins=bins, labels=labels, colors=colors, cmap=cmap,
-                                       nan_color=nan_color, clip_legend=clip_legend, suppress_warnings=suppress_warnings)
+                                       nan_color=nan_color, clip_legend=clip_legend,
+                                       suppress_warnings=suppress_warnings)
 
     legend = Legend.create(legend, aspect=aspect, pad_fraction=pad_fraction, legend_ax=legend_ax, fontsize=fontsize,
                            legend_kwargs=legend_kwargs)
 
-    ax, legend = PlotRaster(ax=ax, figsize=figsize, fontsize=fontsize, params=plot_params, legend=legend, **kwargs)\
+    ax, legend = PlotRaster(ax=ax, figsize=figsize, fontsize=fontsize, params=plot_params, legend=legend, **kwargs) \
         .draw()
 
     if force_equal_figsize and legend != 'colorbar':
@@ -1043,7 +1056,7 @@ def plot_shapes(lat=None, lon=None, values=None, s=None, df=None, bins=None, bin
     legend = Legend.create(legend, aspect=aspect, pad_fraction=pad_fraction, legend_ax=legend_ax, fontsize=fontsize,
                            legend_kwargs=legend_kwargs)
 
-    ax, legend = PlotShapes(ax=ax, figsize=figsize, fontsize=fontsize, params=plot_params, legend=legend, **kwargs)\
+    ax, legend = PlotShapes(ax=ax, figsize=figsize, fontsize=fontsize, params=plot_params, legend=legend, **kwargs) \
         .draw(geometry=geometry, markersize=markersize, linewidth=linewidth)
 
     if force_equal_figsize and legend != 'colorbar':

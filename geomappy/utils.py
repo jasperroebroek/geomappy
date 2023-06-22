@@ -5,19 +5,24 @@ Utilities used in geomappy. Interesting functions to use outside the internal sc
 progress_bar and reproject_map_like
 """
 from functools import wraps
+from numbers import Number
+from typing import Tuple, Union
+
 import numpy as np
+from numpy import ndarray
+from rasterio.coords import BoundingBox
 
 
-def grid_from_corners(v, shape):
+def _grid_from_corners(v: Tuple[Union[Number, ndarray]], shape: Tuple[int, int]):
     """
     function returns an linearly interpolated grid from values at the corners
 
     Parameters
     ----------
-    v : list
+    v : tuple
         List of four numeric values that will be interpolated. Order of the values is clockwise; starting from the upper
         left corner.
-    shape : list
+    shape : tuple
         List of two integers, determining the shape of the array that will be returned
 
     Returns
@@ -25,22 +30,8 @@ def grid_from_corners(v, shape):
     :obj:`~numpy.ndarray`
         Interpolated array
     """
-    if type(v) not in (tuple, list, np.ndarray):
-        raise TypeError("corner values need to be supplied in a list")
-    else:
-        if len(v) != 4:
-            raise ValueError("Four corner values need to be given")
-    if type(shape) not in (tuple, list):
-        raise TypeError("shape needs to be a list")
-    else:
-        if len(shape) != 2:
-            raise ValueError("shape needs to contain 2 integers")
-        if type(shape[0]) not in (float, int) or type(shape[1]) not in (float, int):
-            raise TypeError("shape needs to be provided as integers")
-
-    grid = np.linspace(np.linspace(v[0], v[1], shape[1]),
+    return np.linspace(np.linspace(v[0], v[1], shape[1]),
                        np.linspace(v[3], v[2], shape[1]), shape[0])
-    return grid
 
 
 def add_method(name, *cls):
@@ -58,12 +49,25 @@ def add_method(name, *cls):
     -----
     https://medium.com/@mgarod/dynamically-add-a-method-to-a-class-in-python-c49204b85bd6
     """
+
     def decorator(func):
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             return func(self, *args, **kwargs)
+
         for c in cls:
             setattr(c, name, wrapper)
         # Note we are not binding func, but wrapper which accepts self but does exactly the same as func
-        return func # returning func means func can still be used normally
+        return func  # returning func means func can still be used normally
+
     return decorator
+
+
+def check_increasing_and_unique(v: np.ndarray) -> None:
+    vs = np.sort(np.unique(v))
+    if not np.array_equal(v, vs):
+        raise ValueError("Levels are not sorted or contain double entries")
+
+
+def change_between_bounds_and_extent(x: Union[BoundingBox, Tuple[Number, Number, Number, Number]]):
+    return x[0], x[2], x[1], x[3]

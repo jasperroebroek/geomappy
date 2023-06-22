@@ -85,7 +85,7 @@ and ``plot_file``.
 .. code:: python
 
     df1.plot_file()
-    df2.plot_file(xticks=1, yticks=1, resolution='10m')
+    df2.plot_file(ticks=1, lines=1)
     plt.show()
 
 
@@ -109,7 +109,7 @@ figure as seen before:
 
 .. code:: python
 
-    df1.plot_shapes()
+    df1.plot_shapes(fontsize=8)
     plt.show()
 
 
@@ -133,47 +133,13 @@ continues shapes tutorial
 
 .. code:: python
 
-    df1.plot_shapes(values='e_10', basemap=True, cmap="Reds", bins=[0,100,1000,10000,100000,1000000, 10000000, 100000000], bin_labels = [0, "E2", "E3", "E4", "E5", "E6", "E7", "E8"], figsize=(10,10), pad_fraction=1.2, legend_kwargs=dict(label="Plastic mobilisation", label_font=dict(rotation=270, labelpad=20)))
+    ax, cbar = df1.plot_shapes(values='e_10', basemap=True, cmap="Reds", bins=[0,100,1000,10000,100000,1000000, 10000000, 100000000],
+                              fontsize=8)
+    cbar.ax.set_yticklabels([0, "E2", "E3", "E4", "E5", "E6", "E7", "E8"], fontsize=8)
+    cbar.set_label("Plastic mobilisation", labelpad=15, rotation=270, fontsize=8)
     plt.show()
 
 
 
 .. image:: geopandas_integration_files/geopandas_integration_16_0.png
-
-
-Plotting on different projections
----------------------------------
-
-Different plotting projections are available by passing a caropty
-Projection object to the ``projection`` parameter.
-
-.. code:: python
-
-    df1.plot_shapes(projection=ccrs.Mercator())
-    plt.show()
-
-
-
-.. image:: geopandas_integration_files/geopandas_integration_19_0.png
-
-
-.. code:: python
-
-    ax = mp.basemap(projection=ccrs.LambertConformal())
-    df1.plot_shapes(ax=ax)
-    plt.show()
-
-
-
-.. image:: geopandas_integration_files/geopandas_integration_20_0.png
-
-
-.. code:: python
-
-    df1.plot_shapes(projection=ccrs.LambertConformal(), basemap=True)
-    plt.show()
-
-
-
-.. image:: geopandas_integration_files/geopandas_integration_21_0.png
 

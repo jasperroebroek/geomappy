@@ -5,22 +5,15 @@ The functions here implement shortcuts to create different sort of colors/cmap i
 also contains a convenient function to add a colorbar that has the right size for the plots.
 """
 import colorsys
-from typing import Iterable, Union, Optional, NewType
+from typing import Iterable, Union, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.cm import ScalarMappable
 from matplotlib.colorbar import ColorbarBase
 from matplotlib.colors import Colormap, LinearSegmentedColormap, ListedColormap, to_rgba_array, BoundaryNorm, to_rgba
-from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
-from mpl_toolkits import axes_grid1
-from mpl_toolkits.axes_grid1.inset_locator import InsetPosition
 
-from geomappy.utils import grid_from_corners
-
-Color = NewType('Color', Union[str, Iterable])
-ColorOrMap = NewType('ColorOrMap', Union[str, Iterable, Colormap])
+from geomappy.types import ColorOrMap, Color
+from geomappy.utils import _grid_from_corners
 
 
 def plot_colors(c: ColorOrMap, ticks: bool = False):
@@ -140,7 +133,7 @@ def cmap_2d(shape=(1000, 1000), v=None, alpha=0, plotting=False, diverging=False
         corner_colors = to_rgba_array(v)
     cmap = np.empty((*shape, 3))
     for i in range(3):
-        cmap[:, :, i] = grid_from_corners(corner_colors[:, i], shape=shape)
+        cmap[:, :, i] = _grid_from_corners(corner_colors[:, i], shape=shape)
     if diverging:
         x, y = np.mgrid[-1:1:shape[0] * 1j, -1:1:shape[1] * 1j]
         cmap += (-diverging_alpha * x ** 2 / 2 + -diverging_alpha * y ** 2 / 2 + diverging_alpha)[:, :, np.newaxis]
@@ -236,29 +229,29 @@ def colors_random(n: int,
                           np.random.uniform(low=0.9, high=1)) for i in range(n)]
 
         # Convert HSV list to RGB
-        randRGBcolors = []
+        rand_rgb_colors = []
         for HSVcolor in randHSVcolors:
-            randRGBcolors.append(colorsys.hsv_to_rgb(HSVcolor[0], HSVcolor[1], HSVcolor[2]) + (1,))
+            rand_rgb_colors.append(colorsys.hsv_to_rgb(HSVcolor[0], HSVcolor[1], HSVcolor[2]) + (1,))
 
     # Generate soft pastel colors, by limiting the RGB spectrum
     elif color_type == 'pastel':
         low = 0.6
         high = 0.95
-        randRGBcolors = [(np.random.uniform(low=low, high=high),
-                          np.random.uniform(low=low, high=high),
-                          np.random.uniform(low=low, high=high),
-                          1) for i in range(n)]
+        rand_rgb_colors = [(np.random.uniform(low=low, high=high),
+                            np.random.uniform(low=low, high=high),
+                            np.random.uniform(low=low, high=high),
+                            1) for i in range(n)]
 
     else:
         raise ValueError('Please choose "bright" or "pastel" for type')
 
     if first_color is not None:
-        randRGBcolors[0] = to_rgba(first_color)
+        rand_rgb_colors[0] = to_rgba(first_color)
 
     if last_color is not None:
-        randRGBcolors[-1] = to_rgba(last_color)
+        rand_rgb_colors[-1] = to_rgba(last_color)
 
-    return np.asarray(randRGBcolors)
+    return np.asarray(rand_rgb_colors)
 
 
 def cmap_random(n: int,
@@ -285,109 +278,3 @@ def cmap_random(n: int,
     """
     colors = colors_random(n, color_type, first_color, last_color)
     return LinearSegmentedColormap.from_list('random_cmap', colors, N=n)
-
-
-def legend_patches(colors, labels, type='patch', edgecolor="lightgrey", **kwargs):
-    if len(colors) != len(labels):
-        raise IndexError(f"Length of labels and colors don't match:\n"
-                         f"{labels}\n{colors}")
-
-    if type == 'patch':
-        return [Patch(facecolor=color, label=label, edgecolor=edgecolor, **kwargs)
-                for color, label in zip(colors, labels)]
-    else:
-        return [Line2D([0], [0], color=color, label=label, linestyle=type, markeredgecolor=edgecolor,
-                       **kwargs)
-                for color, label in zip(colors, labels)]
-
-
-def create_colorbar_axes(ax, aspect=30, pad_fraction=0.6, position="right"):
-    """
-    Create an axes for the colorbar to be drawn on that has the same size as the figure
-
-    Parameters
-    ----------
-    ax : Axes, optional
-        The Axes that the colorbar will added to.
-    aspect : float, optional
-        The aspect ratio of the colorbar
-    pad_fraction : float, optional
-        The fraction of the height of the colorbar that the colorbar is removed from the image
-    position : {"left", "right", "top", "bottom"}
-        The position of the colorbar in respect to the image
-
-    Returns
-    -------
-    Axes
-    """
-    divider = axes_grid1.make_axes_locatable(ax)
-    width = axes_grid1.axes_size.AxesY(ax, aspect=1. / aspect)
-    pad = axes_grid1.axes_size.Fraction(pad_fraction, width)
-    ax = divider.append_axes(position=position, size=width, pad=pad, axes_class=plt.Axes)
-    return ax
-
-
-def add_colorbar(im=None, ax=None, cax=None, aspect=30, pad_fraction=0.6, position="right", shrink=1, **kwargs):
-    """
-    Add colorbar to a plot
-
-    Parameters
-    ----------
-    im : ScalarMappable, optional
-        The source ScalarMappable. If not provided it will use the last image on the Axes
-    ax : Axes, optional
-        The Axes that the colorbar will added to. If not provided it will be assumed to be the last Axes that was
-        used (plt.gca())
-    cax : Axes, optional
-        The Axes instance that the colorbar will be drawn on. If not given it will be added internally.
-    aspect : float, optional
-        The aspect ratio of the colorbar
-    pad_fraction : float, optional
-        The fraction of the height of the colorbar that the colorbar is removed from the image
-    position : {"left", "right", "top", "bottom"}
-        The position of the colorbar in respect to the image
-    shrink : float, optional
-        float between 0 and 1, which is the fraction of the space it will cover. Does not work if `cax` is provided.
-    **kwargs : dict, optional
-        Keyword arguments for the colorbar call
-
-    Returns
-    -------
-    Colorbar
-    """
-    if isinstance(im, type(None)):
-        if isinstance(ax, type(None)):
-            ax = plt.gca()
-        im = ax.images[-1]
-    else:
-        if isinstance(ax, type(None)):
-            if isinstance(im, ScalarMappable):
-                ax = plt.gca()
-            else:
-                ax = im.axes
-
-    orientation = "vertical" if position in ("right", "left") else "horizontal"
-    if isinstance(cax, type(None)):
-        cax = create_colorbar_axes(ax=ax, aspect=aspect, pad_fraction=pad_fraction, position=position)
-
-        if shrink < 1:
-            length = 1 / (aspect / shrink)
-            pad = pad_fraction * length
-            create_colorbar_axes(ax=ax, aspect=aspect / 2, pad_fraction=0, position=position).axis("off")
-
-            if position == "left":
-                bbox = [-pad - length, (1 - shrink) / 2, length, shrink]
-            elif position == "right":
-                bbox = [1 + pad, (1 - shrink) / 2, length, shrink]
-            elif position == "bottom":
-                bbox = [(1 - shrink) / 2, -pad - length, shrink, length]
-            elif position == "top":
-                bbox = [(1 - shrink) / 2, 1 + pad, shrink, length]
-
-            ip = InsetPosition(ax, bbox)
-            cax.set_axes_locator(ip)
-
-    elif shrink < 1:
-        raise ValueError("Shrink can only be set if no colorbar axes is provided")
-
-    return ax.figure.colorbar(im, orientation=orientation, cax=cax, **kwargs)

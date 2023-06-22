@@ -5,7 +5,7 @@ build/
 *__pycache__/
 .DS_Store
 dask-worker-space
-
+dist/
 *.tif
 *.so
 *.c

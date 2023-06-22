@@ -79,12 +79,11 @@ relatively low-impact floods occur.
 
 
 Similarly to ``plot_raster`` it provides ``vmin``, ``vmax`` and ``bins``
-to enhance visibility. (Note that ``pad_fraction`` and ``aspect`` are
-used to change how the colobar is represented)
+to enhance visibility.
 
 .. code:: python
 
-    mp.plot_shapes(df=df, values='e_10', vmax=10000000, figsize=(10,10), pad_fraction=1.2, aspect=17)
+    mp.plot_shapes(df=df, values='e_10', vmax=10000000, legend_kw=dict(pad_fraction=1, aspect=20))
     plt.show()
 
 
@@ -94,7 +93,7 @@ used to change how the colobar is represented)
 
 .. code:: python
 
-    mp.plot_shapes(df=df, values='e_10', cmap="Reds", bins=[0,100,1000,10000,100000,1000000, 10000000, 100000000], figsize=(10,10), pad_fraction=1.2, aspect=17)
+    mp.plot_shapes(df=df, values='e_10', cmap="Reds", bins=[0,100,1000,10000,100000,1000000, 10000000, 100000000], legend_kw=dict(pad_fraction=1, aspect=20))
     plt.show()
 
 
@@ -106,19 +105,19 @@ Again a basemap is easily provided
 
 .. code:: python
 
-    ax = mp.basemap(df.total_bounds)
-    mp.plot_shapes(df=df, values='e_10', ax=ax, cmap="Reds", bins=[0,100,1000,10000,100000,1000000, 10000000, 100000000], figsize=(10,10), pad_fraction=1.2)
+    ax = mp.basemap()
+    bounds = df.total_bounds
+    extent = bounds[0], bounds[2], bounds[1], bounds[3]
+    ax.set_extent(extent)
+    mp.add_gridlines(ax, 30)
+    mp.add_ticks(ax, 30)
+    
+    mp.plot_shapes(df=df, values='e_10', cmap="Reds", bins=[0,100,1000,10000,100000,1000000, 10000000, 100000000], legend_kw=dict(pad_fraction=1, aspect=30), ax=ax)
     plt.show()
 
 
-.. parsed-literal::
 
-    /home/caspar/Packages/geomappy/geomappy/basemap.py:162: FutureWarning: elementwise comparison failed; returning scalar instead, but in the future will perform elementwise comparison
-      if extent == "global":
-
-
-
-.. image:: plotting_shapes_files/plotting_shapes_14_1.png
+.. image:: plotting_shapes_files/plotting_shapes_14_0.png
 
 
 The legend is hard to interpret this way. To solve this, the legend
@@ -127,19 +126,20 @@ label can be placed next to the colorbar.
 
 .. code:: python
 
-    ax = mp.basemap(df.total_bounds)
-    mp.plot_shapes(df=df, values='e_10', ax=ax, cmap="Reds", bins=[0,100,1000,10000,100000,1000000, 10000000, 100000000], bin_labels = [0, "E2", "E3", "E4", "E5", "E6", "E7", "E8"], figsize=(10,10), pad_fraction=1.2, legend_kwargs=dict(label="Plastic mobilisation", label_font=dict(rotation=270, labelpad=20)))
+    ax = mp.basemap()
+    bounds = df.total_bounds
+    extent = bounds[0], bounds[2], bounds[1], bounds[3]
+    ax.set_extent(extent)
+    mp.add_gridlines(ax, 30)
+    mp.add_ticks(ax, 30)
+    
+    ax, l = mp.plot_shapes(df=df, values='e_10', cmap="Reds", bins=[0,100,1000,10000,100000,1000000, 10000000, 100000000], legend_kw=dict(pad_fraction=1, aspect=30), ax=ax)
+    l.ax.set_yticks(l.ax.get_yticks(), [0, "E2", "E3", "E4", "E5", "E6", "E7", "E8"])
     plt.show()
 
 
-.. parsed-literal::
 
-    /home/caspar/Packages/geomappy/geomappy/basemap.py:162: FutureWarning: elementwise comparison failed; returning scalar instead, but in the future will perform elementwise comparison
-      if extent == "global":
-
-
-
-.. image:: plotting_shapes_files/plotting_shapes_16_1.png
+.. image:: plotting_shapes_files/plotting_shapes_16_0.png
 
 
 
