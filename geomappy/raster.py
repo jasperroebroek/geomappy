@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, Dict, Union
+from typing import Tuple, Optional, Dict, Union, Iterable
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,10 +13,10 @@ from geomappy.types import Color, Number, OptionalLegend
 
 def plot_classified_raster(m: np.ndarray, *, levels: Optional[Tuple[Number]] = None,
                            colors: Optional[Tuple[Color]] = None, labels: Optional[Tuple[Union[Number, str]]] = None,
-                           cmap: Colormap = "Set1", nan_color: Optional[Color] = None, suppress_warnings: bool = False,
-                           ax: Optional[plt.Axes] = None, figsize: Optional[Tuple[int, int]] = None,
-                           legend: Optional[str] = "colorbar", legend_kw: Optional[Dict] = None,
-                           **kwargs) -> Tuple[plt.Axes, OptionalLegend]:
+                           cmap: Union[str, Colormap] = "Set1", nan_color: Optional[Color] = None,
+                           suppress_warnings: bool = False, ax: Optional[plt.Axes] = None,
+                           figsize: Optional[Tuple[int, int]] = None, legend: Optional[str] = "colorbar",
+                           legend_kw: Optional[Dict] = None, **kwargs) -> Tuple[plt.Axes, OptionalLegend]:
     """"Plot a classified raster
 
     Parameters
@@ -83,11 +83,11 @@ def plot_classified_raster(m: np.ndarray, *, levels: Optional[Tuple[Number]] = N
     return ax, l
 
 
-def plot_raster(m: np.ndarray, *, bins: Optional[Tuple[Number]] = None, cmap: Optional[Colormap] = None,
-                norm: Optional[Normalize] = None, ax: Optional[plt.Axes] = None, vmin: Optional[float] = None,
-                vmax: Optional[float] = None, figsize: Optional[Tuple[int, int]] = None,
-                nan_color: Optional[Color] = None, legend: Optional[str] = "colorbar",
-                legend_kw: Optional[Dict] = None,
+def plot_raster(m: np.ndarray, *, bins: Optional[Union[Iterable, np.ndarray]] = None,
+                cmap: Optional[Union[str, Colormap]] = None, norm: Optional[Normalize] = None,
+                ax: Optional[plt.Axes] = None, vmin: Optional[float] = None, vmax: Optional[float] = None,
+                figsize: Optional[Tuple[int, int]] = None, nan_color: Optional[Color] = None,
+                legend: Optional[str] = "colorbar", legend_kw: Optional[Dict] = None,
                 **kwargs) -> Tuple[plt.Axes, OptionalLegend]:
     """
     Plot a scalar raster

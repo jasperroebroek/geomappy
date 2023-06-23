@@ -64,7 +64,7 @@ def calculate_vertical_locations(v: Union[Number, Tuple[Number]]):
 
 def add_gridlines(ax: GeoAxes, lines: Union[Number, Tuple[Number, Number], Tuple[Tuple[Number], Tuple[Number]]], *,
                   color: str = "grey", linestyle: str = "--", alpha: float = 0.5, n_steps: int = 300,
-                  linewidth: int = 1, crs: ccrs.Projection = ccrs.PlateCarree(), **kwargs) -> None:
+                  linewidth: float = 1, crs: ccrs.Projection = ccrs.PlateCarree(), **kwargs) -> None:
     """Add gridlines to a basemap. Return a Gridliner object that can be further modified
 
     Parameters
@@ -83,9 +83,9 @@ def add_gridlines(ax: GeoAxes, lines: Union[Number, Tuple[Number, Number], Tuple
     alpha : float, optional
         opacity of the gridlines
     linewidth : float, optional
-        linewidth specifier for gridlines. If not specified, the value will be taken from 'linewidth'.
+        Linewidth specifier for gridlines
     crs: ccrs.Projection, optional
-        projection of the coordinates provided in lines, if they are given as a tuple of values
+        Projection of the coordinates provided in lines. Default is lat-lon.
     **kwargs
         keyword arguments for ax.gridlines
     """
@@ -122,7 +122,7 @@ def add_ticks(ax: GeoAxes, ticks: Union[int, Tuple[int, int], Tuple[Tuple[int, i
     fontsize: int
         Fontsize
     crs: ccrs.Projection, optional
-        Projection of the coordinates provided in ticks, if they are given as a tuple of values
+        Projection of the coordinates provided in ticks.
     **kwargs
         keyword arguments for ax.gridlines
     """

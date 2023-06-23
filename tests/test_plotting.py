@@ -1,11 +1,13 @@
-from matplotlib.colors import ListedColormap, from_levels_and_colors
-import geomappy as mp
+import os
+import shutil
+
 import matplotlib.pyplot as plt
 import matplotlib.testing.compare
 import numpy as np
-import os
-import shutil
 import pytest
+from matplotlib.colors import ListedColormap, from_levels_and_colors
+
+import geomappy as mp
 
 
 def imshow(*args, **kwargs):
@@ -14,7 +16,7 @@ def imshow(*args, **kwargs):
     return ax
 
 
-def compare_images(ax1, ax2):
+def compare_images(ax1, ax2, tol=0):
     try:
         os.mkdir("_test_figures")
     except FileExistsError:
@@ -22,7 +24,8 @@ def compare_images(ax1, ax2):
 
     ax1.get_figure().savefig("_test_figures/ax_geomappy.png")
     ax2.get_figure().savefig("_test_figures/ax_matplotlib.png")
-    r = matplotlib.testing.compare.compare_images("_test_figures/ax_geomappy.png", "_test_figures/ax_matplotlib.png", tol=0)
+    r = matplotlib.testing.compare.compare_images("_test_figures/ax_geomappy.png", "_test_figures/ax_matplotlib.png",
+                                                  tol=tol)
 
     shutil.rmtree("_test_figures")
 
@@ -60,6 +63,27 @@ def test_figure_vmin():
     assert compare_images(ax1, ax2)
 
 
+@pytest.mark.parametrize(
+    "bins",
+    [(0.5, 0.8), (-1, 0, 0.5), (-1, 2), (0.5, 2), np.linspace(-2, 2, 100)],
+)
+def test_figure_bins(bins):
+    x = np.random.rand(10, 10)
+
+    ax1, leg = mp.plot_raster(x, bins=bins, legend=None)
+
+    x_d = np.digitize(x, bins=bins, right=True)
+    lut = len(bins) + 1
+    if len(bins) not in x_d:
+        lut -= 1
+    if 0 not in x_d:
+        x_d -= 1
+        lut -= 1
+    ax2 = imshow(x_d, cmap=plt.get_cmap(lut=lut), vmin=0, vmax=lut - 1)
+
+    assert compare_images(ax1, ax2)
+
+
 def test_figure_binary():
     x = np.random.rand(10, 10)
     ax1, l = mp.plot_raster(x, bins=(0.5,), legend=None)
@@ -75,6 +99,24 @@ def test_figure_classified():
     cmap, norm = from_levels_and_colors((1, 2, 5, 6), ['Red', "Green", "Blue"])
     ax2 = imshow(x, cmap=cmap, norm=norm)
     assert compare_images(ax1, ax2)
+
+
+@pytest.mark.parametrize(
+    "m",
+    [2, 3, 10, 30, 300],
+)
+def test_figure_classified_large(m):
+    x = np.random.RandomState(0).randint(0, m, (100, 100))
+
+    ax1, leg = mp.plot_classified_raster(x, levels=np.arange(0, m), cmap="jet", suppress_warnings=True, legend=None)
+    # plt.show()
+
+    # get discrete colormap
+    cmap = plt.get_cmap('jet', m)
+    ax2 = imshow(x, cmap=cmap, vmin=0, vmax=m - 1)
+    # plt.show()
+
+    assert compare_images(ax1, ax2, tol=0.8)
 
 
 def test_figure_legend_patches():

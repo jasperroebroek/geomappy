@@ -1,19 +1,18 @@
-from numbers import Number
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Iterable
 
 import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib.colors import Colormap, Normalize, BoundaryNorm, ListedColormap
+from matplotlib.colors import Colormap, BoundaryNorm, ListedColormap
 
 from geomappy.colors import colors_discrete
 from geomappy.types import Color
 from geomappy.utils import check_increasing_and_unique
 
 
-def parse_classified_plot_params(m: np.ma.MaskedArray, *, levels: Optional[Tuple[Number]] = None,
-                                 colors: Optional[Tuple[Color]] = None,
+def parse_classified_plot_params(m: np.ma.MaskedArray, *, levels: Optional[Iterable] = None,
+                                 colors: Optional[Iterable] = None,
                                  cmap: Colormap = "Set1", nan_color: Optional[Color] = None,
-                                 suppress_warnings: bool = False) -> Tuple[Colormap, Normalize]:
+                                 suppress_warnings: bool = False) -> Tuple[ListedColormap, BoundaryNorm]:
     unique_values = np.unique(m)
 
     if levels is None:

@@ -16,7 +16,7 @@ def _plot_combined_raster(classified: bool, *, da: xr.DataArray, basemap: bool =
                           figsize: Tuple[int, int] = (8, 8), ax: Optional[plt.Axes] = None,
                           lines: Union[Number, Tuple[Number, Number], Tuple[Tuple[Number], Tuple[Number]]] = 30,
                           ticks: Union[Number, Tuple[Number, Number], Tuple[Tuple[Number], Tuple[Number]]] = 30,
-                          fontsize: int = 10, **kwargs) -> Tuple[plt.Axes, OptionalLegend]:
+                          coastlines: bool = True, fontsize: int = 10, **kwargs) -> Tuple[plt.Axes, OptionalLegend]:
     if da.ndim == 3 and da.shape[0] == 1:
         da = da[0]
 
@@ -27,10 +27,17 @@ def _plot_combined_raster(classified: bool, *, da: xr.DataArray, basemap: bool =
         basemap = True
 
     if basemap:
-        projection = da.get_cartopy_projection()
+        if isinstance(ax, GeoAxes):
+            projection = ax.projection
+        else:
+            projection = da.get_cartopy_projection()
+
         ax = basemap_function(ax=ax, projection=projection, figsize=figsize)
-        ax.set_extent(da.get_extent(), crs=projection)
-        ax.coastlines()
+        ax.set_extent(da.get_extent(), crs=da.get_cartopy_projection())
+
+        if coastlines:
+            ax.coastlines()
+
         add_gridlines(ax, lines)
         add_ticks(ax, ticks, fontsize=fontsize)
         kwargs['extent'] = da.get_extent()

@@ -8,7 +8,7 @@ from geopandas import GeoDataFrame, GeoSeries
 from geopandas.plotting import _plot_polygon_collection, _plot_linestring_collection, _plot_point_collection
 from matplotlib import pyplot as plt
 from matplotlib.colors import Normalize, Colormap
-from shapely import Point
+from shapely.geometry import Point
 
 from geomappy.axes_decoration import prepare_axes
 from geomappy.classified import parse_classified_plot_params

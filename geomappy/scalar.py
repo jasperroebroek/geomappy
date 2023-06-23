@@ -1,11 +1,11 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Iterable
 
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.colors import Colormap, Normalize, BoundaryNorm
 from numpy.ma.core import MaskedConstant
 
-from geomappy.types import Color, Number
+from geomappy.types import Color
 from geomappy.utils import check_increasing_and_unique
 
 
@@ -25,7 +25,7 @@ def _define_extend(vmin: float, minimum: float, vmax: float, maximum: float) -> 
 
 
 def parse_scalar_plot_params(m: np.ma.MaskedArray, *,
-                             bins: Optional[Tuple[Number]] = None,
+                             bins: Optional[Iterable] = None,
                              vmin: Optional[float] = None,
                              vmax: Optional[float] = None,
                              cmap: Optional[Colormap] = None,
@@ -35,10 +35,7 @@ def parse_scalar_plot_params(m: np.ma.MaskedArray, *,
         raise ValueError("Bins and norm provided")
 
     if norm is not None:
-        if norm.vmin is None:
-            norm.vmin = vmin
-        if norm.vmax is None:
-            norm.vmax = vmax
+        return plt.get_cmap(cmap), norm
 
     minimum = m.min()
     maximum = m.max()
@@ -51,9 +48,6 @@ def parse_scalar_plot_params(m: np.ma.MaskedArray, *,
         check_increasing_and_unique(bins)
         vmin = bins.min()
         vmax = bins.max()
-    elif norm is not None:
-        vmin = norm.vmin
-        vmax = norm.vmax
 
     if vmin is None:
         vmin = minimum
