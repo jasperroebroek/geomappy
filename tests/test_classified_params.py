@@ -6,7 +6,7 @@ from geomappy.classified import parse_classified_plot_params
 
 def test_scalar_params():
     a = np.random.RandomState(0).randint(0, 5, (10, 10))
-    cmap, norm = parse_classified_plot_params(np.ma.fix_invalid(a))
+    cmap, norm, levels = parse_classified_plot_params(np.ma.fix_invalid(a))
     assert cmap.name == 'from_list'
     assert cmap.N == 5
     assert isinstance(norm, BoundaryNorm)
@@ -20,7 +20,7 @@ def test_scalar_params():
 
 def test_scalar_params_levels():
     a = np.random.RandomState(0).randint(0, 5, (10, 10))
-    cmap, norm = parse_classified_plot_params(np.ma.fix_invalid(a), levels=np.arange(0, 9))
+    cmap, norm, levels = parse_classified_plot_params(np.ma.fix_invalid(a), levels=np.arange(0, 9))
     assert cmap.N == 9
     assert norm.vmin == -1
     assert norm.vmax == 9

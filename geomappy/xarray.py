@@ -1,22 +1,23 @@
 from typing import Optional, Union, Tuple
 
-import cartopy.crs as ccrs
+import cartopy.crs as ccrs  # type: ignore
 import xarray as xr
-from cartopy.mpl.geoaxes import GeoAxes
-from matplotlib import pyplot as plt
+from cartopy.mpl.geoaxes import GeoAxes  # type: ignore
+from matplotlib import pyplot as plt  # type: ignore
 
 from geomappy.basemap import basemap as basemap_function, add_gridlines, add_ticks
 from geomappy.raster import plot_classified_raster, plot_raster
-from geomappy.types import Number, OptionalLegend
+from geomappy.types import LegendOrColorbar
 from geomappy.utils import add_method, change_between_bounds_and_extent
 from geomappy.world import plot_world
 
 
 def _plot_combined_raster(classified: bool, *, da: xr.DataArray, basemap: bool = True,
                           figsize: Tuple[int, int] = (8, 8), ax: Optional[plt.Axes] = None,
-                          lines: Union[Number, Tuple[Number, Number], Tuple[Tuple[Number], Tuple[Number]]] = 30,
-                          ticks: Union[Number, Tuple[Number, Number], Tuple[Tuple[Number], Tuple[Number]]] = 30,
-                          coastlines: bool = True, fontsize: int = 10, **kwargs) -> Tuple[plt.Axes, OptionalLegend]:
+                          lines: Union[float, Tuple[float, float], Tuple[Tuple[float], Tuple[float]]] = 30,
+                          ticks: Union[float, Tuple[float, float], Tuple[Tuple[float], Tuple[float]]] = 30,
+                          decorate_basemap: bool = True, fontsize: int = 10,
+                          **kwargs) -> Tuple[plt.Axes, Optional[LegendOrColorbar]]:
     if da.ndim == 3 and da.shape[0] == 1:
         da = da[0]
 
@@ -33,13 +34,13 @@ def _plot_combined_raster(classified: bool, *, da: xr.DataArray, basemap: bool =
             projection = da.get_cartopy_projection()
 
         ax = basemap_function(ax=ax, projection=projection, figsize=figsize)
-        ax.set_extent(da.get_extent(), crs=da.get_cartopy_projection())
+        ax.set_extent(da.get_extent(), crs=projection)
 
-        if coastlines:
+        if decorate_basemap:
             ax.coastlines()
+            add_gridlines(ax, lines)
+            add_ticks(ax, ticks, fontsize=fontsize)
 
-        add_gridlines(ax, lines)
-        add_ticks(ax, ticks, fontsize=fontsize)
         kwargs['extent'] = da.get_extent()
         kwargs['transform'] = projection
 
@@ -96,7 +97,7 @@ def xarray_plot_raster(self, *, ax: Optional[plt.Axes] = None, **kwargs):
         parameter that describes the distance between two tick labels in lat-lon terms. The default 30
         means that every 30 degrees a tick gets placed. see add_ticks
     fontsize : float/tuple, optional
-        fontsize for both the lon/lat ticks and the ticks on the colorbar if one number, if a list of is passed it
+        fontsize for both the lon/lat ticks and the ticks on the colorbar if one float, if a list of is passed it
         represents the basemap fontsize and the colorbar fontsize.
     kwargs
         kwargs going to the plot_classified_raster() command
@@ -137,7 +138,7 @@ def xarray_plot_classified_raster(self, *, ax: Optional[plt.Axes] = None, **kwar
         parameter that describes the distance between two tick labels in lat-lon terms. The default 30
         means that every 30 degrees a tick gets placed. see add_ticks
     fontsize : float/tuple, optional
-        fontsize for both the lon/lat ticks and the ticks on the colorbar if one number, if a list of is passed it
+        fontsize for both the lon/lat ticks and the ticks on the colorbar if one float, if a list of is passed it
         represents the basemap fontsize and the colorbar fontsize.
     kwargs
         kwargs going to the plot_classified_raster() command
@@ -167,7 +168,7 @@ def xarray_plot_world(self, ax: Optional[plt.Axes] = None, extent: Union[Tuple[i
     ax : :obj:`~matplotlib.axes.Axes`, optional
         Axes on which to plot the figure
     extent : list, optional
-        Takes a four number list, or rasterio bounds object. It constrains the world view
+        Takes a four float list, or rasterio bounds object. It constrains the world view
         to a specific view. If not lat-lon, the extent_projection needs to be specified
     extent_projection: cartopy.CRS
         Projection of the extent. The default ccrs.PlateCarree().

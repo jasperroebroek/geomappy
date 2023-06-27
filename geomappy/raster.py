@@ -1,22 +1,23 @@
-from typing import Tuple, Optional, Dict, Union, Iterable
+from typing import Tuple, Optional, Dict, Union, Sequence
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type: ignore
 import numpy as np
-from matplotlib.colors import Colormap, Normalize
+from matplotlib.colors import Colormap, Normalize  # type: ignore
 
 from geomappy.axes_decoration import prepare_axes
 from geomappy.classified import parse_classified_plot_params
 from geomappy.legends import add_legend
 from geomappy.scalar import parse_scalar_plot_params
-from geomappy.types import Color, Number, OptionalLegend
+from geomappy.types import Color, LegendOrColorbar
 
 
-def plot_classified_raster(m: np.ndarray, *, levels: Optional[Tuple[Number]] = None,
-                           colors: Optional[Tuple[Color]] = None, labels: Optional[Tuple[Union[Number, str]]] = None,
+def plot_classified_raster(m: np.ndarray, *, levels: Optional[Union[Tuple[float, ...], np.ndarray]] = None,
+                           colors: Optional[Union[Tuple[Color, ...], np.ndarray]] = None,
+                           labels: Optional[Union[Tuple[float, ...], Tuple[str, ...], np.ndarray]] = None,
                            cmap: Union[str, Colormap] = "Set1", nan_color: Optional[Color] = None,
                            suppress_warnings: bool = False, ax: Optional[plt.Axes] = None,
                            figsize: Optional[Tuple[int, int]] = None, legend: Optional[str] = "colorbar",
-                           legend_kw: Optional[Dict] = None, **kwargs) -> Tuple[plt.Axes, OptionalLegend]:
+                           legend_kw: Optional[Dict] = None, **kwargs) -> Tuple[plt.Axes, Optional[LegendOrColorbar]]:
     """"Plot a classified raster
 
     Parameters
@@ -61,14 +62,13 @@ def plot_classified_raster(m: np.ndarray, *, levels: Optional[Tuple[Number]] = N
     if m.ndim != 2:
         raise ValueError("Input data needs to be 2D if plotting classified data")
 
-    if not isinstance(m, np.ma.MaskedArray):
-        m = np.ma.fix_invalid(m)
+    m_masked = np.ma.fix_invalid(m)
 
-    cmap, norm = parse_classified_plot_params(m, levels=levels, colors=colors, cmap=cmap, nan_color=nan_color,
-                                              suppress_warnings=suppress_warnings)
+    cmap, norm, levels_parsed = parse_classified_plot_params(m_masked, levels=levels, colors=colors, cmap=cmap,
+                                                             nan_color=nan_color, suppress_warnings=suppress_warnings)
 
     ax = prepare_axes(ax, figsize)
-    ax.imshow(m, cmap=cmap, norm=norm, **kwargs)
+    ax.imshow(m_masked, cmap=cmap, norm=norm, **kwargs)
 
     if legend_kw is None:
         legend_kw = {}
@@ -76,19 +76,19 @@ def plot_classified_raster(m: np.ndarray, *, levels: Optional[Tuple[Number]] = N
     if labels is None and levels is None:
         labels = np.unique(m)
     elif labels is None:
-        labels = levels
+        labels = levels_parsed
 
     l = add_legend('classified', legend, ax=ax, labels=labels, norm=norm, cmap=cmap, **legend_kw)
 
     return ax, l
 
 
-def plot_raster(m: np.ndarray, *, bins: Optional[Union[Iterable, np.ndarray]] = None,
+def plot_raster(m: np.ndarray, *, bins: Optional[Union[Sequence, np.ndarray]] = None,
                 cmap: Optional[Union[str, Colormap]] = None, norm: Optional[Normalize] = None,
                 ax: Optional[plt.Axes] = None, vmin: Optional[float] = None, vmax: Optional[float] = None,
                 figsize: Optional[Tuple[int, int]] = None, nan_color: Optional[Color] = None,
                 legend: Optional[str] = "colorbar", legend_kw: Optional[Dict] = None,
-                **kwargs) -> Tuple[plt.Axes, OptionalLegend]:
+                **kwargs) -> Tuple[plt.Axes, Optional[LegendOrColorbar]]:
     """
     Plot a scalar raster
 
@@ -135,25 +135,24 @@ def plot_raster(m: np.ndarray, *, bins: Optional[Union[Iterable, np.ndarray]] = 
         raise ValueError(f"3D arrays are only acceptable if presenting RGB(A) information. It does not work with "
                          f"boolean variables.\nShape: {m.shape} \ndtype: {m.dtype}")
 
-    if not isinstance(m, np.ma.MaskedArray):
-        m = np.ma.fix_invalid(m)
+    m_masked = np.ma.fix_invalid(m)
 
     if bins is not None and len(bins) == 1:
-        m = m > bins[0]
+        m_masked = m_masked > bins[0]
 
-    if np.issubdtype(m.dtype, np.bool_):
-        return plot_classified_raster(m, colors=("Lightgrey", "Red"), legend=legend, labels=["False", "True"], ax=ax,
-                                      figsize=figsize, legend_kw=legend_kw, nan_color=nan_color, **kwargs)
+    if np.issubdtype(m_masked.dtype, np.bool_):
+        return plot_classified_raster(m_masked, colors=("Lightgrey", "Red"), legend=legend, labels=("False", "True"),
+                                      ax=ax, figsize=figsize, legend_kw=legend_kw, nan_color=nan_color, **kwargs)
 
-    if m.ndim == 3:
+    if m_masked.ndim == 3:
         cmap = None
         norm = None
     else:
-        cmap, norm = parse_scalar_plot_params(m, cmap=cmap, bins=bins, vmin=vmin, vmax=vmax, norm=norm,
+        cmap, norm = parse_scalar_plot_params(m_masked, cmap=cmap, bins=bins, vmin=vmin, vmax=vmax, norm=norm,
                                               nan_color=nan_color)
 
     ax = prepare_axes(ax, figsize)
-    ax.imshow(m, cmap=cmap, norm=norm, **kwargs)
+    ax.imshow(m_masked, cmap=cmap, norm=norm, **kwargs)
 
     if legend_kw is None:
         legend_kw = {}

@@ -1,24 +1,25 @@
 from typing import Tuple, Optional, Union
 
-from matplotlib import pyplot as plt
-from matplotlib.cm import ScalarMappable
-from matplotlib.image import AxesImage
-from matplotlib.lines import Line2D
-from matplotlib.patches import Patch
-from mpl_toolkits import axes_grid1
-from mpl_toolkits.axes_grid1.inset_locator import InsetPosition
-
-from geomappy.types import Number
+from matplotlib import pyplot as plt  # type: ignore
+from matplotlib.cm import ScalarMappable  # type: ignore
+from matplotlib.image import AxesImage  # type: ignore
+from matplotlib.lines import Line2D  # type: ignore
+from matplotlib.patches import Patch  # type: ignore
+from mpl_toolkits import axes_grid1  # type: ignore
+from mpl_toolkits.axes_grid1.inset_locator import InsetPosition  # type: ignore
 
 
-def prepare_axes(ax: Optional[plt.Axes] = None, figsize: Tuple[int, int] = (10, 10)) -> plt.Axes:
+def prepare_axes(ax: Optional[plt.Axes] = None, figsize: Optional[Tuple[int, int]] = None) -> plt.Axes:
+    if figsize is None:
+        figsize = (8, 8)
+
     if ax is None:
         f, ax = plt.subplots(figsize=figsize)
 
     return ax
 
 
-def create_colorbar_axes(ax: plt.Axes, aspect: Number = 30, pad_fraction: float = 0.6, position="right"):
+def create_colorbar_axes(ax: plt.Axes, aspect: float = 30, pad_fraction: float = 0.6, position="right"):
     """
     Create an axes for the colorbar to be drawn on that has the same size as the figure
 
@@ -45,7 +46,7 @@ def create_colorbar_axes(ax: plt.Axes, aspect: Number = 30, pad_fraction: float 
 
 
 def add_colorbar(im: Optional[Union[ScalarMappable, AxesImage]] = None, ax: Optional[plt.Axes] = None,
-                 legend_ax: Optional[plt.Axes] = None, aspect: Number = 25, pad_fraction: float = 0.7,
+                 legend_ax: Optional[plt.Axes] = None, aspect: float = 25, pad_fraction: float = 0.7,
                  position: str = "right", shrink=1, **kwargs):
     """
     Add colorbar to a plot

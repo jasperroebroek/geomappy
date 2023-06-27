@@ -1,14 +1,15 @@
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, TypeVar
 
+import matplotlib  # type: ignore
 import numpy as np
-import matplotlib
-from matplotlib import pyplot as plt
-from matplotlib.cm import ScalarMappable
-from matplotlib.colorbar import Colorbar
-from matplotlib.colors import BoundaryNorm, Normalize, Colormap
+from matplotlib import pyplot as plt  # type: ignore
+from matplotlib.cm import ScalarMappable  # type: ignore
+from matplotlib.colorbar import Colorbar  # type: ignore
+from matplotlib.colors import BoundaryNorm, Normalize, Colormap  # type: ignore
 
 from geomappy.axes_decoration import legend_patches, add_colorbar
-from geomappy.types import Number
+
+Labels = TypeVar("Labels", Tuple[float, ...], Tuple[str, ...], np.ndarray)
 
 
 def no_legend(*args, **kwargs) -> None:
@@ -41,8 +42,8 @@ def add_colorbar_scalar(ax: plt.Axes, norm: Normalize, cmap: Colormap, **kwargs)
     return add_colorbar(ax=ax, im=im, **kwargs)
 
 
-def add_legend_patches_classified(ax: plt.Axes, labels: Optional[Tuple[Union[Number, str]]], norm: BoundaryNorm,
-                                  cmap: Colormap, **kwargs) -> matplotlib.legend.Legend:
+def add_legend_patches_classified(ax: plt.Axes, labels: Optional[Labels], norm: BoundaryNorm, cmap: Colormap,
+                                  **kwargs) -> matplotlib.legend.Legend:
     if not isinstance(norm, BoundaryNorm):
         TypeError("Can only plot classified patches with BoundaryNorm")
 
@@ -54,8 +55,8 @@ def add_legend_patches_classified(ax: plt.Axes, labels: Optional[Tuple[Union[Num
     return ax.legend(handles=handles, **kwargs)
 
 
-def add_colorbar_classified(ax: plt.Axes, labels: Optional[Tuple[Union[Number, str]]], norm: BoundaryNorm,
-                            cmap: Colormap, **kwargs) -> Colorbar:
+def add_colorbar_classified(ax: plt.Axes, labels: Optional[Labels],
+                            norm: BoundaryNorm, cmap: Colormap, **kwargs) -> Colorbar:
     if not isinstance(norm, BoundaryNorm):
         TypeError("Can only plot classified colorbar with BoundaryNorm")
 
@@ -69,21 +70,22 @@ def add_colorbar_classified(ax: plt.Axes, labels: Optional[Tuple[Union[Number, s
     return l
 
 
-SCALAR_LEGENDS = {None: no_legend,
-                  "legend": add_legend_patches_scalar,
+SCALAR_LEGENDS = {"legend": add_legend_patches_scalar,
                   "colorbar": add_colorbar_scalar}
 
-CLASSIFIED_LEGENDS = {None: no_legend,
-                      "legend": add_legend_patches_classified,
+CLASSIFIED_LEGENDS = {"legend": add_legend_patches_classified,
                       "colorbar": add_colorbar_classified}
+
+LEGENDS = {
+    'scalar': SCALAR_LEGENDS,
+    'classified': CLASSIFIED_LEGENDS,
+}
+EMPTY_DICT = {None: no_legend}
 
 
 def add_legend(t: str, legend: Optional[str], *, ax: plt.Axes, **kwargs):
-    if t == 'scalar':
-        d = SCALAR_LEGENDS
-    elif t == 'classified':
-        d = CLASSIFIED_LEGENDS
-    else:
-        raise ValueError
-
-    return d.get(legend)(ax=ax, **kwargs)
+    return (
+        LEGENDS
+        .get(t, EMPTY_DICT)
+        .get(legend, no_legend)(ax=ax, **kwargs)
+    )

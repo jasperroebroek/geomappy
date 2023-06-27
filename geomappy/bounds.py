@@ -1,10 +1,10 @@
-from typing import Optional, Tuple
+from typing import Tuple
 
-import geopandas as gpd
+import geopandas as gpd  # type: ignore
 import numpy as np
 from pyproj import Proj
-from rasterio.coords import BoundingBox
-from shapely.geometry import Polygon
+from rasterio.coords import BoundingBox  # type: ignore
+from shapely.geometry import Polygon  # type: ignore
 
 PROJ_LAT_LON = Proj(4326, preserve_units=False)
 

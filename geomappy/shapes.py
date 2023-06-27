@@ -1,29 +1,35 @@
 from typing import Union, Optional, Tuple, Dict
 
-import cartopy.crs as ccrs
-import geopandas as gpd
+import cartopy.crs as ccrs  # type: ignore
+import geopandas as gpd  # type: ignore
 import numpy as np
-from cartopy.mpl.geoaxes import GeoAxes
+from cartopy.mpl.geoaxes import GeoAxes  # type: ignore
 from geopandas import GeoDataFrame, GeoSeries
-from geopandas.plotting import _plot_polygon_collection, _plot_linestring_collection, _plot_point_collection
-from matplotlib import pyplot as plt
-from matplotlib.colors import Normalize, Colormap
-from shapely.geometry import Point
+from geopandas.plotting import (  # type: ignore
+    _plot_polygon_collection, _plot_linestring_collection, _plot_point_collection
+)
+from matplotlib import pyplot as plt  # type: ignore
+from matplotlib.colors import Normalize, Colormap  # type: ignore
+from shapely.geometry import Point  # type: ignore
 
 from geomappy.axes_decoration import prepare_axes
 from geomappy.classified import parse_classified_plot_params
 from geomappy.legends import add_legend
 from geomappy.scalar import parse_scalar_plot_params
-from geomappy.types import Number, Color, OptionalLegend
+from geomappy.types import Color, LegendOrColorbar
 
 
 def _create_geometries_and_values_from_lat_lon(lat: Optional[np.ndarray] = None,
                                                lon: Optional[np.ndarray] = None,
-                                               values: Optional[np.ndarray] = None,
-                                               s: Optional[Union[Number, np.ndarray]] = None) \
+                                               values: Optional[Union[np.ndarray, str, float]] = None,
+                                               s: Optional[Union[float, np.ndarray]] = None) \
         -> Tuple[GeoSeries, np.ndarray, Optional[np.ndarray]]:
     lon = np.asarray(lon)
     lat = np.asarray(lat)
+
+    if isinstance(values, str):
+        raise TypeError("When no dataframe is provided, values need to be either numeric or an array")
+
     values = np.asarray(values)
 
     if lon.size != lat.size:
@@ -38,17 +44,21 @@ def _create_geometries_and_values_from_lat_lon(lat: Optional[np.ndarray] = None,
     return geometry, values, markersize
 
 
-def _create_geometries_and_values_from_gdf(values: Optional[Union[str, Number, np.ndarray]] = None,
-                                           s: Optional[Union[Number, np.ndarray]] = None,
-                                           df: Optional[Union[GeoDataFrame, GeoSeries]] = None) \
+def _create_geometries_and_values_from_gdf(values: Optional[Union[str, float, np.ndarray]] = None,
+                                           s: Optional[Union[float, np.ndarray]] = None,
+                                           df: Union[GeoDataFrame, GeoSeries] = None) \
         -> Tuple[GeoSeries, np.ndarray, Optional[np.ndarray]]:
     geometry = df['geometry']
     if isinstance(values, str):
+        if df is None:
+            raise ValueError("Values str refers to dataframe, which is not provided")
         if values not in df.columns:
             raise ValueError("values are not present in dataframe")
         values = df.loc[:, values].values
     else:
-        values = np.array(values).flatten()
+        values = np.asarray(values).flatten()
+
+    markersize: Optional[np.ndarray]
 
     if s is None:
         markersize = None
@@ -59,13 +69,13 @@ def _create_geometries_and_values_from_gdf(values: Optional[Union[str, Number, n
     else:
         markersize = np.array(s).flatten()
 
-    return geometry, values, markersize
+    return geometry, np.ma.fix_invalid(values), markersize
 
 
 def _create_geometry_values_and_sizes(lat: Optional[np.ndarray] = None,
                                       lon: Optional[np.ndarray] = None,
-                                      values: Optional[Union[str, Number, np.ndarray]] = None,
-                                      s: Optional[Union[Number, np.ndarray]] = None,
+                                      values: Optional[Union[str, float, np.ndarray]] = None,
+                                      s: Optional[Union[float, np.ndarray]] = None,
                                       df: Optional[Union[GeoDataFrame, GeoSeries]] = None) \
         -> Tuple[GeoSeries, np.ma.MaskedArray, Optional[np.ndarray]]:
     """
@@ -104,23 +114,23 @@ def _create_geometry_values_and_sizes(lat: Optional[np.ndarray] = None,
     if values.size != geometry.size:
         raise IndexError("Mismatch length sizes and geometries")
 
+    markersize_parsed: Optional[np.ndarray] = None
     if markersize is not None:
         if markersize.size == 1:
             if markersize[0] is None:
-                markersize = None
+                markersize_parsed = None
             else:
-                markersize = markersize.repeat(geometry.size)
+                markersize_parsed = markersize.repeat(geometry.size)
 
-        if markersize.size != geometry.size:
+        elif markersize.size != geometry.size:
             raise IndexError("Mismatch length of `s` and coordindates")
 
-    values = np.ma.fix_invalid(values)
-
-    return geometry, values, markersize
+    return geometry, np.ma.fix_invalid(values), markersize_parsed
 
 
-def _plot_geometries(ax: plt.Axes, geometries: GeoSeries, colors: np.ndarray, linewidth: float,
-                     markersize: Union[float, np.ndarray], **kwargs) -> None:
+def _plot_geometries(ax: plt.Axes, geometries: GeoSeries, colors: Union[np.ndarray, Tuple[Color, ...]],
+                     linewidth: float,
+                     markersize: Optional[Union[float, np.ndarray]], **kwargs) -> None:
     """
     internal plotting function for geometries, called by plot_shapes and plot_classified_shapes
 
@@ -181,20 +191,20 @@ def _plot_geometries(ax: plt.Axes, geometries: GeoSeries, colors: np.ndarray, li
 
 def plot_classified_shapes(lat: Optional[np.ndarray] = None,
                            lon: Optional[np.ndarray] = None,
-                           values: Optional[Union[str, Number, np.ndarray]] = None,
-                           s: Optional[Union[Number, np.ndarray]] = None,
+                           values: Optional[Union[str, float, np.ndarray]] = None,
+                           s: Optional[Union[float, np.ndarray]] = None,
                            df: Optional[Union[GeoDataFrame, GeoSeries]] = None,
-                           levels: Optional[Tuple[Number]] = None,
-                           colors: Optional[Tuple[Color]] = None,
+                           levels: Optional[Tuple[float, ...]] = None,
+                           colors: Optional[Tuple[Color, ...]] = None,
                            cmap: Union[str, Colormap] = "Set1",
-                           labels: Optional[Tuple[str]] = None,
+                           labels: Optional[Tuple[str, ...]] = None,
                            legend: Optional[str] = "colorbar",
                            ax: Optional[plt.Axes] = None,
                            figsize: Optional[Tuple[int, int]] = None,
                            suppress_warnings: bool = False,
                            legend_kw: Optional[Dict] = None,
-                           linewidth: Number = 1,
-                           nan_color: Optional[Color] = None, **kwargs) -> Tuple[plt.Axes, OptionalLegend]:
+                           linewidth: float = 1,
+                           nan_color: Optional[Color] = None, **kwargs) -> Tuple[plt.Axes, Optional[LegendOrColorbar]]:
     """
     Plot shapes with discrete classes or index
 
@@ -263,12 +273,12 @@ def plot_classified_shapes(lat: Optional[np.ndarray] = None,
             kwargs["transform"] = ccrs.PlateCarree()
 
     geometry, values, markersize = _create_geometry_values_and_sizes(lat, lon, values, s, df)
-    cmap, norm = parse_classified_plot_params(values, levels=levels, colors=colors, cmap=cmap, nan_color=nan_color,
-                                              suppress_warnings=suppress_warnings)
+    cmap, norm, parsed_levels = parse_classified_plot_params(values, levels=levels, colors=colors, cmap=cmap,
+                                                             nan_color=nan_color, suppress_warnings=suppress_warnings)
 
-    colors = cmap(norm(values))
+    colors_parsed = cmap(norm(values))
     ax = prepare_axes(ax, figsize)
-    _plot_geometries(ax, geometry, colors, linewidth, markersize, **kwargs)
+    _plot_geometries(ax, geometry, colors_parsed, linewidth, markersize, **kwargs)
 
     if legend_kw is None:
         legend_kw = {}
@@ -276,7 +286,7 @@ def plot_classified_shapes(lat: Optional[np.ndarray] = None,
     if labels is None and levels is None:
         labels = np.unique(values)
     elif labels is None:
-        labels = levels
+        labels = tuple(str(l) for l in parsed_levels)
 
     l = add_legend('classified', legend, ax=ax, labels=labels, norm=norm, cmap=cmap, **legend_kw)
 
@@ -285,10 +295,10 @@ def plot_classified_shapes(lat: Optional[np.ndarray] = None,
 
 def plot_shapes(lat: Optional[np.ndarray] = None,
                 lon: Optional[np.ndarray] = None,
-                values: Optional[Union[str, Number, np.ndarray]] = None,
-                s: Optional[Union[Number, np.ndarray]] = None,
+                values: Optional[Union[str, float, np.ndarray]] = None,
+                s: Optional[Union[float, np.ndarray]] = None,
                 df: Optional[Union[GeoDataFrame, GeoSeries]] = None,
-                bins: Optional[Tuple[Number]] = None,
+                bins: Optional[Tuple[float]] = None,
                 cmap: Optional[Colormap] = None,
                 norm: Optional[Normalize] = None,
                 vmin: Optional[float] = None,
@@ -298,7 +308,7 @@ def plot_shapes(lat: Optional[np.ndarray] = None,
                 figsize: Optional[Tuple[int, int]] = None,
                 legend_kw: Optional[Dict] = None,
                 linewidth: float = 1,
-                nan_color: Optional[Color] = None, **kwargs) -> Tuple[plt.Axes, OptionalLegend]:
+                nan_color: Optional[Color] = None, **kwargs) -> Tuple[plt.Axes, Optional[LegendOrColorbar]]:
     """
     Plot shapes in a continuous fashion
 
@@ -367,20 +377,20 @@ def plot_shapes(lat: Optional[np.ndarray] = None,
         if 'transform' not in kwargs:
             kwargs["transform"] = ccrs.PlateCarree()
 
-    geometry, values, markersize = _create_geometry_values_and_sizes(lat, lon, values, s, df)
+    geometry, values_parsed, markersize = _create_geometry_values_and_sizes(lat, lon, values, s, df)
 
     if bins is not None and len(bins) == 1:
         # If only one bin is present the data will be converted to a boolean array
-        values = values > bins[0]
+        values_parsed = values_parsed > bins[0]
 
-    if np.issubdtype(values.dtype, np.bool_):
+    if np.issubdtype(values_parsed.dtype, np.bool_):
         plot_classified_shapes(lat, lon, values, s, df, labels=("False", "True"), colors=("Lightgrey", "Red"), ax=ax,
                                figsize=figsize, legend=legend, legend_kw=legend_kw, linewidth=linewidth,
                                nan_color=nan_color, **kwargs)
 
-    cmap, norm = parse_scalar_plot_params(values, cmap=cmap, bins=bins, vmin=vmin, vmax=vmax, norm=norm,
+    cmap, norm = parse_scalar_plot_params(values_parsed, cmap=cmap, bins=bins, vmin=vmin, vmax=vmax, norm=norm,
                                           nan_color=nan_color)
-    colors = cmap(norm(values))
+    colors = cmap(norm(values_parsed))
     ax = prepare_axes(ax, figsize)
     _plot_geometries(ax, geometry, colors, linewidth, markersize, **kwargs)
 

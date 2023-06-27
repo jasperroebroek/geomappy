@@ -1,19 +1,19 @@
-from numbers import Number
 from typing import Union, Tuple
 
-import cartopy
-import cartopy.crs as ccrs
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
+import cartopy  # type: ignore
+import cartopy.crs as ccrs  # type: ignore
+import matplotlib.pyplot as plt  # type: ignore
+import matplotlib.ticker as mticker  # type: ignore
 import numpy as np
-from cartopy.mpl.geoaxes import GeoAxes
-from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
+from cartopy.mpl.geoaxes import GeoAxes  # type: ignore
+from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter  # type: ignore
 
 
 class ProjectCustomExtent(ccrs.Projection):
     """
     Creating a custom extent for a given epsg code, if the hardcoded values do not suffice
     """
+
     def __init__(self, epsg: Union[str, int], extent: Tuple[int, int, int, int], *args, **kwargs):
         super(ccrs.Projection, self).__init__(f"EPSG:{epsg}")
         xmin, xmax, ymin, ymax = extent
@@ -50,19 +50,19 @@ class ProjectCustomExtent(ccrs.Projection):
         return self.ymin, self.ymax
 
 
-def calculate_horizontal_locations(v: Union[Number, Tuple[Number]]):
+def calculate_horizontal_locations(v: Union[float, Tuple[float]]):
     if isinstance(v, (float, int)):
         return np.linspace(-180, 180, int(360 / v + 1))
     return np.asarray(v)
 
 
-def calculate_vertical_locations(v: Union[Number, Tuple[Number]]):
+def calculate_vertical_locations(v: Union[float, Tuple[float]]):
     if isinstance(v, (float, int)):
         return np.linspace(-90, 90, int(180 / v + 1))
     return np.asarray(v)
 
 
-def add_gridlines(ax: GeoAxes, lines: Union[Number, Tuple[Number, Number], Tuple[Tuple[Number], Tuple[Number]]], *,
+def add_gridlines(ax: GeoAxes, lines: Union[float, Tuple[float, float], Tuple[Tuple[float], Tuple[float]]], *,
                   color: str = "grey", linestyle: str = "--", alpha: float = 0.5, n_steps: int = 300,
                   linewidth: float = 1, crs: ccrs.Projection = ccrs.PlateCarree(), **kwargs) -> None:
     """Add gridlines to a basemap. Return a Gridliner object that can be further modified
@@ -104,7 +104,8 @@ def add_gridlines(ax: GeoAxes, lines: Union[Number, Tuple[Number, Number], Tuple
     return g
 
 
-def add_ticks(ax: GeoAxes, ticks: Union[int, Tuple[int, int], Tuple[Tuple[int, int], Tuple[int, int]]], *,
+def add_ticks(ax: GeoAxes,
+              ticks: Union[float, Tuple[float, float], Tuple[Tuple[float], Tuple[float]]], *,
               formatter: Union[mticker.Formatter, Tuple[mticker.Formatter, mticker.Formatter], None] = None,
               fontsize: int = 10, crs: ccrs.Projection = ccrs.PlateCarree(), **kwargs) -> None:
     """Helper function creating labels. Returns a Gridliner object that can be further modified for styling

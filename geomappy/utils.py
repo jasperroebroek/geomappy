@@ -5,15 +5,14 @@ Utilities used in geomappy. Interesting functions to use outside the internal sc
 progress_bar and reproject_map_like
 """
 from functools import wraps
-from numbers import Number
 from typing import Tuple, Union
 
 import numpy as np
 from numpy import ndarray
-from rasterio.coords import BoundingBox
+from rasterio.coords import BoundingBox  # type: ignore
 
 
-def _grid_from_corners(v: Tuple[Union[Number, ndarray]], shape: Tuple[int, int]):
+def _grid_from_corners(v: Tuple[Union[float, ndarray], ...], shape: Tuple[int, int]):
     """
     function returns an linearly interpolated grid from values at the corners
 
@@ -69,5 +68,5 @@ def check_increasing_and_unique(v: np.ndarray) -> None:
         raise ValueError("Levels are not sorted or contain double entries")
 
 
-def change_between_bounds_and_extent(x: Union[BoundingBox, Tuple[Number, Number, Number, Number]]):
+def change_between_bounds_and_extent(x: Union[BoundingBox, Tuple[float, float, float, float]]):
     return x[0], x[2], x[1], x[3]

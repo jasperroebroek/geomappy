@@ -7,16 +7,17 @@ also contains a convenient function to add a colorbar that has the right size fo
 import colorsys
 from typing import Iterable, Union, Optional
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type: ignore
 import numpy as np
-from matplotlib.colorbar import ColorbarBase
-from matplotlib.colors import Colormap, LinearSegmentedColormap, ListedColormap, to_rgba_array, BoundaryNorm, to_rgba
-
-from geomappy.types import ColorOrMap, Color
+from matplotlib.colorbar import ColorbarBase  # type: ignore
+from matplotlib.colors import (  # type: ignore
+    Colormap, LinearSegmentedColormap, ListedColormap, to_rgba_array, BoundaryNorm, to_rgba
+)  # type: ignore
+from geomappy.types import Color
 from geomappy.utils import _grid_from_corners
 
 
-def plot_colors(c: ColorOrMap, ticks: bool = False):
+def plot_colors(c: Union[Color, Colormap], ticks: bool = False):
     """
     Plot a horizontal colorbar to inspect colors
 
@@ -74,7 +75,7 @@ def cmap_2d(shape=(1000, 1000), v=None, alpha=0, plotting=False, diverging=False
     diverging : bool, optional
         Apply whitening kernel causing the centre of the cmap to be white if v is left to None. Default is False.
     diverging_alpha : float, optional
-        The central RGB components are raised with this number. The default is 0.5, which is also the maximum, and will
+        The central RGB components are raised with this float. The default is 0.5, which is also the maximum, and will
         lead to white as the central colors. The minimum is -0.5 which will lead to black as the central color.
     rotate : int, optional
         Rotate the created array clockwise. The default is zero. Options are 1, 2 or 3 which will lead to 90, 180 or 270
@@ -160,7 +161,7 @@ def colors_discrete(cmap: Union[str, Colormap] = 'hsv', n: int = 256) -> np.ndar
     cmap : str or Colormap, optional
         Name of cmap (or cmap itself). If `cmap` is a string it needs to be available in the matplotlib namespace
     n : int
-        Number of colors
+        float of colors
     """
     if isinstance(cmap, str):
         cmap = plt.get_cmap(cmap)
@@ -177,7 +178,7 @@ def cmap_discrete(cmap: Union[str, Colormap] = 'hsv', n: int = 256) -> Colormap:
     cmap : str or Colormap, optional
         Name of cmap (or cmap itself). If `cmap` is a string it needs to be available in the matplotlib namespace
     n : int
-        Number of colors
+        float of colors
     """
     if isinstance(cmap, str):
         cmap = plt.get_cmap(cmap)
@@ -210,7 +211,7 @@ def colors_random(n: int,
     Parameters
     ----------
     n : int
-        Number of labels (size of colormap)
+        float of labels (size of colormap)
     color_type : {"bright","pastel"}
         'bright' for strong colors, 'soft' for pastel colors, which is the default behaviour
     first_color : str, optional
@@ -264,7 +265,7 @@ def cmap_random(n: int,
     Parameters
     ----------
     n : int
-        Number of labels (size of colormap)
+        float of labels (size of colormap)
     color_type : {"bright","pastel"}
         'bright' for strong colors, 'soft' for pastel colors, which is the default behaviour
     first_color : str, optional

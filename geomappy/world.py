@@ -1,17 +1,16 @@
 from typing import Tuple, Optional, Union
 
-import cartopy.crs as ccrs
-from cartopy.mpl.geoaxes import GeoAxes
-from matplotlib import pyplot as plt
-from rasterio.coords import BoundingBox
+import cartopy.crs as ccrs  # type: ignore
+from cartopy.mpl.geoaxes import GeoAxes  # type: ignore
+from matplotlib import pyplot as plt  # type: ignore
+from rasterio.coords import BoundingBox  # type: ignore
 
 from geomappy.basemap import basemap, add_gridlines, add_ticks
 from geomappy.bounds import bounds_to_polygons
-from geomappy.types import Number
 
 
-def plot_world(bounds: Union[Tuple[Number, Number, Number, Number]], ax: Optional[plt.Axes] = None,
-               extent: Union[Tuple[Number, Number, Number, Number], str] = 'global',
+def plot_world(bounds: Union[Tuple[float, float, float, float]], ax: Optional[plt.Axes] = None,
+               extent: Union[Tuple[float, float, float, float], str] = 'global',
                projection: ccrs.Projection = ccrs.PlateCarree(),
                extent_projection: ccrs.Projection = ccrs.PlateCarree(),
                bounds_projection: ccrs.Projection = ccrs.PlateCarree(),
@@ -26,7 +25,7 @@ def plot_world(bounds: Union[Tuple[Number, Number, Number, Number]], ax: Optiona
     ax : :obj:`~matplotlib.axes.Axes`, optional
         Axes on which to plot the figure
     extent : list, optional
-        Takes a four number list, or rasterio bounds object. It constrains the world view
+        Takes a four float list, or rasterio bounds object. It constrains the world view
         to a specific view. If not lat-lon, the extent_projection needs to be specified
     extent_projection: cartopy.CRS
         Projection of the extent and bounds. The default ccrs.PlateCarree().

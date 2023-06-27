@@ -1,8 +1,8 @@
 from typing import Optional, Tuple, Iterable
 
 import numpy as np
-from matplotlib import pyplot as plt
-from matplotlib.colors import Colormap, Normalize, BoundaryNorm
+from matplotlib import pyplot as plt  # type: ignore
+from matplotlib.colors import Colormap, Normalize, BoundaryNorm  # type: ignore
 from numpy.ma.core import MaskedConstant
 
 from geomappy.types import Color

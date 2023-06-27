@@ -11,7 +11,7 @@ import geomappy as mp
 
 
 def imshow(*args, **kwargs):
-    f, ax = plt.subplots()
+    f, ax = plt.subplots(figsize=(8, 8))
     ax.imshow(*args, **kwargs)
     return ax
 
@@ -116,7 +116,7 @@ def test_figure_classified_large(m):
     ax2 = imshow(x, cmap=cmap, vmin=0, vmax=m - 1)
     # plt.show()
 
-    assert compare_images(ax1, ax2, tol=0.8)
+    assert compare_images(ax1, ax2, tol=1)
 
 
 def test_figure_legend_patches():

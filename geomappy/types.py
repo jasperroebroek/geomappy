@@ -1,14 +1,9 @@
 from enum import Enum
-from typing import NewType, Union, Iterable, Optional, TypeVar
+from typing import TypeVar, Tuple
 
-import matplotlib
-from matplotlib.colorbar import Colorbar
-from matplotlib.colors import Colormap
-
-Color = TypeVar('Color', str, Iterable)
-ColorOrMap = NewType('ColorOrMap', Union[str, Iterable, Colormap])
-Number = TypeVar('Number', int, float)
-OptionalLegend = NewType("OptionalLegend", Optional[Union[Colorbar, matplotlib.legend.Legend]])
+Color = TypeVar('Color', str, Tuple[float, float, float], Tuple[float, float, float, float])
+Colormap = TypeVar('Colormap')
+LegendOrColorbar = TypeVar("LegendOrColorbar")
 
 
 class Legend(Enum):
