@@ -12,12 +12,20 @@ Plotting choropleth shapes
 
     import geopandas as gpd
     import matplotlib.pyplot as plt
-    import geomappy as mp
-    import numpy as np
+    
     import os
+    
+    from cartopy.crs import PlateCarree
+    
+    import geomappy as mp
+    import geomappy.plot_utils
+
+
+.. code:: python
+
     os.chdir("../../../")
 
-Loading data on river plastic mobilisation when flood events happen
+\|Loading data on river plastic mobilisation when flood events happen
 (Roebroek et al., 2021).
 
 .. code:: python
@@ -48,7 +56,7 @@ The data shows like this when plotted within the geopandas dataframe.
 
 
 
-.. image:: plotting_shapes_files/plotting_shapes_5_0.png
+.. image:: plotting_shapes_files/plotting_shapes_6_0.png
 
 
 In its most simple form, the ``plot_shapes`` function does exactly the
@@ -61,7 +69,7 @@ same (with some minor esthetic changes)
 
 
 
-.. image:: plotting_shapes_files/plotting_shapes_7_0.png
+.. image:: plotting_shapes_files/plotting_shapes_8_0.png
 
 
 Choropleth capabilities are available when selecting a column to express
@@ -75,7 +83,7 @@ relatively low-impact floods occur.
 
 
 
-.. image:: plotting_shapes_files/plotting_shapes_9_0.png
+.. image:: plotting_shapes_files/plotting_shapes_10_0.png
 
 
 Similarly to ``plot_raster`` it provides ``vmin``, ``vmax`` and ``bins``
@@ -83,17 +91,7 @@ to enhance visibility.
 
 .. code:: python
 
-    mp.plot_shapes(df=df, values='e_10', vmax=10000000, legend_kw=dict(pad_fraction=1, aspect=20))
-    plt.show()
-
-
-
-.. image:: plotting_shapes_files/plotting_shapes_11_0.png
-
-
-.. code:: python
-
-    mp.plot_shapes(df=df, values='e_10', cmap="Reds", bins=[0,100,1000,10000,100000,1000000, 10000000, 100000000], legend_kw=dict(pad_fraction=1, aspect=20))
+    mp.plot_shapes(df=df, values='e_10', vmax=10000000)
     plt.show()
 
 
@@ -101,23 +99,49 @@ to enhance visibility.
 .. image:: plotting_shapes_files/plotting_shapes_12_0.png
 
 
-Again a basemap is easily provided
+.. code:: python
+
+    bins = [0, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000]
 
 .. code:: python
 
-    ax = mp.basemap()
-    bounds = df.total_bounds
-    extent = bounds[0], bounds[2], bounds[1], bounds[3]
-    ax.set_extent(extent)
-    mp.add_gridlines(ax, 30)
-    mp.add_ticks(ax, 30)
-    
-    mp.plot_shapes(df=df, values='e_10', cmap="Reds", bins=[0,100,1000,10000,100000,1000000, 10000000, 100000000], legend_kw=dict(pad_fraction=1, aspect=30), ax=ax)
+    mp.plot_shapes(df=df, values='e_10', bins=bins)
     plt.show()
 
 
 
 .. image:: plotting_shapes_files/plotting_shapes_14_0.png
+
+
+To plot a binary classification of the data, provide a single bin:
+
+.. code:: python
+
+    mp.plot_shapes(df=df, values='e_10', bins=[1000000])
+    plt.show()
+
+
+
+.. image:: plotting_shapes_files/plotting_shapes_16_0.png
+
+
+Again a basemap is easily provided
+
+.. code:: python
+
+    f, ax = plt.subplots(figsize=(20, 20), subplot_kw={'projection': PlateCarree()})
+    bounds = df.total_bounds
+    extent = bounds[0], bounds[2], bounds[1], bounds[3]
+    ax.set_extent(extent)
+    geomappy.plot_utils.add_gridlines(ax, 30)
+    geomappy.plot_utils.add_ticks(ax, 30)
+    
+    mp.plot_shapes(df=df, values='e_10', cmap="Reds", bins=bins, ax=ax)
+    plt.show()
+
+
+
+.. image:: plotting_shapes_files/plotting_shapes_18_0.png
 
 
 The legend is hard to interpret this way. To solve this, the legend
@@ -126,20 +150,24 @@ label can be placed next to the colorbar.
 
 .. code:: python
 
-    ax = mp.basemap()
+    f, ax = plt.subplots(figsize=(20, 20), subplot_kw={'projection': PlateCarree()})
     bounds = df.total_bounds
     extent = bounds[0], bounds[2], bounds[1], bounds[3]
     ax.set_extent(extent)
-    mp.add_gridlines(ax, 30)
-    mp.add_ticks(ax, 30)
+    geomappy.plot_utils.add_gridlines(ax, 30)
+    geomappy.plot_utils.add_ticks(ax, 30)
     
-    ax, l = mp.plot_shapes(df=df, values='e_10', cmap="Reds", bins=[0,100,1000,10000,100000,1000000, 10000000, 100000000], legend_kw=dict(pad_fraction=1, aspect=30), ax=ax)
+    legend_ax = mp.create_colorbar_axes(ax=ax, width=0.02, pad=0.03)
+    im, l = mp.plot_shapes(df=df, values='e_10', cmap="Reds", bins=bins, ax=ax, legend_ax=legend_ax)
     l.ax.set_yticks(l.ax.get_yticks(), [0, "E2", "E3", "E4", "E5", "E6", "E7", "E8"])
+    
     plt.show()
 
 
 
-.. image:: plotting_shapes_files/plotting_shapes_16_0.png
+.. image:: plotting_shapes_files/plotting_shapes_20_0.png
+
+
 
 
 

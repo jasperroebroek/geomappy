@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geomappy"
+version = "0.1.0"
+description = "Plotting geospatial vector and raster data on a basemap using matplotlib and cartopy"
+authors = [
+    { name = "jasperroebroek", email = "roebroek.jasper@gmail.com" },
+]
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "cartopy>=0.22",
+    "rioxarray",
+    "geopandas",
+    "matplotlib>=3.10",
+]
+
+[project.optional-dependencies]
+dev = [
+    "sphinx",
+    "sphinx_rtd_theme",
+    "numpydoc",
+    "jupyter",
+    "pytest",
+    "libgdal-hdf5"
+]
+
+[tool.setuptools]
+packages = ["geomappy"]
+
+[project.urls]
+"Homepage" = "https://github.com/jasperroebroek/geomappy"
+"Bug Tracker" = "https://github.com/jasperroebroek/geomappy/issues"

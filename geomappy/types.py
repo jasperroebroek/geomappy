@@ -1,12 +1,21 @@
-from enum import Enum
-from typing import TypeVar, Tuple
+from typing import Literal, Protocol
 
-Color = TypeVar('Color', str, Tuple[float, float, float], Tuple[float, float, float, float])
-Colormap = TypeVar('Colormap')
-LegendOrColorbar = TypeVar("LegendOrColorbar")
+import matplotlib.axes
+from matplotlib.colorbar import Colorbar
+from matplotlib.colorizer import ColorizingArtist
+from matplotlib.legend import Legend
+from numpy.typing import ArrayLike
+
+LegendType = Colorbar | Legend
+ExtendType = Literal['neither', 'both', 'min', 'max']
+GridSpacer = float | tuple[float, float] | tuple[tuple[float], tuple[float]]
 
 
-class Legend(Enum):
-    NoLegend = 0
-    Legend = 1
-    Colorbar = 2
+class LegendCreator(Protocol):
+    def __call__(
+        self,
+        ax: matplotlib.axes.Axes,
+        ca: ColorizingArtist,
+        legend_ax: matplotlib.axes.Axes | None,
+        labels: ArrayLike | None,
+    ) -> LegendType | None: ...

@@ -2,13 +2,19 @@
 API reference
 #############
 
-Basemap
-=======
+Plotting utilities
+==================
+
+.. currentmodule:: geomappy.plot_utils
 
 .. autosummary::
     :toctree: generated/
 
-    geomappy.basemap
+    create_colorbar_axes
+    legend_patches
+    add_gridlines
+    add_ticks
+    plot_world
 
 Plotting functions
 ==================
@@ -16,20 +22,24 @@ Plotting functions
 Plotting rasters
 ****************
 
+.. currentmodule:: geomappy.plotting.raster
+
 .. autosummary::
     :toctree: generated/
 
-    geomappy.plot_raster
-    geomappy.plot_classified_raster
+    plot_raster
+    plot_classified_raster
 
 Plotting shapes
 ***************
 
+.. currentmodule:: geomappy.plotting.shapes
+
 .. autosummary::
     :toctree: generated/
 
-    geomappy.plot_shapes
-    geomappy.plot_classified_shapes
+    plot_shapes
+    plot_classified_shapes
 
 Integrated plotting functions
 =============================
@@ -37,21 +47,23 @@ Integrated plotting functions
 Rioxarray
 *********
 
-.. autosummary::
-    :toctree: generated/xarray
+.. currentmodule:: geomappy.integration.rioxarray
 
-    geomappy.xarray_plot_raster
-    geomappy.xarray_plot_classified_raster
-    geomappy.xarray_plot_world
-    geomappy.xarray_plot_file
+.. autosummary::
+    :toctree: generated/
+
+    da_plot_raster
+    da_plot_classified_raster
+    da_plot_world
 
 Geopandas
 *********
 
-.. autosummary::
-    :toctree: generated/geodataframe
+.. currentmodule:: geomappy.integration.geopandas
 
-    geomappy.gpd_plot_shapes
-    geomappy.gpd_plot_classified_shapes
-    geomappy.gpd_plot_world
-    geomappy.gpd_plot_file
+.. autosummary::
+    :toctree: generated/
+
+    gpd_plot_shapes
+    gpd_plot_classified_shapes
+    gpd_plot_world

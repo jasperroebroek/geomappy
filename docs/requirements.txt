@@ -1,0 +1,9 @@
+numpydoc
+IPython
+sphinx
+sphinx_rtd_theme
+matplotlib>=3.10
+cartopy
+geopandas
+rioxarray
+python>=3.10

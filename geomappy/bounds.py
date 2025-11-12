@@ -1,39 +1,23 @@
-from typing import Tuple
-
-import geopandas as gpd  # type: ignore
-import numpy as np
-from pyproj import Proj
-from rasterio.coords import BoundingBox  # type: ignore
-from shapely.geometry import Polygon  # type: ignore
-
-PROJ_LAT_LON = Proj(4326, preserve_units=False)
+import geopandas as gpd
+from rasterio.coords import BoundingBox
+from shapely.geometry import Polygon
 
 
-def bounds_to_polygons(bounds_list: Tuple[BoundingBox]):
-    """
-    Creating a geodataframe with polygons based on a list of bounds.
+def bounds_to_polygons(bounds: tuple[BoundingBox]) -> gpd.GeoDataFrame:
+    gdf = gpd.GeoDataFrame(index=range(len(bounds)), columns=('bounds', 'geometry'))
 
-    Parameters
-    ----------
-    bounds_list : list
-        List of rasterio BoundingBox objects (or a list with the same order).
-
-    Returns
-    -------
-    gdf : geopandas.GeoDataframe
-        GeoDataframe containing the polygons corresponding to the bounds that were given
-    """
-    if not isinstance(bounds_list, (list, tuple, np.ndarray)):
-        raise TypeError("List of bounds not iterable")
-
-    # create geodataframe with columns to store the bounds and the polygons
-    gdf = gpd.GeoDataFrame(columns=("bounds", "geometry"))
-
-    for i, bounds in enumerate(bounds_list):
+    for i, bounds in enumerate(bounds):
         left, bottom, right, top = bounds
         box_x = [left, right, right, left]
         box_y = [top, top, bottom, bottom]
         polygon = Polygon(zip(box_x, box_y))
-        gdf.loc[i] = [bounds, polygon]
+        gdf.loc[i, 'bounds'] = bounds
+        gdf.loc[i, 'geometry'] = polygon
 
-    return gdf.set_geometry('geometry')
+    return gdf
+
+
+def extent_from_bounds(
+    bounds: BoundingBox | tuple[float, float, float, float],
+) -> tuple[float, float, float, float]:
+    return bounds[0], bounds[2], bounds[1], bounds[3]

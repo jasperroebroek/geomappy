@@ -1,9 +1,0 @@
-Cartopy>=0.20
-rioxarray
-geopandas
-sphinx
-sphinx_rtd_theme
-numpydoc
-jupyter
-pytest
-matplotlib

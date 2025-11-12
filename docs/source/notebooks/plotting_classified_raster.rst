@@ -12,9 +12,14 @@ Plotting discrete choropleth rasters
 
     import rioxarray as rxr
     import matplotlib.pyplot as plt
+    from cartopy.crs import PlateCarree
+    
     import geomappy as mp
-    import numpy as np
+    import geomappy.plot_utils
     import os
+
+.. code:: python
+
     os.chdir("../../../")
 
 Loading a global raster indicating climate zones (from Beck et al, 2019)
@@ -29,12 +34,13 @@ instead of being labelled with their standard A-E formulation
 
 .. code:: python
 
-    mp.plot_raster(a, figsize=(10, 10))
+    f, ax = plt.subplots(figsize=(10, 10))
+    mp.plot_raster(a, ax=ax)
     plt.show()
 
 
 
-.. image:: plotting_classified_raster_files/plotting_classified_raster_5_0.png
+.. image:: plotting_classified_raster_files/plotting_classified_raster_6_0.png
 
 
 To map these numbers to their correct labels they are loaded from a text
@@ -127,43 +133,58 @@ They are used as parameters in the ``plot_classified_raster`` function
 
 .. code:: python
 
-    mp.plot_classified_raster(a, levels=bins, labels=labels, colors=colors, figsize=(20, 20), suppress_warnings=True)
+    f, ax = plt.subplots(figsize=(20, 20))
+    mp.plot_classified_raster(a, levels=bins, labels=labels, colors=colors, ax=ax)
     plt.show()
 
 
+.. parsed-literal::
 
-.. image:: plotting_classified_raster_files/plotting_classified_raster_13_0.png
+    /Users/jroebroek/Packages/geomappy/geomappy/plotting/raster.py:72: UserWarning: Using 31 levels may reduce plot visibility. Consider using 9 or fewer levels.
+      colorizer = create_classified_colorizer(
+
+
+
+.. image:: plotting_classified_raster_files/plotting_classified_raster_14_1.png
 
 
 Also a legend can be used
 
 .. code:: python
 
-    mp.plot_classified_raster(a, levels=bins, labels=labels, colors=colors, figsize=(20, 20), suppress_warnings=True, legend='legend')
+    f, ax = plt.subplots(figsize=(20, 20))
+    mp.plot_classified_raster(a, levels=bins, labels=labels, colors=colors, ax=ax, legend='legend')
     plt.show()
 
 
+.. parsed-literal::
 
-.. image:: plotting_classified_raster_files/plotting_classified_raster_15_0.png
+    /Users/jroebroek/Packages/geomappy/geomappy/plotting/raster.py:72: UserWarning: Using 31 levels may reduce plot visibility. Consider using 9 or fewer levels.
+      colorizer = create_classified_colorizer(
 
 
-Again this can be easily enhanced with a basemap
+
+.. image:: plotting_classified_raster_files/plotting_classified_raster_16_1.png
+
+
+Again this can be easily enhanced with a basemap. The colorbar is made
+smaller as well.
 
 .. code:: python
 
-    ax = mp.basemap(figsize=(20, 20))
+    f, ax = plt.subplots(figsize=(20, 20), subplot_kw={'projection': PlateCarree()})
     ax.coastlines()
-    mp.add_gridlines(ax, 30)
-    mp.add_ticks(ax, 30)
+    geomappy.plot_utils.add_gridlines(ax, 30)
+    geomappy.plot_utils.add_ticks(ax, 30)
     bounds = r.rio.bounds()
     extent = bounds[0], bounds[2], bounds[1], bounds[3]
-    mp.plot_classified_raster(a, levels=bins, labels=labels, colors=colors, suppress_warnings=True, legend='colorbar', 
-                              ax=ax, extent=extent)
+    legend_ax = mp.create_colorbar_axes(ax=ax, width=0.02, pad=0.02)
+    mp.plot_classified_raster(a, levels=bins, labels=labels, colors=colors, ax=ax, legend_ax=legend_ax, extent=extent)
     plt.show()
 
 
 
-.. image:: plotting_classified_raster_files/plotting_classified_raster_17_0.png
+.. image:: plotting_classified_raster_files/plotting_classified_raster_18_0.png
 
 
 

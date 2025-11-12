@@ -1,29 +1,25 @@
 .. geomappy documentation master file, created by
-   sphinx-quickstart on Wed Dec  1 14:19:25 2021.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+   sphinx-quickstart.
+   This file contains the root `toctree` directive.
 
-***********************
-Creating maps in Python
-***********************
+=======================
+Geomappy: Creating Maps
+=======================
 
-This package aims to provide a quick interface to create publication quality maps. It combines the plotting of both
-raster and polygon data on a basemap (based on ``cartopy``) and integrates its functionality into ``geopandas`` and
-``rioxarray``. It is build in the matplotlib ecosystem, so all usual functionality is available here too. Only
-choropleth plotting functionality is supported (to make plotting of shapes and rasters as similar as possible). See
-for example the ``geoplot`` package for different plotting options for shapes. Both packages can play together
-quite nicely, but terminology is not always identical. Projections are taken care of under the hood, but can at any
-time be passed as a separate parameter, accepting all cartopy projections.
+This package provides a streamlined interface for creating publication-quality maps. It supports plotting both raster
+and vector (polygon) data on a basemap using cartopy and integrates with ``geopandas`` and ``rioxarray``. Built on top
+of the ``matplotlib`` ecosystem, it retains access to all standard matplotlib functionality. Currently, only
+choropleth-style plotting is supported, which ensures a consistent interface for both raster and vector data. For
+additional vector plotting options, see the ``geoplot`` package—both can be used together, though terminology may
+differ. Projections are handled automatically but can also be explicitly specified, supporting any valid cartopy
+projection.
 
-The package provides:
-
-- A convenience :func:`geomappy.basemap` function
-- Functions to plot rasters and shapes in an identical interface. They are both separated in the plotting of continuous and discrete data.
-- Both plotting and basemap functionality is directly loaded into ``rioxarray`` and ``geopandas``
-
-*************
-Documentation
-*************
+Key features
+------------
+- Unified plotting interface for rasters and vector shapes.
+- Automatic integration with ``geopandas`` and ``rioxarray``.
+- Support for classified and continuous data.
+- Full control of projections and Matplotlib styling.
 
 .. toctree::
    :maxdepth: 2
@@ -33,27 +29,19 @@ Documentation
 
 .. toctree::
    :maxdepth: 2
-   :caption: Methods
+   :caption: Tutorials
 
-   Basemap
-   =======
-   notebooks/basemap
-
-   Plotting functions
-   ==================
    notebooks/plotting_raster
    notebooks/plotting_classified_raster
    notebooks/plotting_shapes
    notebooks/plotting_classified_shapes
 
-   Integration
-   ===========
-   notebooks/rioxarray_integration
-   notebooks/geopandas_integration
-
 .. toctree::
    :maxdepth: 2
-   :caption: Tutorials
+   :caption: Integration
+
+   notebooks/rioxarray_integration
+   notebooks/geopandas_integration
 
 .. toctree::
    :maxdepth: 2
@@ -62,16 +50,12 @@ Documentation
    whats_new
    api
 
-
 License
 =======
-
-geomappy is published under a MIT license.
-
+Geomappy is published under an MIT license.
 
 Indices and tables
 ==================
-
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`

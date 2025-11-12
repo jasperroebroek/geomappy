@@ -12,16 +12,18 @@ Plotting choropleth rasters
 
     import rioxarray as rxr
     import matplotlib.pyplot as plt
+    from cartopy.crs import PlateCarree
+    
     import geomappy as mp
-    import numpy as np
+    import geomappy.plot_utils
     import os
+    
     os.chdir("../../../")
 
 .. code:: python
 
-    r = rxr.open_rasterio("data/wtd.tif")
+    r = rxr.open_rasterio("data/wtd.tif", mask_and_scale=True)
     a = r.values[0]
-    a[a == -999.9] = np.nan
 
 A contains a 2D raster of water table depth (Fan et al., 2017). To
 visualise this one can simply use matplotlib directly.
@@ -64,12 +66,13 @@ numpy outisde the plotting interface.
 .. image:: plotting_raster_files/plotting_raster_8_0.png
 
 
-In this case, the colorbar can be converted into a true legend (figure
-size is expanded with ``figsize`` to fit the legend):
+In this case, the colorbar can be converted into a true legend. For
+visibility we expand the figure size, by creating a new figure first.
 
 .. code:: python
 
-    mp.plot_raster(a, bins=[0,0.1,0.5,1,2,5,10,25], cmap="Blues_r", legend='legend', figsize=(10, 10))
+    f, ax = plt.subplots(figsize=(12, 12))
+    mp.plot_raster(a, bins=[0,0.1,0.5,1,2,5,10,25], cmap="Blues_r", legend='legend', ax=ax)
     plt.show()
 
 
@@ -102,18 +105,18 @@ Then a basemap needs to be created
 
 .. code:: python
 
-    ax = mp.basemap(figsize=(6, 6))
+    f, ax = plt.subplots(figsize=(6, 6), subplot_kw={'projection': PlateCarree()})
     ax.coastlines()
     ax.set_extent(extent)
-    mp.add_ticks(ax, 10)
-    mp.add_gridlines(ax, 10)
+    geomappy.plot_utils.add_ticks(ax, 10)
+    geomappy.plot_utils.add_gridlines(ax, 10)
 
 
 
 
 .. parsed-literal::
 
-    <cartopy.mpl.gridliner.Gridliner at 0x183c5ea60>
+    <cartopy.mpl.gridliner.Gridliner at 0x18305f980>
 
 
 
@@ -125,11 +128,11 @@ Then this GeoAxes object needs to be passed to the plotting function.
 
 .. code:: python
 
-    ax = mp.basemap(figsize=(6, 6))
+    f, ax = plt.subplots(figsize=(6, 6), subplot_kw={'projection': PlateCarree()})
     ax.coastlines()
     ax.set_extent(extent)
-    mp.add_ticks(ax, 10)
-    mp.add_gridlines(ax, 10)
+    geomappy.plot_utils.add_ticks(ax, 10)
+    geomappy.plot_utils.add_gridlines(ax, 10)
     mp.plot_raster(a, ax=ax, cmap="Blues_r", bins=[0,0.1,0.5,1,2,5,10,25], extent=extent)
     plt.show()
 

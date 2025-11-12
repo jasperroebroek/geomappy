@@ -1,48 +1,25 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Utilities used in geomappy. Interesting functions to use outside the internal scope are
-progress_bar and reproject_map_like
-"""
+import numbers
 from functools import wraps
-from typing import Tuple, Union
 
+import cartopy.crs as ccrs
 import numpy as np
-from numpy import ndarray
-from rasterio.coords import BoundingBox  # type: ignore
+from matplotlib.colors import Normalize
+from numpy.typing import ArrayLike
+from pyproj import CRS
 
-
-def _grid_from_corners(v: Tuple[Union[float, ndarray], ...], shape: Tuple[int, int]):
-    """
-    function returns an linearly interpolated grid from values at the corners
-
-    Parameters
-    ----------
-    v : tuple
-        List of four numeric values that will be interpolated. Order of the values is clockwise; starting from the upper
-        left corner.
-    shape : tuple
-        List of two integers, determining the shape of the array that will be returned
-
-    Returns
-    -------
-    :obj:`~numpy.ndarray`
-        Interpolated array
-    """
-    return np.linspace(np.linspace(v[0], v[1], shape[1]),
-                       np.linspace(v[3], v[2], shape[1]), shape[0])
+from geomappy.types import ExtendType
 
 
 def add_method(name, *cls):
     """
-    Decorator to add functions to existing classes
+    Decorator to add functions/objects to existing classes
 
     Parameters
     ----------
     name : str
         function name when implemented
-    cls : class or list of classes
-        class or classes that the function that the wrapper is placed around will be added to
+    cls : type or tuple of types
+        class or classes that the function that the decorator is applied to will be added to
 
     Notes
     -----
@@ -56,17 +33,123 @@ def add_method(name, *cls):
 
         for c in cls:
             setattr(c, name, wrapper)
-        # Note we are not binding func, but wrapper which accepts self but does exactly the same as func
-        return func  # returning func means func can still be used normally
+        return func
 
     return decorator
 
 
-def check_increasing_and_unique(v: np.ndarray) -> None:
+def check_increasing_and_unique(v: np.ndarray, name: str) -> None:
     vs = np.sort(np.unique(v))
+    if vs.size == 0:
+        raise ValueError(f'{name} are empty')
     if not np.array_equal(v, vs):
-        raise ValueError("Levels are not sorted or contain double entries")
+        raise ValueError(f'{name} are not sorted, contain double entries or contain NaN values: {v}')
 
 
-def change_between_bounds_and_extent(x: Union[BoundingBox, Tuple[float, float, float, float]]):
-    return x[0], x[2], x[1], x[3]
+def calculate_horizontal_locations(v: float | tuple[float]):
+    if isinstance(v, numbers.Real):
+        return np.linspace(-180, 180, int(360 / v + 1))
+    return np.asarray(v)
+
+
+def calculate_vertical_locations(v: float | tuple[float]):
+    if isinstance(v, numbers.Real):
+        return np.linspace(-90, 90, int(180 / v + 1))
+    return np.asarray(v)
+
+
+def get_data_range(m: np.ndarray) -> tuple[float, float]:
+    data_min = np.ma.min(m) if np.ma.isMaskedArray(m) else np.nanmin(m)
+    data_max = np.ma.max(m) if np.ma.isMaskedArray(m) else np.nanmax(m)
+
+    if np.ma.is_masked(data_min) or np.ma.is_masked(data_max):
+        raise ValueError('Data contains only masked values')
+    if np.isnan(data_min) or np.isnan(data_max):
+        raise ValueError('Data contains only NaN values')
+
+    return data_min, data_max
+
+
+def check_exclusive_limits(
+    bins: ArrayLike | None = None,
+    norm: Normalize | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+):
+    if (
+        sum(
+            (
+                bins is not None,
+                norm is not None,
+                vmin is not None or vmax is not None,
+            ),
+        )
+        > 1
+    ):
+        raise ValueError('bins, norm and vmin/vmax are mutually exclusive')
+
+
+def determine_extend(
+    data_range: tuple[float, float],
+    vmin: float | None = None,
+    vmax: float | None = None,
+    norm: Normalize | None = None,
+    bins: ArrayLike | None = None,
+) -> ExtendType:
+    check_exclusive_limits(bins, norm, vmin, vmax)
+
+    data_min, data_max = data_range
+
+    if bins is not None:
+        vmin = bins[0]
+        vmax = bins[-1]
+    if norm is not None:
+        vmin = norm.vmin
+        vmax = norm.vmax
+
+    if vmin is None:
+        vmin = data_min
+    if vmax is None:
+        vmax = data_max
+
+    extends_below = data_min < vmin
+    extends_above = data_max > vmax
+
+    if extends_below and extends_above:
+        return 'both'
+    if extends_below:
+        return 'min'
+    if extends_above:
+        return 'max'
+    return 'neither'
+
+
+def parse_levels(m: np.ndarray, levels: ArrayLike | None = None) -> np.ndarray[tuple[int], np.float64]:
+    if levels is None:
+        levels = np.unique(m.compressed() if np.ma.isMaskedArray(m) else m)
+    levels = np.asarray(levels, dtype=np.float64).flatten()
+    check_increasing_and_unique(levels, 'levels')
+    return levels
+
+
+def expand(v: ArrayLike | None, size: int) -> np.ndarray | None:
+    if v is None:
+        return None
+    v = np.asarray(v).flatten()
+    if v.size == 1:
+        v = v.repeat(size)
+    if v.size != size:
+        raise IndexError('Length of `v` does not match length of `size`')
+    return v
+
+
+def get_cartopy_projection(crs: CRS) -> ccrs.CRS:
+    if crs.to_epsg() == 4326:
+        return ccrs.PlateCarree()
+    crs = ccrs.epsg(crs.to_epsg())
+    if crs is None:
+        raise ValueError(
+            f'Projection cannot be converted to Cartopy projection: {crs}. Set the projection manually in the plotting '
+            f'functions',
+        )
+    return crs

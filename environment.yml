@@ -1,0 +1,11 @@
+name: geomappy
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - matplotlib>=3.10
+  - cartopy
+  - geopandas
+  - rioxarray
+  - pytest

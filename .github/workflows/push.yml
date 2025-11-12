@@ -1,0 +1,20 @@
+name: push
+description: Build and test on push
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - README.md
+      - docs
+      - .readthedocs.yaml
+      - .gitignore
+
+jobs:
+  test:
+    name: Run tests
+    uses: ./.github/workflows/test.yml
+  build:
+    name: Build wheels
+    uses: ./.github/workflows/build.yml
