@@ -38,9 +38,6 @@ dev = [
     "libgdal-hdf5"
 ]
 
-[tool.setuptools]
-packages = { find = {} }
-
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["geomappy*"]
