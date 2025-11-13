@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "geomappy"
-version = "0.1.0"
+version = "0.1.1"
 description = "Plotting geospatial vector and raster data on a basemap using matplotlib and cartopy"
 authors = [
     { name = "jasperroebroek", email = "roebroek.jasper@gmail.com" },
