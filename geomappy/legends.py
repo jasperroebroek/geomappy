@@ -114,10 +114,10 @@ def get_legend_creator(
     kind: str,
     legend_type: str | LegendCreator | None,
 ) -> LegendCreator:
-    if legend_type is None:
-        return no_legend_creator
     if callable(legend_type):
         return legend_type
+    if legend_type is None:
+        return no_legend_creator
 
     match (kind, legend_type):
         case ('scalar', 'legend'):

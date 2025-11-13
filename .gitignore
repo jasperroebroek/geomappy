@@ -6,6 +6,7 @@ build/
 .DS_Store
 dask-worker-space
 dist/
+data/
 *.tif
 *.so
 *.c
