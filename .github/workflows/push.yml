@@ -4,7 +4,7 @@ description: Build and test on push
 on:
   push:
     branches:
-      - main
+      - master
     paths-ignore:
       - README.md
       - docs
