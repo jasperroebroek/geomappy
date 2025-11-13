@@ -1,10 +1,9 @@
-.. geomappy documentation master file, created by
-   sphinx-quickstart.
+.. geomappy documentation master file, created by sphinx-quickstart.
    This file contains the root `toctree` directive.
 
-=======================
-Geomappy: Creating Maps
-=======================
+========
+Geomappy
+========
 
 This package provides a streamlined interface for creating publication-quality maps. It supports plotting both raster
 and vector (polygon) data on a basemap using cartopy and integrates with ``geopandas`` and ``rioxarray``. Built on top

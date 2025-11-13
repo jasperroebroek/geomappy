@@ -39,7 +39,11 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["geomappy"]
+packages = { find = {} }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["geomappy*"]
 
 [project.urls]
 "Homepage" = "https://github.com/jasperroebroek/geomappy"
